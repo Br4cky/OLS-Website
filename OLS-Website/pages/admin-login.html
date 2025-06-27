@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Old Laurentian RFC</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">
+                    <img src="../images/logo/olrfc-logo.png" alt="Old Laurentian RFC Crest">
+                </div>
+                <div>
+                    <div class="club-name">Old Laurentian RFC</div>
+                    <div class="tagline">Admin Portal</div>
+                </div>
+            </div>
+            <nav class="nav">
+                <a href="../index.html">Back to Website</a>
+            </nav>
+        </div>
+    </header>
+
+    <main style="margin-top: 120px; padding: 3rem 0; min-height: 80vh; display: flex; align-items: center;">
+        <div class="container">
+            <div style="max-width: 500px; margin: 0 auto;">
+                
+                <div style="background: white; padding: 3rem; border-radius: 20px; box-shadow: var(--shadow); text-align: center;">
+                    <h1 style="color: var(--primary-green); margin-bottom: 2rem;">🔐 Admin Login</h1>
+                    
+                    <form id="adminLoginForm" style="text-align: left;">
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: var(--text-dark);">Username:</label>
+                            <input type="text" id="username" required style="width: 100%; padding: 1rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                        </div>
+                        
+                        <div style="margin-bottom: 2rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: var(--text-dark);">Password:</label>
+                            <input type="password" id="password" required style="width: 100%; padding: 1rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                        </div>
+                        
+                        <button type="submit" style="width: 100%; padding: 1rem; background: var(--primary-green); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer;">
+                            Login to Admin Panel
+                        </button>
+                    </form>
+                    
+                    <div style="margin-top: 2rem; padding: 1.5rem; background: var(--bg-light); border-radius: 10px;">
+                        <h3 style="color: var(--primary-green); margin-bottom: 1rem;">Admin Features (Preview)</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: center;">
+                            <div style="padding: 1rem; background: white; border-radius: 8px;">
+                                <strong>📰 News</strong><br>
+                                <small>Add, edit, delete articles</small>
+                            </div>
+                            <div style="padding: 1rem; background: white; border-radius: 8px;">
+                                <strong>🏉 Fixtures</strong><br>
+                                <small>Update scores & results</small>
+                            </div>
+                            <div style="padding: 1rem; background: white; border-radius: 8px;">
+                                <strong>📸 Gallery</strong><br>
+                                <small>Upload team photos</small>
+                            </div>
+                            <div style="padding: 1rem; background: white; border-radius: 8px;">
+                                <strong>👥 Players</strong><br>
+                                <small>Manage team rosters</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 2rem;">
+                    <p style="color: var(--text-light);">
+                        <strong>Note:</strong> This is a demo. In production, this would connect to a secure backend system.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            // Demo authentication (in real app, this would be secure backend)
+            if (username === 'admin' && password === 'olrfc2025') {
+                alert('Login successful! In a real implementation, you would now access the admin dashboard with content management features.');
+                // In real app: window.location.href = 'admin-dashboard.html';
+            } else {
+                alert('Invalid credentials. Try: username "admin", password "olrfc2025"');
+            }
+        });
+    </script>
+</body>
+</html>

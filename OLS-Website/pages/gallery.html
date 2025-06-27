@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Gallery - Old Laurentian RFC</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <link rel="stylesheet" href="../css/gallery.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">
+                    <img src="../images/logo/olrfc-logo.png" alt="Old Laurentian RFC Crest">
+                </div>
+                <div>
+                    <div class="club-name">Old Laurentian RFC</div>
+                    <div class="tagline">Your Club. Your Pride. Your Legacy.</div>
+                </div>
+            </div>
+            <nav class="nav">
+                <a href="../index.html">Home</a>
+                <a href="../index.html#news">News</a>
+                <a href="../index.html#fixtures">Fixtures</a>
+                <a href="../index.html#teams">Teams</a>
+                <a href="../index.html#about">About</a>
+                <a href="#" class="active">Gallery</a>
+                <a href="contact.html">Contact</a>
+            </nav>
+        </div>
+    </header>
+
+    <main style="margin-top: 120px; padding: 3rem 0;">
+        <div class="container">
+            <h1 class="section-title">Photo Gallery</h1>
+            
+            <div class="gallery-filters">
+                <button class="filter-btn active" data-filter="all">All Photos</button>
+                <button class="filter-btn" data-filter="matches">Match Day</button>
+                <button class="filter-btn" data-filter="training">Training</button>
+                <button class="filter-btn" data-filter="social">Social Events</button>
+                <button class="filter-btn" data-filter="team">Team Photos</button>
+            </div>
+
+            <div class="gallery-grid">
+                <!-- Match Day Photos -->
+                <div class="gallery-item fade-in" data-category="matches">
+                    <div class="gallery-placeholder">
+                        <span>Match Action 1</span>
+                    </div>
+                    <div class="gallery-overlay">
+                        <h3>Victory Celebration</h3>
+                        <p>Post-match celebrations after our 24-17 win</p>
+                    </div>
+                </div>
+
+                <div class="gallery-item fade-in" data-category="matches">
+                    <div class="gallery-placeholder">
+                        <span>Match Action 2</span>
+                    </div>
+                    <div class="gallery-overlay">
+                        <h3>Scrum Formation</h3>
+                        <p>Solid scrum against local rivals</p>
+                    </div>
+                </div>
+
+                <div class="gallery-item fade-in" data-category="matches">
+                    <div class="gallery-placeholder">
+                        <span>Match Action 3</span>
+                    </div>
+                    <div class="gallery-overlay">
+                        <h3>Try Scored</h3>
+                        <p>Amazing try in the corner</p>
+                    </div>
+                </div>
+
+                <!-- Training Photos -->
+                <div class="gallery-item fade-in" data-category="training">
+                    <div class="gallery-placeholder">
+                        <span>Training Session 1</span>
+                    </div>
+                    <div class="gallery-overlay">
+                        <h3>Skills Practice</h3>
+                        <p>Tuesday evening training session</p>
+                    </div>
+                </div>
+
+                <div class="gallery-item fade-in" data-category="training">
+                    <div class="gallery-placeholder">
+                        <span>Training Session 2</span>
+                    </div>
+                    <div class="gallery-overlay">
+                        <h3>Fitness Training</h3>
+                        <p>Getting ready for the season</p>
+                    </div>
+                </div>
+
+                <div class="gallery-item fade-in" data-category="training">
+                    <div class="gallery-placeholder">
+                        <span>Youth Training</span>
+                    </div>
+                    <div class="gallery-overlay">
+                        <h3>Youth Development</h3>
+                        <p>Saturday morning youth training</p>
+                    </div>
+                </div>
+
+                <!-- Team Photos -->
+                <div class="gallery-item fade-in" data-category="team">
+                    <div class="gallery-placeholder">
+                        <span>Team Photo 1</span>
+                    </div>
+                    <div class="gallery-overlay">
+                        <h3>First XV Squad</h3>
+                        <p>2024-25 Season team photo</p>
+                    </div>
+                </div>
+
+                <div class="gallery-item fade-in" data-category="team">
+                    <div class="gallery-placeholder">
+                        <span>Team Photo 2</span>
+                    </div>
+                    <div class="gallery-overlay">
+                        <h3>Veterans Team</h3>
+                        <p>Our experienced players</p>
+                    </div>
+                </div>
+
+                <!-- Social Events -->
+                <div class="gallery-item fade-in" data-category="social">
+                    <div class="gallery-placeholder">
+                        <span>Social Event 1</span>
+                    </div>
+                    <div class="gallery-overlay">
+                        <h3>Annual Dinner</h3>
+                        <p>Club awards ceremony 2024</p>
+                    </div>
+                </div>
+
+                <div class="gallery-item fade-in" data-category="social">
+                    <div class="gallery-placeholder">
+                        <span>Social Event 2</span>
+                    </div>
+                    <div class="gallery-overlay">
+                        <h3>Fundraising Event</h3>
+                        <p>Community fundraiser for new equipment</p>
+                    </div>
+                </div>
+
+                <div class="gallery-item fade-in" data-category="social">
+                    <div class="gallery-placeholder">
+                        <span>Club BBQ</span>
+                    </div>
+                    <div class="gallery-overlay">
+                        <h3>Summer BBQ</h3>
+                        <p>Family day at the club</p>
+                    </div>
+                </div>
+
+                <div class="gallery-item fade-in" data-category="matches">
+                    <div class="gallery-placeholder">
+                        <span>Away Game</span>
+                    </div>
+                    <div class="gallery-overlay">
+                        <h3>Away Victory</h3>
+                        <p>Celebrating away from home</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox">
+        <div class="lightbox-content">
+            <span class="lightbox-close">&times;</span>
+            <div class="lightbox-image-container">
+                <img id="lightbox-image" src="" alt="">
+                <div class="lightbox-nav">
+                    <button id="lightbox-prev">&larr;</button>
+                    <button id="lightbox-next">&rarr;</button>
+                </div>
+            </div>
+            <div class="lightbox-info">
+                <h3 id="lightbox-title"></h3>
+                <p id="lightbox-description"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/main.js"></script>
+    <script src="../js/animations.js"></script>
+    <script src="../js/gallery.js"></script>
+</body>
+</html>
