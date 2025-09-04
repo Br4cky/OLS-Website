@@ -2051,6 +2051,75 @@ function deleteNews(index) {
         }
     }
 }
+// ADD THIS FIXTURES FORM SUBMISSION HERE:
+    document.getElementById('fixtureForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const fixtureData = {
+            id: adminSystem.currentEditIndex !== null ? 
+                adminSystem.getData('fixtures')[adminSystem.currentEditIndex].id : 
+                Date.now().toString(),
+            team: document.getElementById('fixtureTeam').value,
+            opponent: document.getElementById('fixtureOpponent').value.trim(),
+            dateTime: document.getElementById('fixtureDateTime').value,
+            venue: document.getElementById('fixtureVenue').value,
+            competition: document.getElementById('fixtureCompetition').value.trim(),
+            ourScore: document.getElementById('fixtureOurScore').value || null,
+            theirScore: document.getElementById('fixtureTheirScore').value || null
+        };
+
+        // Validate required fields
+        if (!fixtureData.opponent || !fixtureData.dateTime) {
+            alert('Please fill in opponent and date/time fields');
+            return;
+        }
+
+        try {
+            // 1. IMMEDIATE localStorage update
+            let existingFixtures = adminSystem.getData('fixtures');
+            
+            if (adminSystem.currentEditIndex !== null) {
+                existingFixtures[adminSystem.currentEditIndex] = fixtureData;
+            } else {
+                existingFixtures.unshift(fixtureData);
+            }
+            
+            adminSystem.saveData('fixtures', existingFixtures);
+            adminSystem.loadFixtures();
+            adminSystem.updateStats();
+            
+            const action = adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+            adminSystem.showAlert('fixtures', `Fixture ${action} successfully!`, 'success');
+            
+            // 2. BACKGROUND cloud storage
+            if (window.netlifyDataManager) {
+                try {
+                    const result = await window.netlifyDataManager.createFixture(fixtureData);
+                    
+                    if (result.success) {
+                        console.log('Fixture successfully synced to cloud storage');
+                        setTimeout(() => {
+                            adminSystem.showAlert('fixtures', 'Fixture synced to cloud storage ✓', 'success');
+                        }, 1000);
+                    } else {
+                        throw new Error(result.error);
+                    }
+                    
+                } catch (cloudError) {
+                    console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
+                    adminSystem.showAlert('fixtures', 'Fixture saved locally (cloud sync failed)', 'warning');
+                }
+            }
+            
+            closeModal('fixtureModal');
+            document.getElementById('fixtureForm').reset();
+            adminSystem.currentEditIndex = null;
+            
+        } catch (error) {
+            console.error('Error saving fixture:', error);
+            adminSystem.showAlert('fixtures', 'Error saving fixture: ' + error.message, 'danger');
+        }
+    });
 
             // Logo file upload handler
             document.getElementById('sponsorLogo').addEventListener('change', function(e) {
@@ -2204,8 +2273,41 @@ function deleteNews(index) {
         }
     }
 }
-        function editFixture(index) { console.log('Edit fixture', index); }
-        function deleteFixture(index) { console.log('Delete fixture', index); }
+        function editFixture(index) {
+    const fixtures = adminSystem.getData('fixtures');
+    const fixture = fixtures[index];
+    
+    adminSystem.currentEditIndex = index;
+    adminSystem.currentSection = 'fixtures';
+    
+    document.getElementById('fixtureTeam').value = fixture.team;
+    document.getElementById('fixtureOpponent').value = fixture.opponent;
+    document.getElementById('fixtureDateTime').value = fixture.dateTime;
+    document.getElementById('fixtureVenue').value = fixture.venue;
+    document.getElementById('fixtureCompetition').value = fixture.competition || '';
+    document.getElementById('fixtureOurScore').value = fixture.ourScore || '';
+    document.getElementById('fixtureTheirScore').value = fixture.theirScore || '';
+    
+    openModal('fixtureModal');
+}
+
+function deleteFixture(index) {
+    const fixtures = adminSystem.getData('fixtures');
+    const fixture = fixtures[index];
+    
+    if (confirm(`Are you sure you want to delete the fixture against ${fixture.opponent}?`)) {
+        try {
+            fixtures.splice(index, 1);
+            adminSystem.saveData('fixtures', fixtures);
+            adminSystem.loadFixtures();
+            adminSystem.updateStats();
+            adminSystem.showAlert('fixtures', 'Fixture deleted successfully', 'success');
+        } catch (error) {
+            console.error('Error deleting fixture:', error);
+            adminSystem.showAlert('fixtures', 'Error deleting fixture: ' + error.message, 'danger');
+        }
+    }
+}
         function editPlayer(index) { console.log('Edit player', index); }
         function deletePlayer(index) { console.log('Delete player', index); }
         function editShopProduct(index) { console.log('Edit shop product', index); }
