@@ -1961,18 +1961,20 @@ document.getElementById('newsForm').addEventListener('submit', async function(e)
         
         // 2. BACKGROUND cloud storage (following sponsor pattern)
         if (window.netlifyDataManager) {
-            try {
-                await window.netlifyDataManager.submitToNetlify('olrfc-news', {
-                    id: newsData.id,
-                    title: newsData.title,
-                    content: newsData.content,
-                    category: newsData.category,
-                    author: newsData.author,
-                    date: newsData.date,
-                    featured: newsData.featured ? 'true' : 'false',
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                });
+    try {
+        const result = await window.netlifyDataManager.createNews(newsData);
+        
+        if (result.success) {
+            console.log('News article successfully synced to cloud storage');
+            
+            // Optional: Show cloud sync confirmation
+            setTimeout(() => {
+                adminSystem.showAlert('news', 'Article synced to cloud storage ✓', 'success');
+            }, 1000);
+        } else {
+            throw new Error(result.error);
+        }
+
                 
                 console.log('News article successfully synced to cloud storage');
                 
