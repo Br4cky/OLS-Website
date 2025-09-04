@@ -2051,6 +2051,73 @@ function deleteNews(index) {
         }
     }
 }
+// PLAYERS FORM SUBMISSION - Add this after the fixtures form handler
+document.getElementById('playerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const playerData = {
+        id: adminSystem.currentEditIndex !== null ? 
+            adminSystem.getData('players')[adminSystem.currentEditIndex].id : 
+            Date.now().toString(),
+        name: document.getElementById('playerName').value.trim(),
+        team: document.getElementById('playerTeam').value,
+        position: document.getElementById('playerPosition').value.trim(),
+        appearances: parseInt(document.getElementById('playerApps').value) || 0,
+        photo: null // Handle photo upload separately if needed
+    };
+
+    // Validate required fields
+    if (!playerData.name) {
+        alert('Please enter the player name');
+        return;
+    }
+
+    try {
+        // 1. IMMEDIATE localStorage update
+        let existingPlayers = adminSystem.getData('players');
+        
+        if (adminSystem.currentEditIndex !== null) {
+            existingPlayers[adminSystem.currentEditIndex] = playerData;
+        } else {
+            existingPlayers.unshift(playerData);
+        }
+        
+        adminSystem.saveData('players', existingPlayers);
+        adminSystem.loadPlayers();
+        adminSystem.updateStats();
+        
+        const action = adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+        adminSystem.showAlert('players', `Player ${action} successfully!`, 'success');
+        
+        // 2. BACKGROUND cloud storage
+        if (window.netlifyDataManager) {
+            try {
+                const result = await window.netlifyDataManager.createPlayer(playerData);
+                
+                if (result.success) {
+                    console.log('Player successfully synced to cloud storage');
+                    setTimeout(() => {
+                        adminSystem.showAlert('players', 'Player synced to cloud storage ✓', 'success');
+                    }, 1000);
+                } else {
+                    throw new Error(result.error);
+                }
+                
+            } catch (cloudError) {
+                console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
+                adminSystem.showAlert('players', 'Player saved locally (cloud sync failed)', 'warning');
+            }
+        }
+        
+        closeModal('playerModal');
+        document.getElementById('playerForm').reset();
+        adminSystem.currentEditIndex = null;
+        
+    } catch (error) {
+        console.error('Error saving player:', error);
+        adminSystem.showAlert('players', 'Error saving player: ' + error.message, 'danger');
+    }
+});
 // ADD THIS FIXTURES FORM SUBMISSION HERE:
     document.getElementById('fixtureForm').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -2308,8 +2375,38 @@ function deleteFixture(index) {
         }
     }
 }
-        function editPlayer(index) { console.log('Edit player', index); }
-        function deletePlayer(index) { console.log('Delete player', index); }
+        function editPlayer(index) {
+    const players = adminSystem.getData('players');
+    const player = players[index];
+    
+    adminSystem.currentEditIndex = index;
+    adminSystem.currentSection = 'players';
+    
+    document.getElementById('playerName').value = player.name;
+    document.getElementById('playerTeam').value = player.team;
+    document.getElementById('playerPosition').value = player.position || '';
+    document.getElementById('playerApps').value = player.appearances || 0;
+    
+    openModal('playerModal');
+}
+
+function deletePlayer(index) {
+    const players = adminSystem.getData('players');
+    const player = players[index];
+    
+    if (confirm(`Are you sure you want to delete ${player.name}?`)) {
+        try {
+            players.splice(index, 1);
+            adminSystem.saveData('players', players);
+            adminSystem.loadPlayers();
+            adminSystem.updateStats();
+            adminSystem.showAlert('players', 'Player deleted successfully', 'success');
+        } catch (error) {
+            console.error('Error deleting player:', error);
+            adminSystem.showAlert('players', 'Error deleting player: ' + error.message, 'danger');
+        }
+    }
+}
         function editShopProduct(index) { console.log('Edit shop product', index); }
         function deleteShopProduct(index) { console.log('Delete shop product', index); }
         function duplicateShopProduct(index) { console.log('Duplicate shop product', index); }
