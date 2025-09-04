@@ -1,0 +1,30 @@
+# netlify.toml - OLS-Website Configuration
+
+[build]
+  # Build settings for static site
+  publish = "."
+  command = "echo 'Static site - no build required'"
+
+[functions]
+  # Functions directory
+  directory = "netlify/functions/"
+  
+[[headers]]
+  # Apply these headers to all pages
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[redirects]]
+  # Handle SPA routing if needed
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Development settings
+[dev]
+  port = 3000
+  autoLaunch = true

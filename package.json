@@ -1,0 +1,22 @@
+{
+  "name": "old-laurentian-rfc-website",
+  "version": "1.0.0",
+  "description": "Official website for Old Laurentian Rugby Football Club",
+  "main": "index.html",
+  "scripts": {
+    "start": "live-server --port=3000 --open=/index.html",
+    "build": "echo 'Build script to be added'",
+    "test": "echo 'Tests to be added'"
+  },
+  "keywords": [
+    "rugby",
+    "sports",
+    "club",
+    "website"
+  ],
+  "author": "Old Laurentian RFC",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}
