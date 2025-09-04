@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fixtures & Results - Old Laurentian RFC</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <style>
+        /* Page-specific styles for fixtures */
+        .fixtures-page-header {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            padding: 6rem 0 4rem;
+            margin-top: 80px;
+            text-align: center;
+        }
+
+        .fixtures-controls {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            margin-bottom: 3rem;
+            position: sticky;
+            top: 100px;
+            z-index: 100;
+        }
+
+        .controls-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .team-selector {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .team-btn {
+            padding: 0.8rem 1.2rem;
+            border: 2px solid var(--primary-green);
+            background: transparent;
+            color: var(--primary-green);
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .team-btn:hover,
+        .team-btn.active {
+            background: var(--primary-green);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .toggle-btn {
+            padding: 0.8rem 1.5rem;
+            border: 2px solid var(--primary-maroon);
+            background: transparent;
+            color: var(--primary-maroon);
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn.active {
+            background: var(--primary-maroon);
+            color: white;
+        }
+
+        .search-filter {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .search-input {
+            padding: 0.8rem 1rem;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            width: 200px;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-green);
+        }
+
+        .date-filter {
+            padding: 0.8rem 1rem;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            background: white;
+            cursor: pointer;
+        }
+
+        .fixtures-section {
+            margin-bottom: 4rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--accent-gold);
+        }
+
+        .section-title-small {
+            color: var(--primary-green);
+            font-size: 2rem;
+            margin: 0;
+        }
+
+        .section-count {
+            background: var(--accent-gold);
+            color: var(--primary-green);
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        /* Table View */
+        .fixtures-table-view {
+            background: white;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .fixtures-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .fixtures-table th {
+            background: var(--primary-green);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: bold;
+            border-bottom: 2px solid var(--primary-maroon);
+        }
+
+        .fixtures-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+
+        .fixtures-table tr:hover {
+            background: var(--bg-light);
+        }
+
+        .fixture-row.result {
+            background: linear-gradient(90deg, rgba(46, 80, 22, 0.05), rgba(139, 21, 56, 0.05));
+        }
+
+        .fixture-row.upcoming {
+            background: linear-gradient(90deg, rgba(244, 196, 48, 0.05), rgba(46, 80, 22, 0.05));
+        }
+
+        .team-names {
+            font-weight: bold;
+            color: var(--text-dark);
+        }
+
+        .result-score {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary-maroon);
+        }
+
+        .result-score.win {
+            color: var(--primary-green);
+        }
+
+        .result-score.loss {
+            color: var(--primary-maroon);
+        }
+
+        .fixture-time {
+            font-weight: bold;
+            color: var(--primary-green);
+        }
+
+        .venue-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .venue-home {
+            background: var(--accent-gold);
+            color: var(--primary-green);
+        }
+
+        .venue-away {
+            background: var(--primary-green);
+            color: white;
+        }
+
+        .competition-tag {
+            background: var(--bg-light);
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            color: var(--text-dark);
+            font-style: italic;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            padding: 0.4rem 0.8rem;
+            border: none;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn.primary {
+            background: var(--primary-green);
+            color: white;
+        }
+
+        .action-btn.secondary {
+            background: var(--accent-gold);
+            color: var(--primary-green);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        /* Card View */
+        .fixtures-card-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .fixture-card-large {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .fixture-card-large:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+
+        .fixture-card-large.result {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+        }
+
+        .fixture-card-large.upcoming {
+            border: 3px solid var(--accent-gold);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-type {
+            background: var(--accent-gold);
+            color: var(--primary-green);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .fixture-card-large.result .card-type {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .card-date {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            font-weight: bold;
+        }
+
+        .fixture-card-large.result .card-date {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .card-teams {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .team-matchup {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            line-height: 1.3;
+        }
+
+        .card-score {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent-gold);
+            margin-bottom: 1rem;
+        }
+
+        .fixture-card-large.upcoming .card-score {
+            color: var(--primary-maroon);
+            font-size: 1.5rem;
+        }
+
+        .card-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-venue {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-competition {
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            margin-bottom: 1rem;
+        }
+
+        .fixture-card-large.upcoming .card-competition {
+            background: var(--bg-light);
+            color: var(--text-dark);
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        /* Summary Stats */
+        .fixtures-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            border-top: 4px solid var(--accent-gold);
+        }
+
+        .summary-number {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--primary-green);
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-label {
+            color: var(--text-light);
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        .summary-detail {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 0.5rem;
+        }
+
+        /* Loading and Empty States */
+        .loading-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-light);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: white;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+        }
+
+        .empty-state h3 {
+            color: var(--primary-green);
+            margin-bottom: 1rem;
+        }
+
+        .empty-state p {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .controls-row {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .team-selector {
+                justify-content: center;
+            }
+
+            .search-filter {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .fixtures-page-header {
+                padding: 4rem 0 2rem;
+            }
+
+            .fixtures-controls {
+                padding: 1.5rem;
+                top: 80px;
+            }
+
+            .team-selector {
+                gap: 0.3rem;
+            }
+
+            .team-btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.8rem;
+            }
+
+            .search-input {
+                width: 150px;
+            }
+
+            .fixtures-table-view {
+                overflow-x: auto;
+            }
+
+            .fixtures-table {
+                min-width: 600px;
+            }
+
+            .fixtures-card-view {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .fixture-card-large {
+                padding: 1.5rem;
+            }
+
+            .card-score {
+                font-size: 2rem;
+            }
+
+            .team-matchup {
+                font-size: 1.1rem;
+            }
+
+            .card-details {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .card-actions {
+                flex-direction: column;
+            }
+
+            /* Mobile navigation */
+            .nav {
+                position: fixed;
+                top: 80px;
+                left: -100%;
+                width: 100%;
+                height: calc(100vh - 80px);
+                background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: center;
+                padding: 2rem 0;
+                transition: left 0.3s ease;
+                z-index: 999;
+            }
+
+            .nav.active {
+                left: 0;
+            }
+
+            .nav a {
+                padding: 1rem 2rem;
+                font-size: 1.2rem;
+                width: 90%;
+                text-align: center;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+
+            .menu-toggle {
+                display: block;
+                z-index: 1001;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .fixtures-controls {
+                padding: 1rem;
+            }
+
+            .team-selector {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .team-btn {
+                width: 200px;
+            }
+
+            .view-toggle {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .toggle-btn {
+                flex: 1;
+                text-align: center;
+            }
+
+            .search-filter {
+                width: 100%;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            .fixtures-summary {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .summary-card {
+                padding: 1.5rem;
+            }
+
+            .summary-number {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">
+                    <img src="../images/logo/olrfc-logo.png" alt="Old Laurentian RFC Crest">
+                </div>
+                <div>
+                    <div class="club-name">Old Laurentian RFC</div>
+                    <div class="tagline">Your Club. Your Pride. Your Legacy.</div>
+                </div>
+            </div>
+            <nav class="nav">
+                <a href="../index.html">Home</a>
+                <a href="../index.html#news">News</a>
+                <a href="#" class="active">Fixtures</a>
+                <div class="nav-dropdown">
+                    <a href="#teams" class="nav-link dropdown-toggle">Teams <span class="dropdown-arrow">▼</span></a>
+                    <div class="dropdown-menu">
+                        <a href="teams/mens-1st-xv.html" class="dropdown-item">Mens 1st XV</a>
+                        <a href="teams/mens-2nd-xv.html" class="dropdown-item">Mens 2nd XV</a>
+                        <a href="teams/womens.html" class="dropdown-item">Womens</a>
+                        <a href="teams/colts.html" class="dropdown-item">Colts</a>
+                        <a href="teams/u16s.html" class="dropdown-item">U16s</a>
+                        <a href="teams/u14s.html" class="dropdown-item">U14s</a>
+                    </div>
+                </div>
+                <a href="../index.html#about">About</a>
+                <a href="gallery.html">Gallery</a>
+                <a href="club-contacts.html">Contact</a>
+            </nav>
+            <button class="menu-toggle" id="menuToggle">☰</button>
+        </div>
+    </header>
+
+    <!-- Page Header -->
+    <section class="fixtures-page-header">
+        <div class="container">
+            <h1>Fixtures & Results</h1>
+            <p style="font-size: 1.2rem; opacity: 0.9; margin-top: 1rem;">
+                Complete fixture list and results for all Old Laurentian RFC teams
+            </p>
+        </div>
+    </section>
+
+    <main style="padding: 2rem 0 4rem;">
+        <div class="container">
+            
+            <!-- Controls -->
+            <div class="fixtures-controls">
+                <div class="controls-row">
+                    <!-- Team Selection -->
+                    <div class="team-selector">
+                        <button class="team-btn active" data-team="all">All Teams</button>
+                        <button class="team-btn" data-team="mens-1st">Mens 1st XV</button>
+                        <button class="team-btn" data-team="mens-2nd">Mens 2nd XV</button>
+                        <button class="team-btn" data-team="ladies">Phoenix Ladies</button>
+                        <button class="team-btn" data-team="colts">Colts</button>
+                        <button class="team-btn" data-team="u16s">U16s</button>
+                        <button class="team-btn" data-team="u14s">U14s</button>
+                    </div>
+
+                    <!-- View Toggle -->
+                    <div class="view-toggle">
+                        <button class="toggle-btn active" data-view="table">Table View</button>
+                        <button class="toggle-btn" data-view="cards">Card View</button>
+                    </div>
+
+                    <!-- Search and Filters -->
+                    <div class="search-filter">
+                        <input type="text" class="search-input" placeholder="Search opponent..." id="searchInput">
+                        <input type="month" class="date-filter" id="dateFilter">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="fixtures-summary" id="fixtureSummary">
+                <div class="summary-card">
+                    <span class="summary-number" id="totalMatches">0</span>
+                    <span class="summary-label">Total Matches</span>
+                    <div class="summary-detail">This Season</div>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-number" id="totalWins">0</span>
+                    <span class="summary-label">Wins</span>
+                    <div class="summary-detail" id="winPercentage">0% win rate</div>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-number" id="upcomingFixtures">0</span>
+                    <span class="summary-label">Upcoming</span>
+                    <div class="summary-detail">Next 30 days</div>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-number" id="totalPoints">0</span>
+                    <span class="summary-label">Points Scored</span>
+                    <div class="summary-detail">All competitions</div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="fixtures-section" id="resultsSection">
+                <div class="section-header">
+                    <h2 class="section-title-small">Recent Results</h2>
+                    <span class="section-count" id="resultsCount">0 matches</span>
+                </div>
+                
+                <!-- Table View -->
+                <div class="fixtures-table-view" id="resultsTableView">
+                    <table class="fixtures-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Teams</th>
+                                <th>Score</th>
+                                <th>Venue</th>
+                                <th>Competition</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTableBody">
+                            <!-- Results will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Card View -->
+                <div class="fixtures-card-view" id="resultsCardView" style="display: none;">
+                    <!-- Result cards will be populated here -->
+                </div>
+            </div>
+
+            <!-- Fixtures Section -->
+            <div class="fixtures-section" id="fixturesSection">
+                <div class="section-header">
+                    <h2 class="section-title-small">Upcoming Fixtures</h2>
+                    <span class="section-count" id="fixturesCount">0 matches</span>
+                </div>
+                
+                <!-- Table View -->
+                <div class="fixtures-table-view" id="fixturesTableView">
+                    <table class="fixtures-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Teams</th>
+                                <th>Time</th>
+                                <th>Venue</th>
+                                <th>Competition</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fixturesTableBody">
+                            <!-- Fixtures will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Card View -->
+                <div class="fixtures-card-view" id="fixturesCardView" style="display: none;">
+                    <!-- Fixture cards will be populated here -->
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Contact Information</h3>
+                    <p>📍 [Club Address]</p>
+                    <p>📞 [Phone Number]</p>
+                    <p>✉️ [Email Address]</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <a href="../index.html#news">Latest News</a>
+                    <a href="../index.html#fixtures">Fixtures & Results</a>
+                    <a href="../index.html#teams">Teams</a>
+                    <a href="gallery.html">Gallery</a>
+                    <a href="club-contacts.html">Club Contacts</a>
+                    <a href="sponsors.html">Our Sponsors</a>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Training Times</h3>
+                    <p>Senior Training:</p>
+                    <p>Tuesday & Thursday 7:00 PM</p>
+                    <p>Youth Training:</p>
+                    <p>Saturday 10:00 AM</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Follow Us</h3>
+                    <div class="social-icons">
+                        <a href="https://www.facebook.com/olsrugby" target="_blank" aria-label="Facebook">FB</a>
+                        <a href="https://www.instagram.com/olsrugby" target="_blank" aria-label="Instagram">IG</a>
+                        <a href="https://twitter.com/YOUR_TWITTER" target="_blank" aria-label="Twitter">TW</a>
+                        <a href="#" aria-label="YouTube">YT</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 Old Laurentian RFC. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="../js/fixtures-filter.js"></script>
+    <script src="../js/admin-data-loader.js"></script>
+    <script>
+        class FixturesPageManager {
+            constructor() {
+                this.currentTeam = 'all';
+                this.currentView = 'table';
+                this.searchTerm = '';
+                this.dateFilter = '';
+                this.allFixtures = [];
+                this.init();
+            }
+
+            init() {
+                this.loadData();
+                this.setupEventListeners();
+                this.renderAll();
+            }
+
+            loadData() {
+                this.allFixtures = this.combineAllFixtureData();
+            }
+
+            combineAllFixtureData() {
+                const combined = [];
+                const teams = ['mens-1st', 'mens-2nd', 'ladies', 'colts', 'u16s', 'u14s'];
+                
+                teams.forEach(team => {
+                    const teamData = typeof teamFixturesData !== 'undefined' ? teamFixturesData[team] : null;
+                    if (teamData) {
+                        if (teamData.lastResult) {
+                            combined.push({
+                                ...teamData.lastResult,
+                                team: team,
+                                teamName: teamData.teamName,
+                                isResult: true,
+                                type: 'result',
+                                ourScore: teamData.lastResult.homeScore,
+                                theirScore: teamData.lastResult.awayScore,
+                                opponent: this.extractOpponent(teamData.lastResult, team)
+                            });
+                        }
+                        
+                        teamData.nextFixtures?.forEach(fixture => {
+                            combined.push({
+                                ...fixture,
+                                team: team,
+                                teamName: teamData.teamName,
+                                isResult: false,
+                                type: 'fixture',
+                                ourScore: null,
+                                theirScore: null,
+                                opponent: this.extractOpponent(fixture, team)
+                            });
+                        });
+                    }
+                });
+
+                const dynamicData = this.getData('fixtures');
+                dynamicData.forEach(dynFixture => {
+                    combined.push({
+                        date: dynFixture.dateTime.split('T')[0],
+                        time: new Date(dynFixture.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                        team: dynFixture.team,
+                        teamName: this.getTeamName(dynFixture.team),
+                        opponent: dynFixture.opponent,
+                        isResult: dynFixture.ourScore !== null && dynFixture.theirScore !== null,
+                        type: dynFixture.ourScore !== null ? 'result' : 'fixture',
+                        ourScore: dynFixture.ourScore,
+                        theirScore: dynFixture.theirScore,
+                        venue: dynFixture.venue === 'home' ? 'Home Ground' : 'Away',
+                        competition: dynFixture.competition || 'Friendly',
+                        homeTeam: dynFixture.venue === 'home' ? this.getTeamName(dynFixture.team) : dynFixture.opponent,
+                        awayTeam: dynFixture.venue === 'home' ? dynFixture.opponent : this.getTeamName(dynFixture.team)
+                    });
+                });
+
+                this.addDemoData(combined);
+                combined.sort((a, b) => new Date(b.date) - new Date(a.date));
+                return combined;
+            }
+
+            addDemoData(combined) {
+                const teams = ['mens-1st', 'mens-2nd', 'ladies', 'colts', 'u16s', 'u14s'];
+                const opponents = ['Leicester RFC', 'Nottingham RFC', 'Derby RFC', 'Birmingham RFC', 'Coventry RFC', 'Worcester RFC'];
+                const competitions = ['Regional Championship', 'Cup Quarter-Final', 'League Match', 'Friendly'];
+                
+                for (let i = 1; i <= 12; i++) {
+                    const team = teams[i % teams.length];
+                    const date = new Date();
+                    date.setDate(date.getDate() - (i * 7));
+                    
+                    combined.push({
+                        date: date.toISOString().split('T')[0],
+                        team: team,
+                        teamName: this.getTeamName(team),
+                        opponent: opponents[i % opponents.length],
+                        isResult: true,
+                        type: 'result',
+                        ourScore: 15 + Math.floor(Math.random() * 20),
+                        theirScore: 10 + Math.floor(Math.random() * 20),
+                        venue: i % 2 === 0 ? 'Home Ground' : 'Away',
+                        competition: competitions[i % competitions.length],
+                        time: '15:00',
+                        homeTeam: i % 2 === 0 ? this.getTeamName(team) : opponents[i % opponents.length],
+                        awayTeam: i % 2 === 0 ? opponents[i % opponents.length] : this.getTeamName(team)
+                    });
+                }
+
+                for (let i = 1; i <= 8; i++) {
+                    const team = teams[i % teams.length];
+                    const date = new Date();
+                    date.setDate(date.getDate() + (i * 7));
+                    
+                    combined.push({
+                        date: date.toISOString().split('T')[0],
+                        team: team,
+                        teamName: this.getTeamName(team),
+                        opponent: opponents[i % opponents.length],
+                        isResult: false,
+                        type: 'fixture',
+                        ourScore: null,
+                        theirScore: null,
+                        venue: i % 2 === 0 ? 'Home Ground' : 'Away',
+                        competition: competitions[i % competitions.length],
+                        time: '15:00',
+                        homeTeam: i % 2 === 0 ? this.getTeamName(team) : opponents[i % opponents.length],
+                        awayTeam: i % 2 === 0 ? opponents[i % opponents.length] : this.getTeamName(team)
+                    });
+                }
+            }
+
+            extractOpponent(fixture, team) {
+                const teamNames = {
+                    'mens-1st': 'Old Laurentian RFC',
+                    'mens-2nd': 'Old Laurentian RFC 2nd XV',
+                    'ladies': 'Phoenix Ladies',
+                    'colts': 'Old Laurentian RFC Colts',
+                    'u16s': 'Old Laurentian RFC U16s',
+                    'u14s': 'Old Laurentian RFC U14s'
+                };
+                
+                const ourTeamName = teamNames[team];
+                return fixture.awayTeam === ourTeamName ? fixture.homeTeam : fixture.awayTeam;
+            }
+
+            getTeamName(team) {
+                const teams = {
+                    'mens-1st': 'Old Laurentian RFC',
+                    'mens-2nd': 'Old Laurentian RFC 2nd XV',
+                    'ladies': 'Phoenix Ladies',
+                    'colts': 'Old Laurentian RFC Colts',
+                    'u16s': 'Old Laurentian RFC U16s',
+                    'u14s': 'Old Laurentian RFC U14s'
+                };
+                return teams[team] || team;
+            }
+
+            getData(key) {
+                try {
+                    return JSON.parse(localStorage.getItem(`olrfc_${key}`)) || [];
+                } catch (e) {
+                    console.error(`Error loading ${key} data:`, e);
+                    return [];
+                }
+            }
+
+            setupEventListeners() {
+                document.querySelectorAll('.team-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.currentTeam = btn.dataset.team;
+                        this.renderAll();
+                    });
+                });
+
+                document.querySelectorAll('.toggle-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.currentView = btn.dataset.view;
+                        this.renderAll();
+                    });
+                });
+
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    this.searchTerm = e.target.value.toLowerCase();
+                    this.renderAll();
+                });
+
+                document.getElementById('dateFilter').addEventListener('change', (e) => {
+                    this.dateFilter = e.target.value;
+                    this.renderAll();
+                });
+            }
+
+            getFilteredFixtures() {
+                let filtered = this.allFixtures;
+
+                if (this.currentTeam !== 'all') {
+                    filtered = filtered.filter(fixture => fixture.team === this.currentTeam);
+                }
+
+                if (this.searchTerm) {
+                    filtered = filtered.filter(fixture => 
+                        fixture.opponent.toLowerCase().includes(this.searchTerm) ||
+                        fixture.competition.toLowerCase().includes(this.searchTerm)
+                    );
+                }
+
+                if (this.dateFilter) {
+                    const filterMonth = this.dateFilter;
+                    filtered = filtered.filter(fixture => 
+                        fixture.date.startsWith(filterMonth)
+                    );
+                }
+
+                return filtered;
+            }
+
+            renderAll() {
+                const filteredFixtures = this.getFilteredFixtures();
+                const results = filteredFixtures.filter(f => f.isResult);
+                const fixtures = filteredFixtures.filter(f => !f.isResult);
+
+                this.renderSummary(filteredFixtures);
+                this.renderResults(results);
+                this.renderFixtures(fixtures);
+                this.updateCounts(results.length, fixtures.length);
+            }
+
+            renderSummary(fixtures) {
+                const results = fixtures.filter(f => f.isResult);
+                const wins = results.filter(f => parseInt(f.ourScore) > parseInt(f.theirScore));
+                const upcoming = fixtures.filter(f => !f.isResult && new Date(f.date) >= new Date());
+                const totalPoints = results.reduce((sum, f) => sum + parseInt(f.ourScore || 0), 0);
+                const winPercentage = results.length > 0 ? Math.round((wins.length / results.length) * 100) : 0;
+
+                document.getElementById('totalMatches').textContent = results.length;
+                document.getElementById('totalWins').textContent = wins.length;
+                document.getElementById('upcomingFixtures').textContent = upcoming.length;
+                document.getElementById('totalPoints').textContent = totalPoints;
+                document.getElementById('winPercentage').textContent = `${winPercentage}% win rate`;
+            }
+
+            renderResults(results) {
+                document.getElementById('resultsCount').textContent = `${results.length} matches`;
+
+                if (this.currentView === 'table') {
+                    this.renderResultsTable(results);
+                    document.getElementById('resultsTableView').style.display = 'block';
+                    document.getElementById('resultsCardView').style.display = 'none';
+                } else {
+                    this.renderResultsCards(results);
+                    document.getElementById('resultsTableView').style.display = 'none';
+                    document.getElementById('resultsCardView').style.display = 'grid';
+                }
+            }
+
+            renderFixtures(fixtures) {
+                document.getElementById('fixturesCount').textContent = `${fixtures.length} matches`;
+
+                if (this.currentView === 'table') {
+                    this.renderFixturesTable(fixtures);
+                    document.getElementById('fixturesTableView').style.display = 'block';
+                    document.getElementById('fixturesCardView').style.display = 'none';
+                } else {
+                    this.renderFixturesCards(fixtures);
+                    document.getElementById('fixturesTableView').style.display = 'none';
+                    document.getElementById('fixturesCardView').style.display = 'grid';
+                }
+            }
+
+            renderResultsTable(results) {
+                const tbody = document.getElementById('resultsTableBody');
+                tbody.innerHTML = '';
+
+                if (results.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-light);">No results found</td></tr>';
+                    return;
+                }
+
+                results.forEach(result => {
+                    const row = document.createElement('tr');
+                    row.className = 'fixture-row result';
+                    
+                    const isWin = parseInt(result.ourScore) > parseInt(result.theirScore);
+                    const scoreClass = isWin ? 'win' : 'loss';
+                    
+                    row.innerHTML = `
+                        <td>${this.formatDate(result.date)}</td>
+                        <td class="team-names">${result.homeTeam} vs ${result.awayTeam}</td>
+                        <td class="result-score ${scoreClass}">${result.ourScore} - ${result.theirScore}</td>
+                        <td><span class="venue-badge venue-${result.venue === 'Home Ground' ? 'home' : 'away'}">${result.venue}</span></td>
+                        <td><span class="competition-tag">${result.competition}</span></td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-btn primary" onclick="showMatchReport('${result.team}', '${result.date}')">Report</button>
+                            </div>
+                        </td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+            }
+
+            renderFixturesTable(fixtures) {
+                const tbody = document.getElementById('fixturesTableBody');
+                tbody.innerHTML = '';
+
+                if (fixtures.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-light);">No upcoming fixtures found</td></tr>';
+                    return;
+                }
+
+                fixtures.forEach(fixture => {
+                    const row = document.createElement('tr');
+                    row.className = 'fixture-row upcoming';
+                    
+                    row.innerHTML = `
+                        <td>${this.formatDate(fixture.date)}</td>
+                        <td class="team-names">${fixture.homeTeam} vs ${fixture.awayTeam}</td>
+                        <td class="fixture-time">${fixture.time}</td>
+                        <td><span class="venue-badge venue-${fixture.venue === 'Home Ground' ? 'home' : 'away'}">${fixture.venue}</span></td>
+                        <td><span class="competition-tag">${fixture.competition}</span></td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-btn secondary" onclick="showMatchPreview('${fixture.team}', '${fixture.date}')">Preview</button>
+                            </div>
+                        </td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+            }
+
+            renderResultsCards(results) {
+                const container = document.getElementById('resultsCardView');
+                container.innerHTML = '';
+
+                if (results.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><h3>No Results Found</h3><p>No match results found for the selected filters.</p></div>';
+                    return;
+                }
+
+                results.forEach(result => {
+                    const card = this.createResultCard(result);
+                    container.appendChild(card);
+                });
+            }
+
+            renderFixturesCards(fixtures) {
+                const container = document.getElementById('fixturesCardView');
+                container.innerHTML = '';
+
+                if (fixtures.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><h3>No Fixtures Found</h3><p>No upcoming fixtures found for the selected filters.</p></div>';
+                    return;
+                }
+
+                fixtures.forEach(fixture => {
+                    const card = this.createFixtureCard(fixture);
+                    container.appendChild(card);
+                });
+            }
+
+            createResultCard(result) {
+                const card = document.createElement('div');
+                card.className = 'fixture-card-large result';
+                
+                const isWin = parseInt(result.ourScore) > parseInt(result.theirScore);
+                const resultText = isWin ? 'Victory' : parseInt(result.ourScore) === parseInt(result.theirScore) ? 'Draw' : 'Defeat';
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-type">Result</div>
+                        <div class="card-date">${this.formatDate(result.date)}</div>
+                    </div>
+                    <div class="card-teams">
+                        <div class="team-matchup">${result.homeTeam} vs ${result.awayTeam}</div>
+                        <div class="card-score">${result.ourScore} - ${result.theirScore}</div>
+                    </div>
+                    <div class="card-details">
+                        <div class="card-venue">
+                            <span class="venue-badge venue-${result.venue === 'Home Ground' ? 'home' : 'away'}">${result.venue}</span>
+                        </div>
+                        <div style="font-weight: bold; color: white;">${resultText}</div>
+                    </div>
+                    <div class="card-competition">${result.competition}</div>
+                    <div class="card-actions">
+                        <button class="btn btn-secondary" onclick="showMatchReport('${result.team}', '${result.date}')">Match Report</button>
+                    </div>
+                `;
+                
+                return card;
+            }
+
+            createFixtureCard(fixture) {
+                const card = document.createElement('div');
+                card.className = 'fixture-card-large upcoming';
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-type">Fixture</div>
+                        <div class="card-date">${this.formatDate(fixture.date)}</div>
+                    </div>
+                    <div class="card-teams">
+                        <div class="team-matchup">${fixture.homeTeam} vs ${fixture.awayTeam}</div>
+                        <div class="card-score">Kick-off: ${fixture.time}</div>
+                    </div>
+                    <div class="card-details">
+                        <div class="card-venue">
+                            <span class="venue-badge venue-${fixture.venue === 'Home Ground' ? 'home' : 'away'}">${fixture.venue}</span>
+                        </div>
+                        <div style="font-weight: bold; color: var(--primary-green);">Upcoming Match</div>
+                    </div>
+                    <div class="card-competition">${fixture.competition}</div>
+                    <div class="card-actions">
+                        <button class="btn btn-primary" onclick="showMatchPreview('${fixture.team}', '${fixture.date}')">Match Preview</button>
+                    </div>
+                `;
+                
+                return card;
+            }
+
+            updateCounts(resultsCount, fixturesCount) {
+                document.getElementById('resultsCount').textContent = `${resultsCount} matches`;
+                document.getElementById('fixturesCount').textContent = `${fixturesCount} matches`;
+            }
+
+            formatDate(dateString) {
+                const date = new Date(dateString);
+                const options = { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                };
+                return date.toLocaleDateString('en-GB', options);
+            }
+        }
+
+        function showMatchReport(team, date) {
+            alert(`Match Report for ${team} on ${date}\n\nIn a real implementation, this would open a detailed match report page with:\n- Match statistics\n- Player performances\n- Photo gallery\n- Match highlights`);
+        }
+
+        function showMatchPreview(team, date) {
+            alert(`Match Preview for ${team} on ${date}\n\nIn a real implementation, this would show:\n- Team news and lineups\n- Recent form\n- Head-to-head record\n- Venue information\n- Match predictions`);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            new FixturesPageManager();
+        });
+
+        document.getElementById('menuToggle')?.addEventListener('click', function() {
+            const nav = document.querySelector('.nav');
+            nav.classList.toggle('active');
+        });
+
+        document.querySelectorAll('.nav a').forEach(link => {
+            link.addEventListener('click', () => {
+                document.querySelector('.nav').classList.remove('active');
+            });
+        });
+    </script>
+</body>
+</html>

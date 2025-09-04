@@ -6,6 +6,217 @@
     <title>Admin Login - Old Laurentian RFC</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/responsive.css">
+    <style>
+        .login-container {
+            margin-top: 120px;
+            padding: 3rem 0;
+            min-height: 80vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, var(--bg-light), #e8f5e8);
+        }
+
+        .login-card {
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            margin: 0 auto;
+            border: 2px solid var(--accent-gold);
+        }
+
+        .login-header {
+            margin-bottom: 2rem;
+        }
+
+        .login-header h1 {
+            color: var(--primary-green);
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+
+        .login-subtitle {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--text-dark);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(46, 80, 22, 0.1);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(45deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .admin-features {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-light);
+            border-radius: 10px;
+            border-left: 4px solid var(--accent-gold);
+        }
+
+        .admin-features h3 {
+            color: var(--primary-green);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            text-align: center;
+        }
+
+        .feature-card {
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: scale(1.05);
+        }
+
+        .feature-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .feature-title {
+            font-weight: bold;
+            color: var(--primary-green);
+            margin-bottom: 0.3rem;
+        }
+
+        .feature-desc {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .login-note {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            color: #856404;
+        }
+
+        .demo-credentials {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .loading-spinner {
+            display: none;
+            margin-left: 10px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .login-card {
+                margin: 1rem;
+                padding: 2rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .login-header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <header class="header">
@@ -25,76 +236,319 @@
         </div>
     </header>
 
-    <main style="margin-top: 120px; padding: 3rem 0; min-height: 80vh; display: flex; align-items: center;">
+    <main class="login-container">
         <div class="container">
-            <div style="max-width: 500px; margin: 0 auto;">
+            <div class="login-card">
+                <div class="login-header">
+                    <h1>🔐 Admin Login</h1>
+                    <p class="login-subtitle">Access the Old Laurentian RFC Content Management System</p>
+                </div>
                 
-                <div style="background: white; padding: 3rem; border-radius: 20px; box-shadow: var(--shadow); text-align: center;">
-                    <h1 style="color: var(--primary-green); margin-bottom: 2rem;">🔐 Admin Login</h1>
+                <form id="adminLoginForm">
+                    <div class="form-group">
+                        <label for="username">Username:</label>
+                        <input type="text" id="username" name="username" required autocomplete="username">
+                    </div>
                     
-                    <form id="adminLoginForm" style="text-align: left;">
-                        <div style="margin-bottom: 1.5rem;">
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: var(--text-dark);">Username:</label>
-                            <input type="text" id="username" required style="width: 100%; padding: 1rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
-                        </div>
-                        
-                        <div style="margin-bottom: 2rem;">
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: var(--text-dark);">Password:</label>
-                            <input type="password" id="password" required style="width: 100%; padding: 1rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
-                        </div>
-                        
-                        <button type="submit" style="width: 100%; padding: 1rem; background: var(--primary-green); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer;">
-                            Login to Admin Panel
-                        </button>
-                    </form>
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" name="password" required autocomplete="current-password">
+                    </div>
                     
-                    <div style="margin-top: 2rem; padding: 1.5rem; background: var(--bg-light); border-radius: 10px;">
-                        <h3 style="color: var(--primary-green); margin-bottom: 1rem;">Admin Features (Preview)</h3>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: center;">
-                            <div style="padding: 1rem; background: white; border-radius: 8px;">
-                                <strong>📰 News</strong><br>
-                                <small>Add, edit, delete articles</small>
-                            </div>
-                            <div style="padding: 1rem; background: white; border-radius: 8px;">
-                                <strong>🏉 Fixtures</strong><br>
-                                <small>Update scores & results</small>
-                            </div>
-                            <div style="padding: 1rem; background: white; border-radius: 8px;">
-                                <strong>📸 Gallery</strong><br>
-                                <small>Upload team photos</small>
-                            </div>
-                            <div style="padding: 1rem; background: white; border-radius: 8px;">
-                                <strong>👥 Players</strong><br>
-                                <small>Manage team rosters</small>
-                            </div>
+                    <button type="submit" class="login-btn" id="loginButton">
+                        Login to Admin Panel
+                        <span class="loading-spinner" id="loadingSpinner">
+                            <div class="spinner"></div>
+                        </span>
+                    </button>
+                </form>
+
+                <!-- Success Message -->
+                <div id="successMessage" class="success-message">
+                    ✅ Login successful! Redirecting to admin dashboard...
+                </div>
+
+                <!-- Error Message -->
+                <div id="errorMessage" class="error-message">
+                    ❌ Invalid credentials. Please check your username and password.
+                </div>
+
+                <!-- Demo Credentials -->
+                <div class="demo-credentials">
+                    <strong>Demo Credentials:</strong><br>
+                    Username: <code>admin</code><br>
+                    Password: <code>olrfc2025</code>
+                </div>
+                
+                <div class="admin-features">
+                    <h3>🎯 Admin Dashboard Features</h3>
+                    <div class="features-grid">
+                        <div class="feature-card">
+                            <span class="feature-icon">📰</span>
+                            <div class="feature-title">News Management</div>
+                            <div class="feature-desc">Add, edit, delete articles</div>
+                        </div>
+                        <div class="feature-card">
+                            <span class="feature-icon">🏉</span>
+                            <div class="feature-title">Fixtures & Results</div>
+                            <div class="feature-desc">Update scores & results</div>
+                        </div>
+                        <div class="feature-card">
+                            <span class="feature-icon">📸</span>
+                            <div class="feature-title">Photo Gallery</div>
+                            <div class="feature-desc">Upload team photos</div>
+                        </div>
+                        <div class="feature-card">
+                            <span class="feature-icon">👥</span>
+                            <div class="feature-title">Player Management</div>
+                            <div class="feature-desc">Manage team rosters</div>
+                        </div>
+                        <div class="feature-card">
+                            <span class="feature-icon">📊</span>
+                            <div class="feature-title">Analytics</div>
+                            <div class="feature-desc">Content statistics</div>
+                        </div>
+                        <div class="feature-card">
+                            <span class="feature-icon">💾</span>
+                            <div class="feature-title">Data Backup</div>
+                            <div class="feature-desc">Export/import data</div>
                         </div>
                     </div>
                 </div>
-                
-                <div style="text-align: center; margin-top: 2rem;">
-                    <p style="color: var(--text-light);">
-                        <strong>Note:</strong> This is a demo. In production, this would connect to a secure backend system.
-                    </p>
-                </div>
+            </div>
+            
+            <div class="login-note">
+                <strong>Note:</strong> This is a frontend-only admin system that stores data in your browser's local storage. 
+                Perfect for GitHub Pages hosting! All changes are saved locally and can be exported for backup.
             </div>
         </div>
     </main>
 
     <script>
-        document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            // Demo authentication (in real app, this would be secure backend)
-            if (username === 'admin' && password === 'olrfc2025') {
-                alert('Login successful! In a real implementation, you would now access the admin dashboard with content management features.');
-                // In real app: window.location.href = 'admin-dashboard.html';
-            } else {
-                alert('Invalid credentials. Try: username "admin", password "olrfc2025"');
+        // Admin Authentication System
+        class AdminAuth {
+            constructor() {
+                this.form = document.getElementById('adminLoginForm');
+                this.usernameField = document.getElementById('username');
+                this.passwordField = document.getElementById('password');
+                this.loginButton = document.getElementById('loginButton');
+                this.loadingSpinner = document.getElementById('loadingSpinner');
+                this.successMessage = document.getElementById('successMessage');
+                this.errorMessage = document.getElementById('errorMessage');
+                
+                this.initializeEventListeners();
+                this.checkExistingSession();
             }
+
+            initializeEventListeners() {
+                this.form.addEventListener('submit', (e) => this.handleLogin(e));
+                
+                // Clear error message when user starts typing
+                this.usernameField.addEventListener('input', () => this.clearMessages());
+                this.passwordField.addEventListener('input', () => this.clearMessages());
+
+                // Enter key handling
+                this.form.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.handleLogin(e);
+                    }
+                });
+            }
+
+            checkExistingSession() {
+                // Check if user is already logged in
+                const adminSession = localStorage.getItem('olrfc_admin_session');
+                if (adminSession) {
+                    const session = JSON.parse(adminSession);
+                    const now = new Date().getTime();
+                    
+                    // Check if session is still valid (24 hours)
+                    if (now - session.timestamp < 24 * 60 * 60 * 1000) {
+                        this.showSuccess('Existing session found. Redirecting...');
+                        setTimeout(() => {
+                            window.location.href = 'admin-dashboard.html';
+                        }, 1000);
+                        return;
+                    } else {
+                        // Clear expired session
+                        localStorage.removeItem('olrfc_admin_session');
+                    }
+                }
+            }
+
+            async handleLogin(e) {
+                e.preventDefault();
+                
+                const username = this.usernameField.value.trim();
+                const password = this.passwordField.value.trim();
+                
+                // Basic validation
+                if (!username || !password) {
+                    this.showError('Please enter both username and password.');
+                    return;
+                }
+
+                this.setLoading(true);
+                this.clearMessages();
+
+                // Simulate API call delay for better UX
+                await this.delay(1000);
+
+                // Authentication logic
+                if (this.authenticate(username, password)) {
+                    this.loginSuccess(username);
+                } else {
+                    this.loginFailure();
+                }
+            }
+
+            authenticate(username, password) {
+                // Admin credentials (in production, this would be server-side)
+                const validCredentials = [
+                    { username: 'admin', password: 'olrfc2025' },
+                    { username: 'clubadmin', password: 'rugby2025' },
+                    { username: 'olrfc', password: 'admin123' }
+                ];
+
+                return validCredentials.some(cred => 
+                    cred.username === username && cred.password === password
+                );
+            }
+
+            loginSuccess(username) {
+                this.setLoading(false);
+                this.showSuccess('Login successful! Redirecting to admin dashboard...');
+                
+                // Create admin session
+                const session = {
+                    username: username,
+                    timestamp: new Date().getTime(),
+                    loginTime: new Date().toISOString()
+                };
+                localStorage.setItem('olrfc_admin_session', JSON.stringify(session));
+
+                // Log the login attempt
+                this.logLoginAttempt(username, true);
+
+                // Redirect to admin dashboard
+                setTimeout(() => {
+                    window.location.href = 'admin-dashboard.html';
+                }, 1500);
+            }
+
+            loginFailure() {
+                this.setLoading(false);
+                this.showError('Invalid credentials. Please check your username and password.');
+                
+                // Log failed attempt
+                this.logLoginAttempt(this.usernameField.value, false);
+                
+                // Clear password field
+                this.passwordField.value = '';
+                this.passwordField.focus();
+
+                // Add shake animation to form
+                this.form.style.animation = 'shake 0.5s';
+                setTimeout(() => {
+                    this.form.style.animation = '';
+                }, 500);
+            }
+
+            setLoading(isLoading) {
+                this.loginButton.disabled = isLoading;
+                this.loadingSpinner.style.display = isLoading ? 'inline-block' : 'none';
+                this.loginButton.textContent = isLoading ? 'Logging in...' : 'Login to Admin Panel';
+                
+                if (isLoading) {
+                    this.loginButton.appendChild(this.loadingSpinner);
+                }
+            }
+
+            showSuccess(message) {
+                this.successMessage.textContent = message;
+                this.successMessage.style.display = 'block';
+                this.errorMessage.style.display = 'none';
+            }
+
+            showError(message) {
+                this.errorMessage.textContent = message;
+                this.errorMessage.style.display = 'block';
+                this.successMessage.style.display = 'none';
+            }
+
+            clearMessages() {
+                this.successMessage.style.display = 'none';
+                this.errorMessage.style.display = 'none';
+            }
+
+            logLoginAttempt(username, success) {
+                const attempts = JSON.parse(localStorage.getItem('olrfc_login_attempts') || '[]');
+                attempts.push({
+                    username: username,
+                    success: success,
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent
+                });
+                
+                // Keep only last 50 attempts
+                if (attempts.length > 50) {
+                    attempts.splice(0, attempts.length - 50);
+                }
+                
+                localStorage.setItem('olrfc_login_attempts', JSON.stringify(attempts));
+            }
+
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        // Initialize admin authentication when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new AdminAuth();
         });
+
+        // Add shake animation CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Logout function (can be called from admin dashboard)
+        function adminLogout() {
+            localStorage.removeItem('olrfc_admin_session');
+            window.location.href = 'admin-login.html';
+        }
+
+        // Check admin session function (can be used by other admin pages)
+        function checkAdminSession() {
+            const session = localStorage.getItem('olrfc_admin_session');
+            if (!session) {
+                window.location.href = 'admin-login.html';
+                return false;
+            }
+            
+            const sessionData = JSON.parse(session);
+            const now = new Date().getTime();
+            
+            if (now - sessionData.timestamp > 24 * 60 * 60 * 1000) {
+                localStorage.removeItem('olrfc_admin_session');
+                window.location.href = 'admin-login.html';
+                return false;
+            }
+            
+            return sessionData;
+        }
+
+        // Make functions available globally
+        window.adminLogout = adminLogout;
+        window.checkAdminSession = checkAdminSession;
     </script>
-</body>
+</body
 </html>

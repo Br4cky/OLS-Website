@@ -208,7 +208,7 @@ const newsArticles = [
 function initializeNewsFiltering() {
     createNewsFilters();
     createMatchResultsSection();
-    createSocialMediaPreview();
+    //createSocialMediaPreview();
     renderNewsGrid('all');
     updateMatchResults('all');
     updateSocialPreview('all');

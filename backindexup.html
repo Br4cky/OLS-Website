@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Old Laurentian RFC - Your Club. Your Pride. Your Legacy.</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <style>
+        /* Admin controlled elements */
+        .nav-item[data-admin-controlled="true"] {
+            display: none;
+        }
+
+        .nav-item[data-admin-controlled="true"].admin-enabled {
+            display: block;
+        }
+
+        /* Live Social Media Section */
+        .live-social-section {
+            padding: 3rem 0;
+            background: var(--bg-light);
+        }
+
+        .social-embed {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .social-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .facebook-logo {
+            width: 50px;
+            height: 50px;
+            background: #1877f2;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .instagram-logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        /* RFU League Table */
+        .rfu-league-section {
+            padding: 3rem 0;
+            background: white;
+        }
+
+        .league-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .league-header {
+            background: var(--primary-green);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .league-content {
+            padding: 2rem;
+        }
+
+        /* Sponsor Tickertape Banner Styles - FIXED positioning */
+        .sponsor-banner {
+            background: var(--white);
+            padding: 1rem 0;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            position: relative;
+            border-top: 3px solid var(--accent-gold);
+            border-bottom: 3px solid var(--accent-gold);
+            margin-top: 80px; /* Space for fixed header */
+            z-index: 50; /* Below header but above other content */
+        }
+
+        .sponsor-ticker {
+            display: flex;
+            animation: sponsorScroll 30s linear infinite;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .sponsor-ticker:hover {
+            animation-play-state: paused;
+        }
+
+        .sponsor-logo-banner {
+            flex: 0 0 auto;
+            height: 60px;
+            min-width: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            background: var(--white);
+            border-radius: 8px;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            filter: grayscale(20%) opacity(0.8);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .sponsor-logo-banner:hover {
+            transform: scale(1.1);
+            filter: grayscale(0%) opacity(1);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .sponsor-logo-banner img {
+            max-height: 50px;
+            max-width: 100px;
+            object-fit: contain;
+        }
+
+        .sponsor-logo-banner.placeholder {
+            background: linear-gradient(45deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        @keyframes sponsorScroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* Hero Section - FIXED to account for header */
+        .hero {
+            background: linear-gradient(135deg, rgba(46, 80, 22, 0.9), rgba(139, 21, 56, 0.9)), url('images/hero-bg.jpg') center/cover;
+            min-height: 60vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            position: relative;
+            margin: 0;
+            padding: 3rem 1rem;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: var(--accent-gold);
+            color: var(--primary-green);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        /* ENHANCED FIXTURES SECTION - Horizontal Scrolling Timeline */
+        /* ENHANCED FIXTURES SECTION - Club Colors Gradient Background with Fade Edges */
+.fixtures-timeline-container {
+    position: relative;
+    margin-top: 2rem;
+    overflow: hidden;
+}
+
+.fixtures-timeline {
+    display: flex;
+    overflow-x: auto;
+    gap: 1.5rem;
+    padding: 1rem 0;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    margin-left: -2rem;
+    margin-right: -2rem;
+}
+
+.fixtures-timeline::-webkit-scrollbar {
+    height: 8px;
+}
+
+.fixtures-timeline::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+}
+
+.fixtures-timeline::-webkit-scrollbar-thumb {
+    background: var(--accent-gold);
+    border-radius: 10px;
+}
+
+.fixtures-timeline::-webkit-scrollbar-thumb:hover {
+    background: rgba(244, 196, 48, 0.8);
+}
+
+/* Fade effect overlays - blend with gradient background */
+.fixtures-timeline-container::before,
+.fixtures-timeline-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 80px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* Left fade - blend with club gradient */
+.fixtures-timeline-container::before {
+    left: 0;
+    background: linear-gradient(to right, 
+        #2e5016 0%, 
+        rgba(46, 80, 22, 0.9) 15%, 
+        rgba(46, 80, 22, 0.7) 35%, 
+        rgba(46, 80, 22, 0.4) 60%, 
+        rgba(46, 80, 22, 0.2) 80%, 
+        transparent 100%);
+}
+
+/* Right fade - blend with club gradient */
+.fixtures-timeline-container::after {
+    right: 0;
+    background: linear-gradient(to left, 
+        #8b1538 0%, 
+        rgba(139, 21, 56, 0.9) 15%, 
+        rgba(139, 21, 56, 0.7) 35%, 
+        rgba(139, 21, 56, 0.4) 60%, 
+        rgba(139, 21, 56, 0.2) 80%, 
+        transparent 100%);
+}
+
+/* Club colors gradient background for entire fixtures section */
+.match-info {
+    background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-maroon) 100%);
+    position: relative;
+}
+
+/* Add subtle overlay pattern for texture */
+.match-info::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+}
+
+/* Ensure content sits above the overlay */
+.match-info .container {
+    position: relative;
+    z-index: 2;
+}
+
+/* Update section title color for gradient background */
+.match-info .section-title {
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Update team filter styling for gradient background */
+.fixtures-team-filter {
+    background: rgba(255,255,255,0.1);
+    padding: 1.5rem;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    margin-bottom: 2rem;
+}
+
+.fixtures-team-filter h3 {
+    color: white;
+    margin-bottom: 1rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.team-filter-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.team-filter-btn {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 2px solid rgba(255,255,255,0.3);
+    padding: 0.8rem 1.5rem;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.team-filter-btn:hover {
+    background: rgba(255,255,255,0.3);
+    border-color: var(--accent-gold);
+    transform: translateY(-2px);
+}
+
+.team-filter-btn.active {
+    background: var(--accent-gold);
+    color: var(--primary-green);
+    border-color: var(--accent-gold);
+    box-shadow: 0 5px 15px rgba(244, 196, 48, 0.4);
+}
+
+/* Update timeline navigation for gradient background */
+.timeline-navigation {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.timeline-nav-btn {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 2px solid rgba(255,255,255,0.3);
+    padding: 0.8rem 1.5rem;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.timeline-nav-btn:hover {
+    background: var(--accent-gold);
+    color: var(--primary-green);
+    border-color: var(--accent-gold);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(244, 196, 48, 0.4);
+}
+
+.timeline-nav-btn:disabled {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.5);
+    border-color: rgba(255,255,255,0.1);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+        .fixture-timeline-card {
+            flex: 0 0 320px;
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            scroll-snap-align: start;
+            position: relative;
+        }
+
+        .fixture-timeline-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .fixture-timeline-card.current-match {
+            border: 3px solid var(--accent-gold);
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .fixture-timeline-card.past-match {
+            opacity: 0.9;
+        }
+
+        .fixture-timeline-card.future-match {
+            border-left: 4px solid var(--primary-green);
+        }
+
+        .match-status {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary-green);
+            color: white;
+            padding: 0.3rem 1rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .match-status.current {
+            background: var(--accent-gold);
+            color: var(--primary-green);
+        }
+
+        .match-status.upcoming {
+            background: var(--primary-maroon);
+        }
+
+        .match-teams-timeline {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--primary-green);
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .match-score-timeline {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 1rem 0;
+            color: var(--primary-maroon);
+        }
+
+        .match-date-timeline {
+            text-align: center;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .match-details-timeline {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+
+        .match-competition-timeline {
+            background: var(--bg-light);
+            padding: 0.5rem;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-dark);
+            font-style: italic;
+        }
+
+        .timeline-navigation {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .timeline-nav-btn {
+            background: var(--primary-green);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-nav-btn:hover {
+            background: var(--primary-maroon);
+            transform: translateY(-2px);
+        }
+
+        .timeline-nav-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @media (max-width: 768px) {
+            /* Stack social feeds vertically on mobile */
+            .live-social-section .container > div[style*="grid-template-columns"] {
+                grid-template-columns: 1fr !important;
+                gap: 2rem;
+            }
+            
+            .social-header {
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+
+            .sponsor-banner {
+                margin-top: 70px; /* Adjust for mobile header height */
+            }
+            
+            .sponsor-ticker {
+                gap: 2rem;
+            }
+            
+            .sponsor-logo-banner {
+                min-width: 100px;
+                height: 50px;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero p {
+                font-size: 1.1rem;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .fixture-timeline-card {
+                flex: 0 0 280px;
+            }
+
+            .timeline-navigation {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">
+                    <img src="images/logo/olrfc-logo.png" alt="Old Laurentian RFC Crest">
+                </div>
+                <div>
+                    <div class="club-name">Old Laurentian RFC</div>
+                    <div class="tagline">Your Club. Your Pride. Your Legacy.</div>
+                </div>
+            </div>
+            <nav class="nav" id="nav">
+                <a href="#home" class="nav-link active">Home</a>
+                <a href="#news" class="nav-link">News</a>
+                <a href="#fixtures" class="nav-link">Fixtures</a>
+                <div class="nav-dropdown">
+                    <a href="#teams" class="nav-link dropdown-toggle">Teams <span class="dropdown-arrow">▼</span></a>
+                    <div class="dropdown-menu">
+                        <a href="pages/teams/mens-1st-xv.html" class="dropdown-item">Mens 1st XV</a>
+                        <a href="pages/teams/mens-2nd-xv.html" class="dropdown-item">Mens 2nd XV</a>
+                        <a href="pages/teams/womens.html" class="dropdown-item">Womens</a>
+                        <a href="pages/teams/colts.html" class="dropdown-item">Colts</a>
+                        <a href="pages/teams/u16s.html" class="dropdown-item">U16s</a>
+                        <a href="pages/teams/u14s.html" class="dropdown-item">U14s</a>
+                    </div>
+                </div>
+                <a href="#about" class="nav-link">About</a>
+                <a href="pages/gallery.html" class="nav-link">Gallery</a>
+                
+                <!-- Admin Controlled Shop Tab -->
+                <a href="pages/shop.html" class="nav-link nav-item" data-admin-controlled="true" data-feature="shop">Shop</a>
+                
+                <a href="pages/club-contacts.html" class="nav-link">Contact</a>
+            </nav>
+            <button class="menu-toggle" id="menuToggle">☰</button>
+        </div>
+    </header>
+
+    <!-- Sponsor Banner -->
+    <section class="sponsor-banner" id="sponsorBanner" style="display: none;">
+        <div class="sponsor-ticker" id="sponsorTickerMain">
+            <!-- Sponsors will be loaded here dynamically -->
+        </div>
+    </section>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1>Welcome to Old Laurentian RFC</h1>
+            <p>Proudly representing tradition, excellence, and the spirit of rugby since our founding</p>
+            <div class="cta-buttons">
+                <a href="#fixtures" class="btn btn-primary">View Fixtures</a>
+                <a href="#about" class="btn btn-secondary">About Our Club</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Our SociOLS Section -->
+    <section class="live-social-section">
+        <div class="container">
+            <h2 class="section-title fade-in">Our SociOLS</h2>
+            
+            <!-- Social Media Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem;">
+                
+                <!-- Instagram Feed (Left) -->
+                <div class="social-embed">
+                    <div id="instagram-feed">
+                        <!-- Instagram Feed -->
+                        <iframe src="https://www.instagram.com/olsrugby/embed" 
+                                width="100%" 
+                                height="700" 
+                                style="border:none;overflow:hidden;border-radius:10px;" 
+                                scrolling="no" 
+                                frameborder="0">
+                        </iframe>
+                    </div>
+                </div>
+                
+                <!-- Facebook Feed (Right) -->
+                <div class="social-embed">
+                    <div id="facebook-feed">
+                        <!-- Live Facebook Feed - Loads Automatically -->
+                        <iframe src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Folsrugby&tabs=timeline&width=500&height=700&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true" 
+                                width="100%" 
+                                height="700" 
+                                style="border:none;overflow:hidden;" 
+                                scrolling="no" 
+                                frameborder="0" 
+                                allowfullscreen="true" 
+                                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Latest News -->
+    <section id="news" class="news-section">
+        <div class="container">
+            <h2 class="section-title fade-in">Latest News</h2>
+            <div class="news-grid">
+                <!-- News articles will be populated by JavaScript -->
+                <article class="news-card fade-in">
+                    <div class="news-image">
+                        <div class="placeholder-image">🏉 Match Report</div>
+                    </div>
+                    <div class="news-content">
+                        <div class="news-date">June 20, 2025</div>
+                        <h3 class="news-title">Victory Against Local Rivals</h3>
+                        <p class="news-excerpt">Old Laurentian RFC secured a thrilling 24-17 victory in last weekend's derby match...</p>
+                        <a href="#" class="btn btn-primary">Read More</a>
+                    </div>
+                </article>
+                
+                <article class="news-card fade-in">
+                    <div class="news-image">
+                        <div class="placeholder-image">🏃 Training</div>
+                    </div>
+                    <div class="news-content">
+                        <div class="news-date">June 15, 2025</div>
+                        <h3 class="news-title">New Season Training Begins</h3>
+                        <p class="news-excerpt">Pre-season training has commenced with great enthusiasm from players and coaching staff...</p>
+                        <a href="#" class="btn btn-primary">Read More</a>
+                    </div>
+                </article>
+                
+                <article class="news-card fade-in">
+                    <div class="news-image">
+                        <div class="placeholder-image">👩 Community</div>
+                    </div>
+                    <div class="news-content">
+                        <div class="news-date">June 10, 2025</div>
+                        <h3 class="news-title">Youth Rugby Initiative Launch</h3>
+                        <p class="news-excerpt">We're excited to announce our new youth development program...</p>
+                        <a href="#" class="btn btn-primary">Read More</a>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- RFU League Table Section - Simple Version -->
+    <section class="rfu-league-section">
+        <div class="container">
+            <h2 class="section-title fade-in">League Table</h2>
+            <div class="league-table">
+                <div class="league-header">
+                    <h3>🏆 Current League Standings</h3>
+                    <p>Live from RFU - Updated Weekly</p>
+                </div>
+                <div class="league-content">
+                    <div id="rfu-league-table" style="text-align: center; padding: 3rem 2rem;">
+                        
+                        <!-- Simple Clean Button -->
+                        <a href="https://www.englandrugby.com/fixtures-and-results/search-results?division=66509&competition=1597&season=2025-2026#tables" 
+                           target="_blank" 
+                           style="
+                               display: inline-block;
+                               background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+                               color: white;
+                               padding: 1.2rem 3rem;
+                               border-radius: 50px;
+                               text-decoration: none;
+                               font-size: 1.2rem;
+                               font-weight: bold;
+                               box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+                               transition: all 0.3s ease;
+                               border: none;
+                               cursor: pointer;
+                           "
+                           onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 35px rgba(0,0,0,0.3)';"
+                           onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.2)';">
+                            🏉 View Official League Table
+                        </a>
+                        
+                        <p style="margin-top: 1.5rem; font-size: 0.9rem; color: #666;">
+                            Opens in new tab • Official England Rugby data
+                        </p>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ENHANCED Fixtures & Results WITH HORIZONTAL SCROLLING TIMELINE -->
+    <section id="fixtures" class="match-info">
+        <div class="container">
+            <h2 class="section-title fade-in">Fixtures & Results</h2>
+            
+            <!-- Team Filter for Fixtures -->
+            <div class="fixtures-team-filter">
+                <h3>Select Team:</h3>
+                <div class="team-filter-buttons">
+                    <button class="team-filter-btn active" data-team="mens-1st">Mens 1st XV</button>
+                    <button class="team-filter-btn" data-team="mens-2nd">Mens 2nd XV</button>
+                    <button class="team-filter-btn" data-team="ladies">Phoenix Ladies</button>
+                    <button class="team-filter-btn" data-team="colts">Colts</button>
+                    <button class="team-filter-btn" data-team="u16s">U16s</button>
+                    <button class="team-filter-btn" data-team="u14s">U14s</button>
+                </div>
+            </div>
+            
+            <!-- Horizontal Scrolling Timeline -->
+            <div class="fixtures-timeline-container">
+                <div class="fixtures-timeline" id="fixtures-timeline">
+                    <!-- Timeline cards will be populated by JavaScript -->
+                </div>
+                
+                <div class="timeline-navigation">
+                    <button class="timeline-nav-btn" id="scrollLeft" onclick="scrollTimeline('left')">← Past Results</button>
+                    <button class="timeline-nav-btn" id="scrollRight" onclick="scrollTimeline('right')">Future Fixtures →</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Club Stats -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="stats-grid fade-in">
+                <div class="stat-item">
+                    <span class="stat-number">150+</span>
+                    <span class="stat-label">Club Members</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">50+</span>
+                    <span class="stat-label">Years of Heritage</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">12</span>
+                    <span class="stat-label">Wins This Season</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">6</span>
+                    <span class="stat-label">Teams</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about-section">
+        <div class="container">
+            <h2 class="section-title fade-in">About Old Laurentian RFC</h2>
+            <div class="about-grid">
+                <div class="about-text fade-in">
+                    <p>Old Laurentian RFC has been a cornerstone of local rugby for decades, fostering a tradition of excellence both on and off the field. Our club is built on the values of respect, integrity, passion, solidarity, and discipline - the core principles that guide everything we do.</p>
+                    
+                    <p>From our humble beginnings to our current position as a respected member of the rugby community, we have always prioritized the development of players at every level. Whether you're a seasoned veteran or new to the sport, Old Laurentian RFC welcomes you to be part of our rugby family.</p>
+                    
+                    <p>Our commitment extends beyond match day, with active community involvement, youth development programs, and a strong social calendar that brings together players, supporters, and families throughout the year.</p>
+                </div>
+                <div class="about-image fade-in">
+                    <div class="placeholder-image">Club Heritage Image</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Contact Information</h3>
+                    <p>📍 [Club Address]</p>
+                    <p>📞 [Phone Number]</p>
+                    <p>✉️ [Email Address]</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <a href="#news">Latest News</a>
+                    <a href="#fixtures">Fixtures & Results</a>
+                    <a href="#teams">Teams</a>
+                    <a href="pages/gallery.html">Gallery</a>
+                    <a href="pages/club-contacts.html">Club Contacts</a>
+                    <a href="pages/sponsors.html">Our Sponsors</a>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Training Times</h3>
+                    <p>Senior Training:</p>
+                    <p>Tuesday & Thursday 7:00 PM</p>
+                    <p>Youth Training:</p>
+                    <p>Saturday 10:00 AM</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Follow Us</h3>
+                    <div class="social-icons">
+                        <!-- Live Social Media Links -->
+                        <a href="https://www.facebook.com/olsrugby" target="_blank" aria-label="Facebook">FB</a>
+                        <a href="https://www.instagram.com/olsrugby" target="_blank" aria-label="Instagram">IG</a>
+                        <a href="https://twitter.com/YOUR_TWITTER" target="_blank" aria-label="Twitter">TW</a>
+                        <a href="#" aria-label="YouTube">YT</a>
+                    </div>
+                </div>
+
+                <div class="footer-section">
+                    <h3>Admin Access</h3>
+                    <a href="#" onclick="toggleAdminDashboard()" style="color: var(--accent-gold); text-decoration: none; font-weight: bold; transition: color 0.3s ease;">
+                        🔐 Admin Login
+                    </a>
+                    <p style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
+                        Club administrators only
+                    </p>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 Old Laurentian RFC. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts - Keeping all your existing functionality -->
+    <script src="js/main.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/news-filter.js"></script>
+    <script src="js/fixtures-filter.js"></script>
+    <script src="js/admin-data-loader.js"></script>
+
+    <script>
+        // Sponsor Banner Integration
+        class SponsorBannerLoader {
+            constructor() {
+                this.init();
+            }
+
+            init() {
+                this.loadSponsorBanner();
+                // Reload banner when storage changes (admin updates)
+                window.addEventListener('storage', () => {
+                    this.loadSponsorBanner();
+                });
+            }
+
+            getData() {
+                try {
+                    return JSON.parse(localStorage.getItem('olrfc_sponsors')) || [];
+                } catch (e) {
+                    console.error('Error loading sponsors:', e);
+                    return [];
+                }
+            }
+
+            loadSponsorBanner() {
+                const sponsors = this.getData().filter(sponsor => sponsor.active);
+                const bannerElement = document.getElementById('sponsorBanner');
+                const tickerElement = document.getElementById('sponsorTickerMain');
+                
+                if (!bannerElement || !tickerElement) return;
+
+                if (sponsors.length === 0) {
+                    bannerElement.style.display = 'none';
+                    return;
+                }
+
+                bannerElement.style.display = 'block';
+                
+                // Create sponsor logos (duplicate for seamless scroll)
+                const sponsorLogos = [...sponsors, ...sponsors];
+                
+                tickerElement.innerHTML = '';
+                
+                sponsorLogos.forEach(sponsor => {
+                    const logoDiv = document.createElement('div');
+                    logoDiv.className = 'sponsor-logo-banner';
+                    logoDiv.onclick = () => {
+                        if (sponsor.website) {
+                            window.open(sponsor.website, '_blank');
+                        }
+                    };
+
+                    if (sponsor.logo) {
+                        logoDiv.innerHTML = `<img src="${sponsor.logo}" alt="${sponsor.name}" title="${sponsor.name}">`;
+                    } else {
+                        logoDiv.className += ' placeholder';
+                        logoDiv.textContent = sponsor.name;
+                        logoDiv.title = sponsor.name;
+                    }
+
+                    tickerElement.appendChild(logoDiv);
+                });
+            }
+        }
+
+        // ENHANCED FIXTURES TIMELINE SYSTEM
+        class FixturesTimeline {
+            constructor() {
+                this.currentTeam = 'mens-1st';
+                this.timeline = document.getElementById('fixtures-timeline');
+                this.init();
+            }
+
+            init() {
+                this.setupTeamFilters();
+                this.loadTimelineData();
+            }
+
+            setupTeamFilters() {
+               const filterButtons = document.querySelectorAll('.team-filter-btn');
+               filterButtons.forEach(btn => {
+                   btn.addEventListener('click', () => {
+                       // Update active button
+                       filterButtons.forEach(b => b.classList.remove('active'));
+                       btn.classList.add('active');
+                       
+                       // Update current team and reload timeline
+                       this.currentTeam = btn.getAttribute('data-team');
+                       this.loadTimelineData();
+                   });
+               });
+           }
+
+           getData(key) {
+               try {
+                   return JSON.parse(localStorage.getItem(`olrfc_${key}`)) || [];
+               } catch (e) {
+                   console.error(`Error loading ${key} data:`, e);
+                   return [];
+               }
+           }
+
+           loadTimelineData() {
+               // Combine static data from fixtures-filter.js and dynamic data from admin
+               const staticData = this.getStaticTeamData(this.currentTeam);
+               const dynamicData = this.getData('fixtures').filter(f => f.team === this.currentTeam);
+               
+               // Create combined timeline data
+               const timelineData = this.combineFixtureData(staticData, dynamicData);
+               
+               // Sort chronologically
+               timelineData.sort((a, b) => new Date(a.date) - new Date(b.date));
+               
+               // Find current match index (most recent result)
+               const currentDate = new Date();
+               let currentIndex = timelineData.findIndex(match => 
+                   match.isResult && new Date(match.date) <= currentDate
+               );
+               
+               if (currentIndex === -1) {
+                   currentIndex = timelineData.findIndex(match => !match.isResult) - 1;
+               }
+               
+               this.renderTimeline(timelineData, currentIndex);
+               this.scrollToCurrentMatch(currentIndex);
+           }
+
+           getStaticTeamData(team) {
+               // Import data from fixtures-filter.js
+               const teamData = typeof teamFixturesData !== 'undefined' ? teamFixturesData[team] : null;
+               const fixtures = [];
+               
+               if (teamData) {
+                   // Add last result
+                   if (teamData.lastResult) {
+                       fixtures.push({
+                           ...teamData.lastResult,
+                           isResult: true,
+                           type: 'result',
+                           ourScore: teamData.lastResult.homeScore,
+                           theirScore: teamData.lastResult.awayScore,
+                           opponent: teamData.lastResult.awayTeam.replace('Old Laurentian RFC', '').replace('Old Laurentian RFC 2nd XV', '').replace('Phoenix Ladies', '').replace('Old Laurentian RFC Colts', '').replace('Old Laurentian RFC U16s', '').replace('Old Laurentian RFC U14s', '').trim() || teamData.lastResult.homeTeam.replace('Old Laurentian RFC', '').replace('Old Laurentian RFC 2nd XV', '').replace('Phoenix Ladies', '').replace('Old Laurentian RFC Colts', '').replace('Old Laurentian RFC U16s', '').replace('Old Laurentian RFC U14s', '').trim()
+                       });
+                   }
+                   
+                   // Add upcoming fixtures
+                   teamData.nextFixtures?.forEach(fixture => {
+                       fixtures.push({
+                           ...fixture,
+                           isResult: false,
+                           type: 'fixture',
+                           ourScore: null,
+                           theirScore: null,
+                           opponent: fixture.awayTeam.replace('Old Laurentian RFC', '').replace('Old Laurentian RFC 2nd XV', '').replace('Phoenix Ladies', '').replace('Old Laurentian RFC Colts', '').replace('Old Laurentian RFC U16s', '').replace('Old Laurentian RFC U14s', '').trim() || fixture.homeTeam.replace('Old Laurentian RFC', '').replace('Old Laurentian RFC 2nd XV', '').replace('Phoenix Ladies', '').replace('Old Laurentian RFC Colts', '').replace('Old Laurentian RFC U16s', '').replace('Old Laurentian RFC U14s', '').trim()
+                       });
+                   });
+               }
+               
+               return fixtures;
+           }
+
+           combineFixtureData(staticData, dynamicData) {
+               // Start with static data
+               let combined = [...staticData];
+               
+               // Add dynamic data that doesn't conflict
+               dynamicData.forEach(dynFixture => {
+                   const exists = combined.find(match => 
+                       Math.abs(new Date(match.date) - new Date(dynFixture.dateTime)) < 24 * 60 * 60 * 1000
+                   );
+                   
+                   if (!exists) {
+                       combined.push({
+                           date: dynFixture.dateTime,
+                           opponent: dynFixture.opponent,
+                           isResult: dynFixture.ourScore !== null && dynFixture.theirScore !== null,
+                           type: dynFixture.ourScore !== null ? 'result' : 'fixture',
+                           ourScore: dynFixture.ourScore,
+                           theirScore: dynFixture.theirScore,
+                           venue: dynFixture.venue === 'home' ? 'Home Ground' : 'Away',
+                           competition: dynFixture.competition || 'Friendly',
+                           time: new Date(dynFixture.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                       });
+                   }
+               });
+               
+               // Add some historical results for demo
+               const currentDate = new Date();
+               for (let i = 1; i <= 5; i++) {
+                   const pastDate = new Date(currentDate);
+                   pastDate.setDate(pastDate.getDate() - (i * 14));
+                   
+                   combined.push({
+                       date: pastDate.toISOString().split('T')[0],
+                       opponent: ['Leicester RFC', 'Nottingham RFC', 'Derby RFC', 'Birmingham RFC', 'Coventry RFC'][i-1],
+                       isResult: true,
+                       type: 'result',
+                       ourScore: 15 + Math.floor(Math.random() * 20),
+                       theirScore: 10 + Math.floor(Math.random() * 20),
+                       venue: i % 2 === 0 ? 'Home Ground' : 'Away',
+                       competition: 'Regional Championship',
+                       time: '15:00'
+                   });
+               }
+               
+               // Add more upcoming fixtures
+               for (let i = 1; i <= 4; i++) {
+                   const futureDate = new Date(currentDate);
+                   futureDate.setDate(futureDate.getDate() + (i * 7) + 14);
+                   
+                   combined.push({
+                       date: futureDate.toISOString().split('T')[0],
+                       opponent: ['Worcester RFC', 'Gloucester RFC', 'Bristol RFC', 'Bath RFC'][i-1],
+                       isResult: false,
+                       type: 'fixture',
+                       ourScore: null,
+                       theirScore: null,
+                       venue: i % 2 === 0 ? 'Away' : 'Home Ground',
+                       competition: 'Regional Championship',
+                       time: '15:00'
+                   });
+               }
+               
+               return combined;
+           }
+
+           renderTimeline(timelineData, currentIndex) {
+               this.timeline.innerHTML = '';
+               
+               timelineData.forEach((match, index) => {
+                   const card = document.createElement('div');
+                   const isCurrent = index === currentIndex;
+                   const isPast = index < currentIndex;
+                   const isFuture = index > currentIndex;
+                   
+                   card.className = `fixture-timeline-card ${isCurrent ? 'current-match' : ''} ${isPast ? 'past-match' : ''} ${isFuture ? 'future-match' : ''}`;
+                   
+                   const statusText = isCurrent ? 'Latest Result' : isPast ? 'Past Result' : 'Upcoming';
+                   const statusClass = isCurrent ? 'current' : isPast ? 'past' : 'upcoming';
+                   
+                   if (match.isResult) {
+                       const isWin = parseInt(match.ourScore) > parseInt(match.theirScore);
+                       const isDraw = parseInt(match.ourScore) === parseInt(match.theirScore);
+                       const resultText = isWin ? 'Victory' : isDraw ? 'Draw' : 'Defeat';
+                       
+                       card.innerHTML = `
+                           <div class="match-status ${statusClass}">${statusText}</div>
+                           <div class="match-teams-timeline">OLS vs ${match.opponent}</div>
+                           <div class="match-score-timeline">${match.ourScore} - ${match.theirScore}</div>
+                           <div class="match-date-timeline">${this.formatDate(match.date)}</div>
+                           <div class="match-details-timeline">
+                               ${match.venue}<br>
+                               <strong>${resultText}</strong>
+                           </div>
+                           <div class="match-competition-timeline">${match.competition || 'Friendly'}</div>
+                       `;
+                   } else {
+                       card.innerHTML = `
+                           <div class="match-status ${statusClass}">${statusText}</div>
+                           <div class="match-teams-timeline">OLS vs ${match.opponent}</div>
+                           <div class="match-score-timeline">${match.time || '15:00'}</div>
+                           <div class="match-date-timeline">${this.formatDate(match.date)}</div>
+                           <div class="match-details-timeline">
+                               ${match.venue}<br>
+                               <strong>Kick-off: ${match.time || '15:00'}</strong>
+                           </div>
+                           <div class="match-competition-timeline">${match.competition || 'Friendly'}</div>
+                       `;
+                   }
+                   
+                   this.timeline.appendChild(card);
+               });
+           }
+
+           formatDate(dateString) {
+               const date = new Date(dateString);
+               const options = { 
+                   weekday: 'short', 
+                   month: 'short', 
+                   day: 'numeric',
+                   year: 'numeric'
+               };
+               return date.toLocaleDateString('en-GB', options);
+           }
+
+           scrollToCurrentMatch(currentIndex) {
+               setTimeout(() => {
+                   const cards = this.timeline.querySelectorAll('.fixture-timeline-card');
+                   if (cards[currentIndex]) {
+                       cards[currentIndex].scrollIntoView({
+                           behavior: 'smooth',
+                           block: 'nearest',
+                           inline: 'center'
+                       });
+                   }
+               }, 100);
+           }
+       }
+
+       // Timeline Navigation Functions
+       function scrollTimeline(direction) {
+           const timeline = document.getElementById('fixtures-timeline');
+           const scrollAmount = 340; // Card width + gap
+           
+           if (direction === 'left') {
+               timeline.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+           } else {
+               timeline.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+           }
+       }
+
+       // Admin Login Function - NOW REDIRECTS TO ADMIN DASHBOARD
+       function toggleAdminDashboard() {
+           const password = prompt('Enter admin password:');
+           
+           if (password === 'olrfc2025') {
+               // Create admin session
+               const adminSession = {
+                   username: 'Admin User',
+                   timestamp: new Date().getTime()
+               };
+               localStorage.setItem('olrfc_admin_session', JSON.stringify(adminSession));
+               
+               // Redirect to admin dashboard
+               window.location.href = 'pages/admin-dashboard.html';
+           } else if (password !== null) {
+               alert('Incorrect password');
+           }
+       }
+
+       // Feature state management for public users
+       const featureStates = {
+           shop: false,
+           events: false,
+           members: false,
+           payments: false,
+           sponsors: false
+       };
+
+       function loadFeatureStates() {
+           const saved = localStorage.getItem('olrfc_admin_features');
+           if (saved) {
+               Object.assign(featureStates, JSON.parse(saved));
+           }
+           
+           // Apply saved states to navigation
+           Object.keys(featureStates).forEach(feature => {
+               const navItems = document.querySelectorAll(`[data-admin-controlled="true"][data-feature="${feature}"]`);
+               
+               if (feature === 'sponsors') {
+                  // Handle sponsor banner visibility
+                  const sponsorBanner = document.getElementById('sponsorBanner');
+                  if (sponsorBanner && featureStates[feature]) {
+                      sponsorBannerLoader.loadSponsorBanner();
+                  } else if (sponsorBanner) {
+                      sponsorBanner.style.display = 'none';
+                  }
+              }
+              
+              navItems.forEach(item => {
+                  item.classList.toggle('admin-enabled', featureStates[feature]);
+              });
+          });
+      }
+
+      // Initialize everything
+      let sponsorBannerLoader;
+      let fixturesTimeline;
+      
+      // Load feature states on page load (public users see saved admin settings)
+      document.addEventListener('DOMContentLoaded', function() {
+          sponsorBannerLoader = new SponsorBannerLoader();
+          fixturesTimeline = new FixturesTimeline();
+          loadFeatureStates();
+      });
+  </script>
+</body>
+</html>

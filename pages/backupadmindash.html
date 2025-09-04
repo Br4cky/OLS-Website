@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Old Laurentian RFC</title>
+    <style>
+        :root {
+            --primary-green: #2e5016;
+            --primary-maroon: #8b1538;
+            --accent-gold: #f4c430;
+            --text-dark: #333;
+            --text-light: #666;
+            --bg-light: #f8f9fa;
+            --white: #ffffff;
+            --shadow: 0 5px 15px rgba(0,0,0,0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: var(--text-dark);
+            background: var(--bg-light);
+        }
+
+        .admin-header {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            padding: 1rem 0;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .admin-header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .admin-logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .admin-logo img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: white;
+            padding: 5px;
+        }
+
+        .admin-nav {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .admin-nav a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .admin-nav a:hover, .admin-nav a.active {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .admin-nav a.logout {
+            background: #dc3545;
+        }
+
+        .admin-nav a.logout:hover {
+            background: #c82333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .dashboard-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            transition: var(--transition);
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-gold);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            color: var(--primary-green);
+            margin-bottom: 1rem;
+        }
+
+        .card-description {
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            background: var(--primary-green);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: var(--primary-maroon);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--accent-gold);
+            color: var(--primary-green);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .admin-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            display: none;
+        }
+
+        .admin-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--bg-light);
+        }
+
+        .section-header h2 {
+            color: var(--primary-green);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--text-dark);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-green);
+        }
+
+        .form-group textarea {
+            height: 120px;
+            resize: vertical;
+        }
+
+        .file-upload {
+            border: 2px dashed #ddd;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 8px;
+            transition: border-color 0.3s ease;
+            background: var(--bg-light);
+        }
+
+        .file-upload:hover {
+            border-color: var(--primary-green);
+        }
+
+        .file-upload input {
+            margin-top: 1rem;
+        }
+
+        .content-list {
+            margin-top: 2rem;
+        }
+
+        .content-item {
+            background: var(--bg-light);
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: var(--transition);
+        }
+
+        .content-item:hover {
+            background: #e9ecef;
+        }
+
+        .content-info h4 {
+            color: var(--primary-green);
+            margin-bottom: 0.5rem;
+        }
+
+        .content-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.9rem;
+        }
+
+        .btn-edit {
+            background: var(--accent-gold);
+            color: var(--primary-green);
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(45deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            display: block;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--bg-light);
+        }
+
+        .modal-header h3 {
+            color: var(--primary-green);
+        }
+
+        .close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .close:hover {
+            background: #f8f9fa;
+        }
+
+        .welcome-banner {
+            background: linear-gradient(45deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .welcome-banner h1 {
+            margin-bottom: 0.5rem;
+        }
+
+        .admin-user {
+            color: var(--accent-gold);
+            font-weight: bold;
+        }
+
+        .quick-actions {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .quick-actions h3 {
+            color: var(--primary-green);
+            margin-bottom: 1rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .data-management {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            margin-top: 2rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        /* Shop specific styles */
+        .shop-item {
+            align-items: flex-start !important;
+        }
+
+        .shop-item .content-info {
+            flex: 1;
+        }
+
+        #shopCategoryFilters .btn.active {
+            background: var(--primary-green) !important;
+            color: white !important;
+        }
+
+        /* Sponsor-specific styles */
+        .sponsor-item {
+            align-items: flex-start !important;
+        }
+
+        .sponsor-item .content-info {
+            flex: 1;
+        }
+
+        .sponsor-tier-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 1rem;
+        }
+
+        .tier-platinum { background: linear-gradient(45deg, #e5e4e2, #c0c0c0); color: #333; }
+        .tier-gold { background: linear-gradient(45deg, #ffd700, #ffed4e); color: #333; }
+        .tier-silver { background: linear-gradient(45deg, #c0c0c0, #a8a8a8); color: #333; }
+        .tier-bronze { background: linear-gradient(45deg, #cd7f32, #b8860b); color: white; }
+
+        #sponsorTierFilters .btn.active {
+            background: var(--primary-green) !important;
+            color: white !important;
+        }
+
+        @keyframes previewScroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        .sponsor-preview-logo {
+            flex: 0 0 auto;
+            height: 40px;
+            min-width: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 0.7rem;
+            text-align: center;
+        }
+
+        .sponsor-preview-logo img {
+            max-height: 30px;
+            max-width: 70px;
+            object-fit: contain;
+        }
+
+        @media (max-width: 768px) {
+            .admin-header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .admin-nav {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                justify-content: center;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .content-item {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .content-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="admin-header">
+        <div class="admin-header-content">
+            <div class="admin-logo">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%232e5016'/%3E%3Ctext x='50' y='35' text-anchor='middle' fill='white' font-size='16' font-weight='bold'%3EOLS%3C/text%3E%3Ctext x='50' y='70' text-anchor='middle' fill='%23f4c430' font-size='12'%3ERFC%3C/text%3E%3C/svg%3E" alt="OLS Logo">
+                <div>
+                    <h2>Old Laurentian RFC</h2>
+                    <small>Admin Dashboard</small>
+                </div>
+            </div>
+            <nav class="admin-nav">
+                <a href="#dashboard" class="nav-item active" onclick="showSection('dashboard')">📊 Dashboard</a>
+                <a href="#news" class="nav-item" onclick="showSection('news')">📰 News</a>
+                <a href="#fixtures" class="nav-item" onclick="showSection('fixtures')">🏉 Fixtures</a>
+                <a href="#gallery" class="nav-item" onclick="showSection('gallery')">📸 Gallery</a>
+                <a href="#players" class="nav-item" onclick="showSection('players')">👥 Players</a>
+                <a href="#shop" class="nav-item" onclick="showSection('shop')">🛒 Shop</a>
+                <a href="#sponsors" class="nav-item" onclick="showSection('sponsors')">🤝 Sponsors</a>
+                <a href="../index.html">🌐 Back to Site</a>
+                <a href="#" onclick="adminLogout()" class="logout">🚪 Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Dashboard Overview -->
+        <div id="dashboard" class="admin-section active">
+            <div class="welcome-banner">
+                <h1>Welcome to the Admin Dashboard</h1>
+                <p>Logged in as: <span class="admin-user" id="currentUser">Admin User</span></p>
+                <p>Manage your Old Laurentian RFC website content from here</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-number" id="newsCount">0</span>
+                    <span>News Articles</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="fixturesCount">0</span>
+                    <span>Fixtures</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="galleryCount">0</span>
+                    <span>Gallery Albums</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="playersCount">0</span>
+                    <span>Players</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="shopCount">0</span>
+                    <span>Shop Items</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="sponsorsCount">0</span>
+                    <span>Sponsors</span>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <h3>⚡ Quick Actions</h3>
+                <div class="action-buttons">
+                    <button class="btn" onclick="openModal('newsModal')">📰 Add News</button>
+                    <button class="btn" onclick="openModal('fixtureModal')">🏉 Add Fixture</button>
+                    <button class="btn" onclick="openModal('galleryModal')">📸 Upload Photos</button>
+                    <button class="btn" onclick="openModal('playerModal')">👥 Add Player</button>
+                    <button class="btn" onclick="openModal('shopModal')">🛒 Add Product</button>
+                    <button class="btn" onclick="openModal('sponsorModal')">🤝 Add Sponsor</button>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="dashboard-card" onclick="showSection('news')">
+                    <span class="card-icon">📰</span>
+                    <h3 class="card-title">Manage News</h3>
+                    <p class="card-description">Add, edit, and delete news articles. Keep your supporters updated with the latest club news.</p>
+                    <button class="btn">Manage News</button>
+                </div>
+
+                <div class="dashboard-card" onclick="showSection('fixtures')">
+                    <span class="card-icon">🏉</span>
+                    <h3 class="card-title">Update Fixtures</h3>
+                    <p class="card-description">Add results and upcoming matches. Track scores and league standings.</p>
+                    <button class="btn">Manage Fixtures</button>
+                </div>
+
+                <div class="dashboard-card" onclick="showSection('gallery')">
+                    <span class="card-icon">📸</span>
+                    <h3 class="card-title">Photo Gallery</h3>
+                    <p class="card-description">Upload and organize team photos. Share memorable moments with your community.</p>
+                    <button class="btn">Manage Gallery</button>
+                </div>
+
+                <div class="dashboard-card" onclick="showSection('players')">
+                    <span class="card-icon">👥</span>
+                    <h3 class="card-title">Player Management</h3>
+                    <p class="card-description">Update player profiles and photos. Maintain accurate team rosters.</p>
+                    <button class="btn">Manage Players</button>
+                </div>
+                
+                <div class="dashboard-card" onclick="showSection('shop')">
+                    <span class="card-icon">🛒</span>
+                    <h3 class="card-title">Shop Management</h3>
+                    <p class="card-description">Manage products, prices, and inventory. Upload product images and descriptions.</p>
+                    <button class="btn">Manage Shop</button>
+                </div>
+
+                <div class="dashboard-card" onclick="showSection('sponsors')">
+                    <span class="card-icon">🤝</span>
+                    <h3 class="card-title">Sponsor Management</h3>
+                    <p class="card-description">Manage club sponsors, upload logos, and control banner display. Build valuable partnerships.</p>
+                    <button class="btn">Manage Sponsors</button>
+                </div>
+            </div>
+
+            <div class="data-management">
+                <h3>💾 Data Management</h3>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="exportData()">📤 Export All Data</button>
+                    <button class="btn btn-secondary" onclick="importData()">📥 Import Data</button>
+                    <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
+                </div>
+                <p style="margin-top: 1rem; color: var(--text-light); font-size: 0.9rem;">
+                    💡 <strong>Tip:</strong> Export your data regularly for backup. All data is stored locally in your browser.
+                </p>
+            </div>
+        </div>
+
+        <!-- News Management -->
+        <div id="news" class="admin-section">
+            <div class="section-header">
+                <h2>📰 News Management</h2>
+                <button class="btn" onclick="openModal('newsModal')">Add News Article</button>
+            </div>
+            <div id="newsAlert" style="display: none;"></div>
+            <div class="content-list" id="newsList">
+                <!-- News articles will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Fixtures Management -->
+        <div id="fixtures" class="admin-section">
+            <div class="section-header">
+                <h2>🏉 Fixtures & Results</h2>
+                <button class="btn" onclick="openModal('fixtureModal')">Add Fixture</button>
+            </div>
+            <div id="fixturesAlert" style="display: none;"></div>
+            <div class="content-list" id="fixturesList">
+                <!-- Fixtures will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Gallery Management -->
+        <div id="gallery" class="admin-section">
+            <div class="section-header">
+                <h2>📸 Photo Gallery</h2>
+                <button class="btn" onclick="openModal('galleryModal')">Upload Photos</button>
+            </div>
+            <div id="galleryAlert" style="display: none;"></div>
+            <div class="content-list" id="galleryList">
+                <!-- Gallery items will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Players Management -->
+        <div id="players" class="admin-section">
+            <div class="section-header">
+                <h2>👥 Player Management</h2>
+                <button class="btn" onclick="openModal('playerModal')">Add Player</button>
+            </div>
+            <div id="playersAlert" style="display: none;"></div>
+            <div class="content-list" id="playersList">
+                <!-- Players will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Shop Management -->
+        <div id="shop" class="admin-section">
+            <div class="section-header">
+                <h2>🛒 Shop Management</h2>
+                <button class="btn" onclick="openModal('shopModal')">Add Product</button>
+            </div>
+            <div id="shopAlert" style="display: none;"></div>
+
+            <!-- Shop Stats -->
+            <div class="stats-grid" style="margin-bottom: 2rem;">
+                <div class="stat-card" style="background: linear-gradient(45deg, #28a745, #20c997);">
+                    <span class="stat-number" id="totalProducts">0</span>
+                    <span>Total Products</span>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(45deg, #007bff, #6610f2);">
+                    <span class="stat-number" id="totalValue">£0</span>
+                    <span>Total Inventory Value</span>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(45deg, #fd7e14, #e83e8c);">
+                    <span class="stat-number" id="categoriesCount">0</span>
+                    <span>Categories</span>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(45deg, #6f42c1, #e83e8c);">
+                    <span class="stat-number" id="lowStockCount">0</span>
+                    <span>Low Stock Items</span>
+                </div>
+            </div>
+
+            <!-- Category Filter -->
+            <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: var(--shadow); margin-bottom: 2rem;">
+                <h3 style="margin-bottom: 1rem; color: var(--primary-green);">Filter by Category</h3>
+                <div class="action-buttons" id="shopCategoryFilters">
+                    <button class="btn btn-secondary active" data-category="all" onclick="filterShopItems('all')">All Items</button>
+                    <button class="btn btn-secondary" data-category="jerseys" onclick="filterShopItems('jerseys')">Jerseys</button>
+                    <button class="btn btn-secondary" data-category="training" onclick="filterShopItems('training')">Training Gear</button>
+                    <button class="btn btn-secondary" data-category="accessories" onclick="filterShopItems('accessories')">Accessories</button>
+                    <button class="btn btn-secondary" data-category="supporters" onclick="filterShopItems('supporters')">Supporters Gear</button>
+                </div>
+            </div>
+
+            <div class="content-list" id="shopList">
+                <!-- Shop items will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Sponsors Management -->
+        <div id="sponsors" class="admin-section">
+            <div class="section-header">
+                <h2>🤝 Sponsor Management</h2>
+                <button class="btn" onclick="openModal('sponsorModal')">Add Sponsor</button>
+            </div>
+            <div id="sponsorsAlert" style="display: none;"></div>
+
+            <!-- Sponsor Stats -->
+            <div class="stats-grid" style="margin-bottom: 2rem;">
+                <div class="stat-card" style="background: linear-gradient(45deg, #ffd700, #ffed4e);">
+                    <span class="stat-number" id="totalSponsors">0</span>
+                    <span>Total Sponsors</span>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(45deg, #28a745, #20c997);">
+                    <span class="stat-number" id="activeSponsors">0</span>
+                    <span>Active Sponsors</span>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(45deg, #e5e4e2, #c0c0c0);">
+                    <span class="stat-number" id="platinumCount">0</span>
+                    <span>Platinum</span>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(45deg, #17a2b8, #6610f2);">
+                    <span class="stat-number" id="goldCount">0</span>
+                    <span>Gold</span>
+                </div>
+            </div>
+
+            <!-- Tier Filter -->
+            <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: var(--shadow); margin-bottom: 2rem;">
+                <h3 style="margin-bottom: 1rem; color: var(--primary-green);">Filter by Tier</h3>
+                <div class="action-buttons" id="sponsorTierFilters">
+                    <button class="btn btn-secondary active" data-tier="all" onclick="filterSponsors('all')">All Sponsors</button>
+                    <button class="btn btn-secondary" data-tier="platinum" onclick="filterSponsors('platinum')">💎 Platinum</button>
+                    <button class="btn btn-secondary" data-tier="gold" onclick="filterSponsors('gold')">🥇 Gold</button>
+                    <button class="btn btn-secondary" data-tier="silver" onclick="filterSponsors('silver')">🥈 Silver</button>
+                    <button class="btn btn-secondary" data-tier="bronze" onclick="filterSponsors('bronze')">🥉 Bronze</button>
+                </div>
+            </div>
+
+            <!-- Banner Preview -->
+            <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: var(--shadow); margin-bottom: 2rem;">
+                <h3 style="margin-bottom: 1rem; color: var(--primary-green);">🎯 Banner Preview</h3>
+                <div style="border: 2px dashed #ddd; border-radius: 10px; padding: 1rem; background: #f8f9fa; overflow: hidden;">
+                    <div class="sponsor-preview-ticker" id="sponsorPreviewTicker" style="display: flex; gap: 2rem; align-items: center; animation: previewScroll 20s linear infinite;">
+                        <!-- Preview will be loaded here -->
+                    </div>
+                </div>
+                <p style="margin-top: 1rem; color: var(--text-light); font-size: 0.9rem;">
+                    ℹ️ This shows how sponsors will appear in the homepage banner
+                </p>
+            </div>
+
+            <div class="content-list" id="sponsorsList">
+                <!-- Sponsors will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- All Modals -->
+    <!-- News Modal -->
+    <div id="newsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📰 Add/Edit News Article</h3>
+                <button class="close" onclick="closeModal('newsModal')">&times;</button>
+            </div>
+            <form id="newsForm">
+                <div class="form-group">
+                    <label>Title:</label>
+                    <input type="text" id="newsTitle" required placeholder="Enter article title">
+                </div>
+                <div class="form-group">
+                    <label>Category:</label>
+                    <select id="newsCategory">
+                        <option value="match">Match Report</option>
+                        <option value="training">Training</option>
+                        <option value="social">Social Event</option>
+                        <option value="club">Club Update</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Content:</label>
+                    <textarea id="newsContent" required placeholder="Write your article content here..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Author:</label>
+                    <input type="text" id="newsAuthor" value="Club Admin" placeholder="Author name">
+                </div>
+                <button type="submit" class="btn">💾 Save Article</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Fixture Modal -->
+    <div id="fixtureModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🏉 Add/Edit Fixture</h3>
+                <button class="close" onclick="closeModal('fixtureModal')">&times;</button>
+            </div>
+            <form id="fixtureForm">
+                <div class="form-group">
+                    <label>Team:</label>
+                    <select id="fixtureTeam">
+                        <option value="mens-1st">Mens 1st XV</option>
+                        <option value="mens-2nd">Mens 2nd XV</option>
+                        <option value="ladies">Phoenix Ladies</option>
+                        <option value="colts">Colts</option>
+                        <option value="u16s">U16s</option>
+                        <option value="u14s">U14s</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Opponent:</label>
+                    <input type="text" id="fixtureOpponent" required placeholder="e.g., Birmingham RFC">
+                </div>
+                <div class="form-group">
+                    <label>Date & Time:</label>
+                    <input type="datetime-local" id="fixtureDateTime" required>
+                </div>
+                <div class="form-group">
+                    <label>Venue:</label>
+                    <select id="fixtureVenue">
+                        <option value="home">Home</option>
+                        <option value="away">Away</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Competition:</label>
+                    <input type="text" id="fixtureCompetition" placeholder="e.g., Regional Championship">
+                </div>
+                <div class="form-group">
+                    <label>Our Score (if played):</label>
+                    <input type="number" id="fixtureOurScore" min="0" placeholder="Leave empty if not played">
+                </div>
+                <div class="form-group">
+                    <label>Their Score (if played):</label>
+                    <input type="number" id="fixtureTheirScore" min="0" placeholder="Leave empty if not played">
+                </div>
+                <button type="submit" class="btn">💾 Save Fixture</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Gallery Modal -->
+    <div id="galleryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📸 Upload Photos</h3>
+                <button class="close" onclick="closeModal('galleryModal')">&times;</button>
+            </div>
+            <form id="galleryForm">
+                <div class="form-group">
+                    <label>Album Title:</label>
+                    <input type="text" id="galleryTitle" required placeholder="e.g., Match vs Birmingham RFC">
+                </div>
+                <div class="form-group">
+                    <label>Category:</label>
+                    <select id="galleryCategory">
+                        <option value="matches">Match Day</option>
+                        <option value="training">Training</option>
+                        <option value="social">Social Events</option>
+                        <option value="team">Team Photos</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description:</label>
+                    <textarea id="galleryDescription" placeholder="Brief description of the album..."></textarea>
+                </div>
+                <div class="form-group">
+                    <div class="file-upload">
+                        <p>📸 Upload Photos</p>
+                        <input type="file" id="galleryFiles" multiple accept="image/*">
+                        <p><small>Select multiple photos (JPG, PNG, WebP)</small></p>
+                    </div>
+                </div>
+                <button type="submit" class="btn">📤 Upload Album</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Player Modal -->
+    <div id="playerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>👥 Add/Edit Player</h3>
+                <button class="close" onclick="closeModal('playerModal')">&times;</button>
+            </div>
+            <form id="playerForm">
+                <div class="form-group">
+                    <label>Player Name:</label>
+                    <input type="text" id="playerName" required placeholder="e.g., John Smith">
+                </div>
+                <div class="form-group">
+                    <label>Team:</label>
+                    <select id="playerTeam">
+                        <option value="mens-1st">Mens 1st XV</option>
+                        <option value="mens-2nd">Mens 2nd XV</option>
+                        <option value="ladies">Phoenix Ladies</option>
+                        <option value="colts">Colts</option>
+                        <option value="u16s">U16s</option>
+                        <option value="u14s">U14s</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Position:</label>
+                    <input type="text" id="playerPosition" placeholder="e.g., Fly-half, Hooker, Prop">
+                </div>
+                <div class="form-group">
+                    <label>Appearances:</label>
+                    <input type="number" id="playerApps" min="0" value="0" placeholder="Number of appearances">
+                </div>
+                <div class="form-group">
+                    <div class="file-upload">
+                        <p>📷 Player Photo</p>
+                        <input type="file" id="playerPhoto" accept="image/*">
+                        <p><small>Upload a player photo (optional)</small></p>
+                    </div>
+                </div>
+                <button type="submit" class="btn">💾 Save Player</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Shop Modal -->
+    <div id="shopModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>🛒 Add/Edit Product</h3>
+                <button class="close" onclick="closeModal('shopModal')">&times;</button>
+            </div>
+            <form id="shopForm">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Product Name:</label>
+                        <input type="text" id="shopProductName" required placeholder="e.g., Home Jersey 2025">
+                    </div>
+                    <div class="form-group">
+                        <label>Category:</label>
+                        <select id="shopCategory">
+                            <option value="jerseys">Jerseys</option>
+                            <option value="training">Training Gear</option>
+                            <option value="accessories">Accessories</option>
+                            <option value="supporters">Supporters Gear</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Description:</label>
+                    <textarea id="shopDescription" placeholder="Product description, features, materials, etc."></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Price (£):</label>
+                        <input type="number" id="shopPrice" step="0.01" min="0" required placeholder="39.99">
+                    </div>
+                    <div class="form-group">
+                        <label>Stock Quantity:</label>
+                        <input type="number" id="shopStock" min="0" required placeholder="25">
+                    </div>
+                    <div class="form-group">
+                        <label>SKU/Code:</label>
+                        <input type="text" id="shopSku" placeholder="OLS-HJ-2025">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Available Sizes:</label>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.3rem;">
+                                <input type="checkbox" id="sizeXS" value="XS"> XS
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.3rem;">
+                                <input type="checkbox" id="sizeS" value="S"> S
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.3rem;">
+                                <input type="checkbox" id="sizeM" value="M"> M
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.3rem;">
+                                <input type="checkbox" id="sizeL" value="L"> L
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.3rem;">
+                                <input type="checkbox" id="sizeXL" value="XL"> XL
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.3rem;">
+                                <input type="checkbox" id="sizeXXL" value="XXL"> XXL
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Status:</label>
+                        <select id="shopStatus">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="out-of-stock">Out of Stock</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="file-upload">
+                        <p>📷 Product Images</p>
+                        <input type="file" id="shopImages" multiple accept="image/*">
+                        <p><small>Upload product photos (multiple images allowed)</small></p>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Weight (kg):</label>
+                        <input type="number" id="shopWeight" step="0.1" min="0" placeholder="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label>Shipping Cost (£):</label>
+                        <input type="number" id="shopShipping" step="0.01" min="0" placeholder="4.99">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%;">💾 Save Product</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sponsor Modal -->
+    <div id="sponsorModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>🤝 Add/Edit Sponsor</h3>
+                <button class="close" onclick="closeModal('sponsorModal')">&times;</button>
+            </div>
+            <form id="sponsorForm">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Company Name:</label>
+                        <input type="text" id="sponsorName" required placeholder="e.g., Local Sports Equipment">
+                    </div>
+                    <div class="form-group">
+                        <label>Sponsor Tier:</label>
+                        <select id="sponsorTier" required>
+                            <option value="bronze">🥉 Bronze</option>
+                            <option value="silver">🥈 Silver</option>
+                            <option value="gold">🥇 Gold</option>
+                            <option value="platinum">💎 Platinum</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Phone Number:</label>
+                        <input type="tel" id="sponsorPhone" placeholder="01234 567890">
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address:</label>
+                        <input type="email" id="sponsorEmail" placeholder="contact@company.com">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Website URL:</label>
+                    <input type="url" id="sponsorWebsite" placeholder="https://www.company.com">
+                </div>
+
+                <div class="form-group">
+                    <div class="file-upload">
+                        <p>📎 Upload Company Logo</p>
+                        <input type="file" id="sponsorLogo" accept="image/*">
+                        <p><small>PNG, JPG, or SVG files recommended. Best size: 200x100px</small></p>
+                    </div>
+                    <div id="logoPreview" style="margin-top: 1rem; display: none;">
+                        <img id="logoPreviewImg" style="max-height: 80px; max-width: 160px; border: 2px solid #ddd; border-radius: 8px;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="sponsorActive" checked>
+                            Active Sponsor (show on website)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="sponsorBanner" checked>
+                            Show in homepage banner
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%;">💾 Save Sponsor</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Updated AdminSystem Class with Shop and Sponsor Management
+        class AdminSystem {
+            constructor() {
+                this.currentEditIndex = null;
+                this.currentSection = null;
+                this.initializeData();
+                this.loadAllData();
+                this.updateStats();
+                this.loadUserInfo();
+            }
+
+            loadUserInfo() {
+                const session = JSON.parse(localStorage.getItem('olrfc_admin_session') || '{}');
+                if (session.username) {
+                    document.getElementById('currentUser').textContent = session.username;
+                }
+            }
+
+            initializeData() {
+                if (!this.getData('news')) this.saveData('news', []);
+                if (!this.getData('fixtures')) this.saveData('fixtures', []);
+                if (!this.getData('gallery')) this.saveData('gallery', []);
+                if (!this.getData('players')) this.saveData('players', []);
+                if (!this.getData('shop')) this.saveData('shop', []);
+                if (!this.getData('sponsors')) this.saveData('sponsors', []);
+            }
+
+            getData(key) {
+                try {
+                    return JSON.parse(localStorage.getItem(`olrfc_${key}`)) || [];
+                } catch (e) {
+                    console.error(`Error loading ${key} data:`, e);
+                    return [];
+                }
+            }
+
+            saveData(key, data) {
+                try {
+                    localStorage.setItem(`olrfc_${key}`, JSON.stringify(data));
+                    this.updateStats();
+                    this.showAlert(key, 'Data saved successfully!', 'success');
+                } catch (e) {
+                    console.error(`Error saving ${key} data:`, e);
+                    this.showAlert(key, 'Error saving data. Storage might be full.', 'danger');
+                }
+            }
+
+            showAlert(section, message, type = 'success') {
+                const alertId = section + 'Alert';
+                const alertElement = document.getElementById(alertId);
+                if (alertElement) {
+                    alertElement.className = `alert alert-${type}`;
+                    alertElement.textContent = message;
+                    alertElement.style.display = 'block';
+                    setTimeout(() => {
+                        alertElement.style.display = 'none';
+                    }, 5000);
+                }
+            }
+
+            updateStats() {
+                document.getElementById('newsCount').textContent = this.getData('news').length;
+                document.getElementById('fixturesCount').textContent = this.getData('fixtures').length;
+                document.getElementById('galleryCount').textContent = this.getData('gallery').length;
+                document.getElementById('playersCount').textContent = this.getData('players').length;
+                document.getElementById('shopCount').textContent = this.getData('shop').length;
+                document.getElementById('sponsorsCount').textContent = this.getData('sponsors').length;
+                this.updateShopStats();
+                this.updateSponsorStats();
+            }
+
+            updateShopStats() {
+                const shop = this.getData('shop');
+                
+                if (document.getElementById('totalProducts')) {
+                    document.getElementById('totalProducts').textContent = shop.length;
+                }
+                
+                if (document.getElementById('totalValue')) {
+                    const totalValue = shop.reduce((sum, product) => {
+                        return sum + (parseFloat(product.price) * parseInt(product.stock));
+                    }, 0);
+                    document.getElementById('totalValue').textContent = `£${totalValue.toFixed(2)}`;
+                }
+                
+                if (document.getElementById('categoriesCount')) {
+                    const categories = new Set(shop.map(product => product.category));
+                    document.getElementById('categoriesCount').textContent = categories.size;
+                }
+                
+                if (document.getElementById('lowStockCount')) {
+                    const lowStock = shop.filter(product => parseInt(product.stock) < 5);
+                    document.getElementById('lowStockCount').textContent = lowStock.length;
+                }
+            }
+
+            updateSponsorStats() {
+                const sponsors = this.getData('sponsors');
+                
+                if (document.getElementById('totalSponsors')) {
+                    document.getElementById('totalSponsors').textContent = sponsors.length;
+                }
+                
+                if (document.getElementById('activeSponsors')) {
+                    const activeCount = sponsors.filter(sponsor => sponsor.active).length;
+                    document.getElementById('activeSponsors').textContent = activeCount;
+                }
+                
+                if (document.getElementById('platinumCount')) {
+                    const platinumCount = sponsors.filter(sponsor => sponsor.tier === 'platinum').length;
+                    document.getElementById('platinumCount').textContent = platinumCount;
+                }
+                
+                if (document.getElementById('goldCount')) {
+                    const goldCount = sponsors.filter(sponsor => sponsor.tier === 'gold').length;
+                    document.getElementById('goldCount').textContent = goldCount;
+                }
+            }
+
+            loadAllData() {
+                this.loadNews();
+                this.loadFixtures();
+                this.loadGallery();
+                this.loadPlayers();
+                this.loadShop();
+                this.loadSponsors();
+            }
+
+            loadSponsors() {
+                const sponsors = this.getData('sponsors');
+                const sponsorsList = document.getElementById('sponsorsList');
+                if (!sponsorsList) return;
+
+                sponsorsList.innerHTML = '';
+
+                if (sponsors.length === 0) {
+                    sponsorsList.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 2rem;">No sponsors yet. Click "Add Sponsor" to get started!</p>';
+                    return;
+                }
+
+                sponsors.forEach((sponsor, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'content-item sponsor-item';
+                    item.dataset.tier = sponsor.tier;
+                    
+                    const logoDisplay = sponsor.logo 
+                        ? `<img src="${sponsor.logo}" alt="${sponsor.name}" style="width: 80px; height: 40px; object-fit: contain; border-radius: 6px; margin-right: 1rem; border: 1px solid #ddd;">`
+                        : `<div style="width: 80px; height: 40px; background: linear-gradient(45deg, var(--primary-green), var(--primary-maroon)); border-radius: 6px; margin-right: 1rem; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem; text-align: center;">${sponsor.name}</div>`;
+
+                    item.innerHTML = `
+                        <div style="display: flex; align-items: center;">
+                            ${logoDisplay}
+                            <div class="content-info">
+                                <h4>🤝 ${sponsor.name}</h4>
+                                <p><strong>Tier:</strong> <span class="sponsor-tier-badge tier-${sponsor.tier}">${this.formatSponsorTier(sponsor.tier)}</span></p>
+                                <p><strong>Contact:</strong> ${sponsor.phone || 'N/A'} | ${sponsor.email || 'N/A'}</p>
+                                <small><strong>Status:</strong> ${sponsor.active ? '✅ Active' : '❌ Inactive'} | <strong>Website:</strong> ${sponsor.website || 'Not provided'}</small>
+                            </div>
+                        </div>
+                        <div class="content-actions">
+                            <button class="btn btn-small btn-edit" onclick="editSponsor(${index})">✏️ Edit</button>
+                            <button class="btn btn-small" onclick="duplicateSponsor(${index})" style="background: #17a2b8; color: white;">📋 Duplicate</button>
+                            <button class="btn btn-small btn-delete" onclick="deleteSponsor(${index})">🗑️ Delete</button>
+                        </div>
+                    `;
+                    sponsorsList.appendChild(item);
+                });
+
+                this.updateSponsorStats();
+                this.loadSponsorPreview();
+            }
+
+            loadSponsorPreview() {
+                const sponsors = this.getData('sponsors').filter(sponsor => sponsor.active);
+                const previewTicker = document.getElementById('sponsorPreviewTicker');
+                
+                if (!previewTicker) return;
+                
+                previewTicker.innerHTML = '';
+                
+                if (sponsors.length === 0) {
+                    previewTicker.innerHTML = '<div style="color: var(--text-light); font-style: italic;">No active sponsors to preview</div>';
+                    return;
+                }
+                
+                // Show sponsors twice for preview effect
+                const sponsorLogos = [...sponsors, ...sponsors];
+                
+                sponsorLogos.forEach(sponsor => {
+                    const logoDiv = document.createElement('div');
+                    logoDiv.className = 'sponsor-preview-logo';
+                    
+                    if (sponsor.logo) {
+                        logoDiv.innerHTML = `<img src="${sponsor.logo}" alt="${sponsor.name}">`;
+                    } else {
+                        logoDiv.textContent = sponsor.name;
+                    }
+                    
+                    previewTicker.appendChild(logoDiv);
+                });
+            }
+
+            loadNews() {
+                const news = this.getData('news');
+                const newsList = document.getElementById('newsList');
+                if (!newsList) return;
+
+                newsList.innerHTML = '';
+
+                if (news.length === 0) {
+                    newsList.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 2rem;">No news articles yet. Click "Add News Article" to get started!</p>';
+                    return;
+                }
+
+                news.forEach((article, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'content-item';
+                    item.innerHTML = `
+                        <div class="content-info">
+                            <h4>${article.title}</h4>
+                            <p><strong>Category:</strong> ${this.formatCategory(article.category)} | <strong>Author:</strong> ${article.author}</p>
+                            <small>Created: ${new Date(article.date).toLocaleDateString()}</small>
+                            <p style="margin-top: 0.5rem; color: var(--text-light);">${article.content.substring(0, 100)}...</p>
+                        </div>
+                        <div class="content-actions">
+                            <button class="btn btn-small btn-edit" onclick="editNews(${index})">✏️ Edit</button>
+                            <button class="btn btn-small btn-delete" onclick="deleteNews(${index})">🗑️ Delete</button>
+                        </div>
+                    `;
+                    newsList.appendChild(item);
+                });
+            }
+
+            loadFixtures() {
+                const fixtures = this.getData('fixtures');
+                const fixturesList = document.getElementById('fixturesList');
+                if (!fixturesList) return;
+
+                fixturesList.innerHTML = '';
+
+                if (fixtures.length === 0) {
+                    fixturesList.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 2rem;">No fixtures yet. Click "Add Fixture" to get started!</p>';
+                    return;
+                }
+
+                fixtures.forEach((fixture, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'content-item';
+                    const isPlayed = fixture.ourScore !== null && fixture.theirScore !== null;
+                    const result = isPlayed ? `${fixture.ourScore} - ${fixture.theirScore}` : 'Upcoming';
+                    const resultIcon = isPlayed ? '🏆' : '📅';
+                    
+                    item.innerHTML = `
+                        <div class="content-info">
+                            <h4>${resultIcon} ${this.formatTeam(fixture.team)} vs ${fixture.opponent}</h4>
+                            <p><strong>Date:</strong> ${new Date(fixture.dateTime).toLocaleDateString()} at ${new Date(fixture.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                            <p><strong>Venue:</strong> ${fixture.venue} | <strong>Result:</strong> ${result}</p>
+                            <small>Competition: ${fixture.competition || 'Not specified'}</small>
+                        </div>
+                        <div class="content-actions">
+                            <button class="btn btn-small btn-edit" onclick="editFixture(${index})">✏️ Edit</button>
+                            <button class="btn btn-small btn-delete" onclick="deleteFixture(${index})">🗑️ Delete</button>
+                        </div>
+                    `;
+                    fixturesList.appendChild(item);
+                });
+            }
+
+            loadGallery() {
+                const gallery = this.getData('gallery');
+                const galleryList = document.getElementById('galleryList');
+                if (!galleryList) return;
+
+                galleryList.innerHTML = '';
+
+                if (gallery.length === 0) {
+                    galleryList.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 2rem;">No photo albums yet. Click "Upload Photos" to get started!</p>';
+                    return;
+                }
+
+                gallery.forEach((album, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'content-item';
+                    item.innerHTML = `
+                        <div class="content-info">
+                            <h4>📸 ${album.title}</h4>
+                            <p><strong>Category:</strong> ${this.formatCategory(album.category)} | <strong>Photos:</strong> ${album.photos.length}</p>
+                            <small>Created: ${new Date(album.date).toLocaleDateString()}</small>
+                            <p style="margin-top: 0.5rem; color: var(--text-light);">${album.description || 'No description'}</p>
+                        </div>
+                        <div class="content-actions">
+                            <button class="btn btn-small btn-edit" onclick="viewAlbum(${index})">👁️ View</button>
+                            <button class="btn btn-small btn-delete" onclick="deleteAlbum(${index})">🗑️ Delete</button>
+                        </div>
+                    `;
+                    galleryList.appendChild(item);
+                });
+            }
+
+            loadPlayers() {
+                const players = this.getData('players');
+                const playersList = document.getElementById('playersList');
+                if (!playersList) return;
+
+                playersList.innerHTML = '';
+
+                if (players.length === 0) {
+                    playersList.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 2rem;">No players yet. Click "Add Player" to get started!</p>';
+                    return;
+                }
+
+                players.forEach((player, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'content-item';
+                    item.innerHTML = `
+                        <div class="content-info">
+                            <h4>👤 ${player.name}</h4>
+                            <p><strong>Team:</strong> ${this.formatTeam(player.team)} | <strong>Position:</strong> ${player.position}</p>
+                            <small>Appearances: ${player.appearances}</small>
+                        </div>
+                        <div class="content-actions">
+                            <button class="btn btn-small btn-edit" onclick="editPlayer(${index})">✏️ Edit</button>
+                            <button class="btn btn-small btn-delete" onclick="deletePlayer(${index})">🗑️ Delete</button>
+                        </div>
+                    `;
+                    playersList.appendChild(item);
+                });
+            }
+
+            loadShop() {
+                const shop = this.getData('shop');
+                const shopList = document.getElementById('shopList');
+                if (!shopList) return;
+
+                shopList.innerHTML = '';
+
+                if (shop.length === 0) {
+                    shopList.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 2rem;">No products yet. Click "Add Product" to get started!</p>';
+                    return;
+                }
+
+                shop.forEach((product, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'content-item shop-item';
+                    item.dataset.category = product.category;
+                    
+                    const stockStatus = parseInt(product.stock) === 0 ? 'Out of Stock' : 
+                                      parseInt(product.stock) < 5 ? `Low Stock (${product.stock})` : 
+                                      `In Stock (${product.stock})`;
+                    
+                    const stockClass = parseInt(product.stock) === 0 ? 'color: #dc3545;' : 
+                                      parseInt(product.stock) < 5 ? 'color: #ffc107;' : 
+                                      'color: #28a745;';
+
+                    const imageDisplay = product.images && product.images.length > 0 
+                        ? `<img src="${product.images[0].url}" alt="${product.name}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin-right: 1rem;">`
+                        : `<div style="width: 80px; height: 80px; background: linear-gradient(45deg, var(--primary-green), var(--primary-maroon)); border-radius: 8px; margin-right: 1rem; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem;">No Image</div>`;
+
+                    item.innerHTML = `
+                        <div style="display: flex; align-items: center;">
+                            ${imageDisplay}
+                            <div class="content-info">
+                                <h4>🛒 ${product.name}</h4>
+                                <p><strong>Price:</strong> £${product.price} | <strong>Category:</strong> ${this.formatShopCategory(product.category)}</p>
+                                <p><strong>Status:</strong> <span style="${stockClass}">${stockStatus}</span> | <strong>SKU:</strong> ${product.sku || 'N/A'}</p>
+                                <small>${product.description ? product.description.substring(0, 100) + '...' : 'No description'}</small>
+                            </div>
+                        </div>
+                        <div class="content-actions">
+                            <button class="btn btn-small btn-edit" onclick="editShopProduct(${index})">✏️ Edit</button>
+                            <button class="btn btn-small" onclick="duplicateShopProduct(${index})" style="background: #17a2b8; color: white;">📋 Duplicate</button>
+                            <button class="btn btn-small btn-delete" onclick="deleteShopProduct(${index})">🗑️ Delete</button>
+                        </div>
+                    `;
+                    shopList.appendChild(item);
+                });
+
+                this.updateShopStats();
+            }
+
+            formatCategory(category) {
+                const categories = {
+                    'match': 'Match Report',
+                    'training': 'Training',
+                    'social': 'Social Event',
+                    'club': 'Club Update',
+                    'matches': 'Match Day',
+                    'team': 'Team Photos'
+                };
+                return categories[category] || category;
+            }
+
+            formatTeam(team) {
+                const teams = {
+                    'mens-1st': 'Mens 1st XV',
+                    'mens-2nd': 'Mens 2nd XV',
+                    'ladies': 'Phoenix Ladies',
+                    'colts': 'Colts',
+                    'u16s': 'U16s',
+                    'u14s': 'U14s'
+                };
+                return teams[team] || team;
+            }
+
+            formatShopCategory(category) {
+                const categories = {
+                    'jerseys': 'Jerseys',
+                    'training': 'Training Kit',
+                    'accessories': 'Accessories',
+                    'supporters': 'Supporters Gear'
+                };
+                return categories[category] || category;
+            }
+
+            formatSponsorTier(tier) {
+                const tiers = {
+                    'platinum': '💎 Platinum',
+                    'gold': '🥇 Gold',
+                    'silver': '🥈 Silver',
+                    'bronze': '🥉 Bronze'
+                };
+                return tiers[tier] || tier;
+            }
+        }
+
+        // Initialize admin system
+        const adminSystem = new AdminSystem();
+
+        // Navigation functions
+        function showSection(sectionId) {
+            document.querySelectorAll('.admin-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            document.getElementById(sectionId).classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            const activeNav = document.querySelector(`[onclick="showSection('${sectionId}')"]`);
+            if (activeNav) {
+                activeNav.classList.add('active');
+            }
+
+            document.title = `${sectionId.charAt(0).toUpperCase() + sectionId.slice(1)} - Admin Dashboard`;
+        }
+
+        // Modal functions
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            document.body.style.overflow = 'auto';
+            
+            const form = document.getElementById(modalId).querySelector('form');
+            if (form) {
+                form.reset();
+                adminSystem.currentEditIndex = null;
+            }
+        }
+
+        // Sponsor Management Functions
+        function editSponsor(index) {
+            const sponsors = adminSystem.getData('sponsors');
+            const sponsor = sponsors[index];
+            
+            adminSystem.currentEditIndex = index;
+            adminSystem.currentSection = 'sponsors';
+            
+            // Populate form
+            document.getElementById('sponsorName').value = sponsor.name;
+            document.getElementById('sponsorTier').value = sponsor.tier;
+            document.getElementById('sponsorPhone').value = sponsor.phone || '';
+            document.getElementById('sponsorEmail').value = sponsor.email || '';
+            document.getElementById('sponsorWebsite').value = sponsor.website || '';
+            document.getElementById('sponsorActive').checked = sponsor.active;
+            document.getElementById('sponsorBanner').checked = sponsor.showInBanner !== false;
+            
+            // Show logo preview if exists
+            if (sponsor.logo) {
+                document.getElementById('logoPreview').style.display = 'block';
+                document.getElementById('logoPreviewImg').src = sponsor.logo;
+            }
+            
+            openModal('sponsorModal');
+        }
+
+        function deleteSponsor(index) {
+            const sponsors = adminSystem.getData('sponsors');
+            const sponsor = sponsors[index];
+            
+            if (confirm(`Are you sure you want to delete ${sponsor.name}?`)) {
+                sponsors.splice(index, 1);
+                adminSystem.saveData('sponsors', sponsors);
+            }
+        }
+
+        function duplicateSponsor(index) {
+            const sponsors = adminSystem.getData('sponsors');
+            const sponsor = {...sponsors[index]};
+            
+            sponsor.name = sponsor.name + ' (Copy)';
+            sponsor.id = Date.now();
+            sponsor.dateAdded = new Date().toISOString();
+            
+            sponsors.push(sponsor);
+            adminSystem.saveData('sponsors', sponsors);
+        }
+
+        function filterSponsors(tier) {
+            const sponsorItems = document.querySelectorAll('.sponsor-item');
+            const filterButtons = document.querySelectorAll('#sponsorTierFilters .btn');
+            
+            // Update active button
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-tier="${tier}"]`).classList.add('active');
+            
+            // Filter items
+            sponsorItems.forEach(item => {
+                if (tier === 'all' || item.dataset.tier === tier) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // Shop Management Functions
+        function filterShopItems(category) {
+            const shopItems = document.querySelectorAll('.shop-item');
+            const filterButtons = document.querySelectorAll('#shopCategoryFilters .btn');
+            
+            // Update active button
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-category="${category}"]`).classList.add('active');
+            
+            // Filter items
+            shopItems.forEach(item => {
+                if (category === 'all' || item.dataset.category === category) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // Form event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sponsor form submission
+            document.getElementById('sponsorForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const sponsors = adminSystem.getData('sponsors');
+                const currentLogo = document.getElementById('logoPreviewImg').src || null;
+                
+                const sponsor = {
+                    id: adminSystem.currentEditIndex !== null ? sponsors[adminSystem.currentEditIndex].id : Date.now(),
+                    name: document.getElementById('sponsorName').value,
+                    tier: document.getElementById('sponsorTier').value,
+                    phone: document.getElementById('sponsorPhone').value,
+                    email: document.getElementById('sponsorEmail').value,
+                    website: document.getElementById('sponsorWebsite').value,
+                    logo: currentLogo,
+                    active: document.getElementById('sponsorActive').checked,
+                    showInBanner: document.getElementById('sponsorBanner').checked,
+                    dateAdded: adminSystem.currentEditIndex !== null ? sponsors[adminSystem.currentEditIndex].dateAdded : new Date().toISOString()
+                };
+
+                if (adminSystem.currentEditIndex !== null) {
+                    sponsors[adminSystem.currentEditIndex] = sponsor;
+                } else {
+                    sponsors.push(sponsor);
+                }
+
+                adminSystem.saveData('sponsors', sponsors);
+                closeModal('sponsorModal');
+                
+                // Reset form and preview
+                document.getElementById('sponsorForm').reset();
+                document.getElementById('logoPreview').style.display = 'none';
+                adminSystem.currentEditIndex = null;
+            });
+
+            // Logo file upload handler
+            document.getElementById('sponsorLogo').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('logoPreview').style.display = 'block';
+                        document.getElementById('logoPreviewImg').src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        });
+
+        // Session check and initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            const session = checkAdminSession();
+            if (!session) return;
+            console.log(`Welcome back, ${session.username}!`);
+        });
+
+        // Session check function
+        function checkAdminSession() {
+            const session = localStorage.getItem('olrfc_admin_session');
+            if (!session) {
+                // For demo purposes, create a session
+                const demoSession = {
+                    username: 'Admin User',
+                    timestamp: new Date().getTime()
+                };
+                localStorage.setItem('olrfc_admin_session', JSON.stringify(demoSession));
+                return demoSession;
+            }
+            
+            const sessionData = JSON.parse(session);
+            const now = new Date().getTime();
+            
+            if (now - sessionData.timestamp > 24 * 60 * 60 * 1000) {
+                localStorage.removeItem('olrfc_admin_session');
+                return checkAdminSession(); // Recreate session for demo
+            }
+            
+            return sessionData;
+        }
+
+        // Logout function
+        function adminLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('olrfc_admin_session');
+                alert('Logged out successfully!');
+            }
+        }
+
+        // Initialize sample data
+        function initializeSampleData() {
+            // Sample shop data
+            if (adminSystem.getData('shop').length === 0) {
+                const sampleProducts = [
+                    {
+                        name: "Home Jersey 2025",
+                        category: "jerseys",
+                        description: "Official Old Laurentian RFC home jersey for the 2025 season.",
+                        price: "65.00",
+                        stock: 25,
+                        sku: "OLS-HJ-2025",
+                        sizes: ["S", "M", "L", "XL", "XXL"],
+                        status: "active",
+                        images: [],
+                        weight: 0.3,
+                        shipping: 4.99,
+                        dateAdded: new Date().toISOString()
+                    }
+                ];
+                adminSystem.saveData('shop', sampleProducts);
+            }
+
+            // Sample sponsor data
+            if (adminSystem.getData('sponsors').length === 0) {
+                const sampleSponsors = [
+                    {
+                        id: 1,
+                        name: "Local Sports Equipment",
+                        tier: "gold",
+                        phone: "01234 567890",
+                        email: "info@localsports.com",
+                        website: "https://www.localsports.com",
+                        logo: null,
+                        active: true,
+                        showInBanner: true,
+                        dateAdded: new Date().toISOString()
+                    },
+                    {
+                        id: 2,
+                        name: "Community Bank",
+                        tier: "silver",
+                        phone: "01234 567891",
+                        email: "community@bank.com",
+                        website: "https://www.communitybank.com",
+                        logo: null,
+                        active: true,
+                        showInBanner: true,
+                        dateAdded: new Date().toISOString()
+                    }
+                ];
+                adminSystem.saveData('sponsors', sampleSponsors);
+            }
+
+            adminSystem.loadAllData();
+        }
+
+        // Placeholder functions for other features
+        function editNews(index) { console.log('Edit news', index); }
+        function deleteNews(index) { console.log('Delete news', index); }
+        function editFixture(index) { console.log('Edit fixture', index); }
+        function deleteFixture(index) { console.log('Delete fixture', index); }
+        function editPlayer(index) { console.log('Edit player', index); }
+        function deletePlayer(index) { console.log('Delete player', index); }
+        function editShopProduct(index) { console.log('Edit shop product', index); }
+        function deleteShopProduct(index) { console.log('Delete shop product', index); }
+        function duplicateShopProduct(index) { console.log('Duplicate shop product', index); }
+        function viewAlbum(index) { console.log('View album', index); }
+        function deleteAlbum(index) { console.log('Delete album', index); }
+        function exportData() { console.log('Export data'); }
+        function importData() { console.log('Import data'); }
+        function clearAllData() { console.log('Clear all data'); }
+
+        setTimeout(initializeSampleData, 500);
+    </script>
+</body>
+</html>
