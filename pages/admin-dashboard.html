@@ -1916,6 +1916,140 @@
     }
 });
 
+document.getElementById('newsForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const newsData = {
+        id: adminSystem.currentEditIndex !== null ? 
+            adminSystem.getData('news')[adminSystem.currentEditIndex].id : 
+            Date.now().toString(),
+        title: document.getElementById('newsTitle').value.trim(),
+        content: document.getElementById('newsContent').value.trim(),
+        category: document.getElementById('newsCategory').value,
+        author: document.getElementById('newsAuthor').value.trim() || 'Club Admin',
+        date: new Date().toISOString().split('T')[0],
+        featured: false // You can add a featured checkbox to the form if needed
+    };
+
+    // Validate required fields
+    if (!newsData.title || !newsData.content) {
+        alert('Please fill in both title and content fields');
+        return;
+    }
+
+    try {
+        // 1. IMMEDIATE localStorage update (preserves existing UX)
+        let existingNews = adminSystem.getData('news');
+        
+        if (adminSystem.currentEditIndex !== null) {
+            // Editing existing news
+            existingNews[adminSystem.currentEditIndex] = newsData;
+        } else {
+            // Adding new news
+            existingNews.unshift(newsData);
+        }
+        
+        adminSystem.saveData('news', existingNews);
+        
+        // Update UI immediately
+        adminSystem.loadNews();
+        adminSystem.updateStats();
+        
+        // Show immediate success feedback
+        const action = adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+        adminSystem.showAlert('news', `News article ${action} successfully!`, 'success');
+        
+        // 2. BACKGROUND cloud storage (following sponsor pattern)
+        if (window.netlifyDataManager) {
+            try {
+                await window.netlifyDataManager.submitToNetlify('olrfc-news', {
+                    id: newsData.id,
+                    title: newsData.title,
+                    content: newsData.content,
+                    category: newsData.category,
+                    author: newsData.author,
+                    date: newsData.date,
+                    featured: newsData.featured ? 'true' : 'false',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                });
+                
+                console.log('News article successfully synced to cloud storage');
+                
+                // Optional: Show cloud sync confirmation
+                setTimeout(() => {
+                    adminSystem.showAlert('news', 'Article synced to cloud storage ✓', 'success');
+                }, 1000);
+                
+            } catch (cloudError) {
+                console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
+                adminSystem.showAlert('news', 'Article saved locally (cloud sync failed - will retry)', 'warning');
+                
+                // Store for retry when network available
+                let pendingSync = JSON.parse(localStorage.getItem('olrfc_pending_sync') || '{}');
+                if (!pendingSync.news) pendingSync.news = [];
+                pendingSync.news.push(newsData);
+                localStorage.setItem('olrfc_pending_sync', JSON.stringify(pendingSync));
+            }
+        } else {
+            console.log('Netlify data manager not available, localStorage only');
+        }
+        
+        // Close modal and reset form
+        closeModal('newsModal');
+        document.getElementById('newsForm').reset();
+        adminSystem.currentEditIndex = null;
+        
+    } catch (error) {
+        console.error('Error saving news article:', error);
+        adminSystem.showAlert('news', 'Error saving news article: ' + error.message, 'danger');
+    }
+});
+
+// Enhanced news editing function (replace the existing placeholder)
+function editNews(index) {
+    const news = adminSystem.getData('news');
+    const article = news[index];
+    
+    adminSystem.currentEditIndex = index;
+    adminSystem.currentSection = 'news';
+    
+    // Populate form with existing data
+    document.getElementById('newsTitle').value = article.title;
+    document.getElementById('newsContent').value = article.content;
+    document.getElementById('newsCategory').value = article.category;
+    document.getElementById('newsAuthor').value = article.author;
+    
+    openModal('newsModal');
+}
+
+// Enhanced news deletion function (replace the existing placeholder)
+function deleteNews(index) {
+    const news = adminSystem.getData('news');
+    const article = news[index];
+    
+    if (confirm(`Are you sure you want to delete "${article.title}"?`)) {
+        try {
+            // Remove from localStorage
+            news.splice(index, 1);
+            adminSystem.saveData('news', news);
+            
+            // Update UI
+            adminSystem.loadNews();
+            adminSystem.updateStats();
+            
+            adminSystem.showAlert('news', 'News article deleted successfully', 'success');
+            
+            // Note: Netlify Forms don't support deletion, but we log for future API implementation
+            console.log('News deleted from localStorage, cloud deletion logged for future API implementation');
+            
+        } catch (error) {
+            console.error('Error deleting news:', error);
+            adminSystem.showAlert('news', 'Error deleting news: ' + error.message, 'danger');
+        }
+    }
+}
+
             // Logo file upload handler
             document.getElementById('sponsorLogo').addEventListener('change', function(e) {
                 const file = e.target.files[0];
@@ -2027,8 +2161,47 @@
         }
 
         // Placeholder functions for other features
-        function editNews(index) { console.log('Edit news', index); }
-        function deleteNews(index) { console.log('Delete news', index); }
+        function editNews(index) {
+    const news = adminSystem.getData('news');
+    const article = news[index];
+    
+    adminSystem.currentEditIndex = index;
+    adminSystem.currentSection = 'news';
+    
+    // Populate form with existing data
+    document.getElementById('newsTitle').value = article.title;
+    document.getElementById('newsContent').value = article.content;
+    document.getElementById('newsCategory').value = article.category;
+    document.getElementById('newsAuthor').value = article.author;
+    
+    openModal('newsModal');
+}
+
+function deleteNews(index) {
+    const news = adminSystem.getData('news');
+    const article = news[index];
+    
+    if (confirm(`Are you sure you want to delete "${article.title}"?`)) {
+        try {
+            // Remove from localStorage
+            news.splice(index, 1);
+            adminSystem.saveData('news', news);
+            
+            // Update UI
+            adminSystem.loadNews();
+            adminSystem.updateStats();
+            
+            adminSystem.showAlert('news', 'News article deleted successfully', 'success');
+            
+            // Note: Netlify Forms don't support deletion, but we log for future API implementation
+            console.log('News deleted from localStorage, cloud deletion logged for future API implementation');
+            
+        } catch (error) {
+            console.error('Error deleting news:', error);
+            adminSystem.showAlert('news', 'Error deleting news: ' + error.message, 'danger');
+        }
+    }
+}
         function editFixture(index) { console.log('Edit fixture', index); }
         function deleteFixture(index) { console.log('Delete fixture', index); }
         function editPlayer(index) { console.log('Edit player', index); }
