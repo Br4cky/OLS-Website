@@ -1863,39 +1863,58 @@
             loadWebsiteFeatureStates();
             
             // Sponsor form submission
-            document.getElementById('sponsorForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const sponsors = adminSystem.getData('sponsors');
-                const currentLogo = document.getElementById('logoPreviewImg').src || null;
-                
-                const sponsor = {
-                    id: adminSystem.currentEditIndex !== null ? sponsors[adminSystem.currentEditIndex].id : Date.now(),
-                    name: document.getElementById('sponsorName').value,
-                    tier: document.getElementById('sponsorTier').value,
-                    phone: document.getElementById('sponsorPhone').value,
-                    email: document.getElementById('sponsorEmail').value,
-                    website: document.getElementById('sponsorWebsite').value,
-                    logo: currentLogo,
-                    active: document.getElementById('sponsorActive').checked,
-                    showInBanner: document.getElementById('sponsorBanner').checked,
-                    dateAdded: adminSystem.currentEditIndex !== null ? sponsors[adminSystem.currentEditIndex].dateAdded : new Date().toISOString()
-                };
+            document.getElementById('sponsorForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const sponsors = adminSystem.getData('sponsors');
+    const currentLogo = document.getElementById('logoPreviewImg').src || null;
+    
+    const sponsorData = {
+        name: document.getElementById('sponsorName').value,
+        tier: document.getElementById('sponsorTier').value,
+        phone: document.getElementById('sponsorPhone').value,
+        email: document.getElementById('sponsorEmail').value,
+        website: document.getElementById('sponsorWebsite').value,
+        logo: currentLogo,
+        active: document.getElementById('sponsorActive').checked,
+        showInBanner: document.getElementById('sponsorBanner').checked
+    };
 
-                if (adminSystem.currentEditIndex !== null) {
-                    sponsors[adminSystem.currentEditIndex] = sponsor;
-                } else {
-                    sponsors.push(sponsor);
-                }
+    try {
+        // Save to localStorage first
+        const sponsor = {
+            id: adminSystem.currentEditIndex !== null ? sponsors[adminSystem.currentEditIndex].id : Date.now(),
+            ...sponsorData,
+            dateAdded: adminSystem.currentEditIndex !== null ? sponsors[adminSystem.currentEditIndex].dateAdded : new Date().toISOString()
+        };
 
-                adminSystem.saveData('sponsors', sponsors);
-                closeModal('sponsorModal');
-                
-                // Reset form and preview
-                document.getElementById('sponsorForm').reset();
-                document.getElementById('logoPreview').style.display = 'none';
-                adminSystem.currentEditIndex = null;
-            });
+        if (adminSystem.currentEditIndex !== null) {
+            sponsors[adminSystem.currentEditIndex] = sponsor;
+        } else {
+            sponsors.push(sponsor);
+        }
+
+        adminSystem.saveData('sponsors', sponsors);
+
+        // Submit to Netlify Forms
+        if (window.netlifyDataManager) {
+            const result = await window.netlifyDataManager.createSponsor(sponsorData);
+            if (result.success) {
+                console.log('Sponsor saved to Netlify Forms successfully');
+            } else {
+                console.warn('Netlify Forms submission failed:', result.error);
+            }
+        }
+
+        closeModal('sponsorModal');
+        document.getElementById('sponsorForm').reset();
+        document.getElementById('logoPreview').style.display = 'none';
+        adminSystem.currentEditIndex = null;
+
+    } catch (error) {
+        console.error('Error saving sponsor:', error);
+    }
+});
 
             // Logo file upload handler
             document.getElementById('sponsorLogo').addEventListener('change', function(e) {
