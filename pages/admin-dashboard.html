@@ -10276,18 +10276,52 @@ let bulkEditDeleteIds = new Set();  // Set of fixture IDs marked for deletion
 let bulkEditSelectedIds = new Set(); // Set of selected fixture IDs (for bulk delete)
 let bulkEditNewRowCounter = 0;  // Counter for generating temp IDs
 
+// OLS SAFETY: Snapshot of total fixture count when bulk edit was opened
+// Used to prevent saving if data has become incomplete
+let bulkEditSnapshotCount = 0;
+let bulkEditCloudCount = null; // Will be fetched from cloud on open
+
 /**
  * Open the bulk edit modal and populate with all fixtures
  */
-function openBulkEditFixtures(teamFilter = null) {
+async function openBulkEditFixtures(teamFilter = null) {
+    // OLS SAFETY: First, sync fresh data from cloud before opening bulk edit
+    // This prevents editing stale/partial data from localStorage
+    showLoading('Loading fixtures from cloud...');
+
+    try {
+        const cloudResponse = await fetch('/.netlify/functions/fixtures', { method: 'GET' });
+        if (cloudResponse.ok) {
+            const cloudResult = await cloudResponse.json();
+            const cloudFixtures = cloudResult.data || [];
+            bulkEditCloudCount = cloudFixtures.length;
+
+            // Update localStorage with fresh cloud data before opening editor
+            localStorage.setItem('olrfc_fixtures', JSON.stringify(cloudFixtures));
+            console.log(`✅ Bulk edit: Synced ${cloudFixtures.length} fixtures from cloud before editing`);
+        } else {
+            console.warn('⚠️ Could not fetch fixtures from cloud, using localStorage');
+            bulkEditCloudCount = null;
+        }
+    } catch (err) {
+        console.warn('⚠️ Cloud sync failed before bulk edit, using localStorage:', err.message);
+        bulkEditCloudCount = null;
+    }
+
+    hideLoading();
+
     const allFixtures = adminSystem.getData('fixtures');
     const teams = adminSystem.getData('teams');
-    
+
+    // OLS SAFETY: Record the total count when we opened the editor
+    bulkEditSnapshotCount = allFixtures.length;
+    console.log(`📸 Bulk edit snapshot: ${bulkEditSnapshotCount} total fixtures at open time`);
+
     // Get current filter from main page if not provided
     if (teamFilter === null) {
         teamFilter = document.getElementById('admin-team-filter')?.value || 'all';
     }
-    
+
     // Reset all tracking
     bulkEditOriginalData = {};
     bulkEditChangedCells.clear();
@@ -10295,11 +10329,11 @@ function openBulkEditFixtures(teamFilter = null) {
     bulkEditDeleteIds.clear();
     bulkEditSelectedIds.clear();
     bulkEditNewRowCounter = 0;
-    
+
     // Reset select all checkbox
     const selectAllCheckbox = document.getElementById('bulkSelectAll');
     if (selectAllCheckbox) selectAllCheckbox.checked = false;
-    
+
     // Populate the bulk edit team filter dropdown
     const bulkEditTeamFilter = document.getElementById('bulk-edit-team-filter');
     bulkEditTeamFilter.innerHTML = '<option value="all">All Teams</option>';
@@ -10309,10 +10343,10 @@ function openBulkEditFixtures(teamFilter = null) {
         option.textContent = team.name;
         bulkEditTeamFilter.appendChild(option);
     });
-    
+
     // Set the current filter
     bulkEditTeamFilter.value = teamFilter;
-    
+
     // Add event listener for filter changes (remove any existing first)
     const newFilter = bulkEditTeamFilter.cloneNode(true);
     bulkEditTeamFilter.parentNode.replaceChild(newFilter, bulkEditTeamFilter);
@@ -10327,12 +10361,12 @@ function openBulkEditFixtures(teamFilter = null) {
         }
         reloadBulkEditTable(this.value);
     });
-    
+
     // Filter fixtures based on selected team
-    let fixtures = teamFilter === 'all' 
-        ? allFixtures 
+    let fixtures = teamFilter === 'all'
+        ? allFixtures
         : allFixtures.filter(fixture => fixture.team === teamFilter);
-    
+
     // Sort fixtures: Upcoming first (soonest), then Past (most recent)
     const now = new Date();
     fixtures = fixtures.sort((a, b) => {
@@ -10340,42 +10374,42 @@ function openBulkEditFixtures(teamFilter = null) {
         const dateB = new Date(b.dateTime);
         const aIsUpcoming = dateA >= now;
         const bIsUpcoming = dateB >= now;
-        
+
         if (aIsUpcoming === bIsUpcoming) {
             return aIsUpcoming ? dateA - dateB : dateB - dateA;
         }
         return aIsUpcoming ? -1 : 1;
     });
-    
+
     // Update fixture count
     const countDisplay = document.getElementById('bulk-edit-fixture-count');
     countDisplay.textContent = `${fixtures.length} fixture${fixtures.length !== 1 ? 's' : ''}`;
-    
+
     // Build team options HTML for dropdowns
     let teamOptionsHTML = '<option value="">-- Select team --</option>';
     teams.forEach(team => {
         teamOptionsHTML += `<option value="${team.slug}">${team.name}</option>`;
     });
-    
+
     // Store team options for new rows
     window.bulkEditTeamOptionsHTML = teamOptionsHTML;
-    
+
     // Populate table
     const tbody = document.getElementById('bulkEditFixturesBody');
     tbody.innerHTML = '';
-    
+
     fixtures.forEach((fixture, displayIndex) => {
         const actualIndex = allFixtures.indexOf(fixture);
         bulkEditOriginalData[fixture.id] = JSON.parse(JSON.stringify(fixture));
-        
+
         const row = createBulkEditRow(fixture, actualIndex, teamOptionsHTML, false);
         tbody.appendChild(row);
     });
-    
+
     // Update UI counters
     updateBulkEditChangesCount();
     updateBulkDeleteButton();
-    
+
     // Open modal
     document.getElementById('bulkEditFixturesModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
@@ -10728,39 +10762,73 @@ async function saveBulkEditFixtures() {
     const hasEdits = bulkEditChangedCells.size > 0;
     const hasNew = bulkEditNewRows.length > 0;
     const hasDeletes = bulkEditDeleteIds.size > 0;
-    
+
     if (!hasEdits && !hasNew && !hasDeletes) {
         alert('No changes to save');
         return;
     }
-    
+
     // Build confirmation message
     const parts = [];
     if (hasNew) parts.push(`create ${bulkEditNewRows.length} new fixture(s)`);
     if (hasEdits) parts.push(`update ${getChangedFixtureCount()} fixture(s)`);
     if (hasDeletes) parts.push(`delete ${bulkEditDeleteIds.size} fixture(s)`);
-    
+
     if (!confirm(`Are you sure you want to ${parts.join(', ')}?`)) {
         return;
     }
-    
+
     showLoading('Processing bulk changes...');
-    
+
     try {
-        const fixtures = adminSystem.getData('fixtures');
+        // ==========================================
+        // OLS SAFETY: Fetch fresh cloud data as the authoritative source
+        // This ensures we never lose records that weren't loaded locally
+        // ==========================================
+        let cloudFixtures = null;
+        try {
+            const cloudResponse = await fetch('/.netlify/functions/fixtures', { method: 'GET' });
+            if (cloudResponse.ok) {
+                const cloudResult = await cloudResponse.json();
+                cloudFixtures = cloudResult.data || [];
+                console.log(`☁️ Fetched ${cloudFixtures.length} fixtures from cloud before save`);
+            }
+        } catch (cloudErr) {
+            console.warn('⚠️ Could not fetch cloud data before save:', cloudErr.message);
+        }
+
+        // Use cloud data as the base if available, otherwise fall back to localStorage
+        const fixtures = cloudFixtures || adminSystem.getData('fixtures');
+
+        // OLS SAFETY: Validate we have at least as many fixtures as when we opened the editor
+        // (minus any intentional deletions)
+        const expectedMinCount = bulkEditSnapshotCount - bulkEditDeleteIds.size;
+        if (fixtures.length < expectedMinCount) {
+            const proceed = confirm(
+                `⚠️ DATA SAFETY WARNING: Expected at least ${expectedMinCount} fixtures but only found ${fixtures.length}. ` +
+                `This could mean some fixtures failed to load. Proceeding may cause data loss.\n\n` +
+                `Do you want to ABORT to prevent data loss? (Recommended: Click OK to abort)`
+            );
+            if (proceed) {
+                hideLoading();
+                alert('Save aborted to protect your data. Please refresh the page and try again.');
+                return;
+            }
+        }
+
         const tbody = document.getElementById('bulkEditFixturesBody');
         const rows = tbody.querySelectorAll('tr');
-        
+
         // ==========================================
-        // 1. HANDLE DELETIONS
+        // 1. HANDLE DELETIONS (cloud-first)
         // ==========================================
         if (hasDeletes) {
             const idsToDelete = [...bulkEditDeleteIds];
             console.log(`🗑️ Bulk deleting ${idsToDelete.length} fixtures...`);
-            
+
             if (window.netlifyDataManager && typeof window.netlifyDataManager.deleteFixtures === 'function') {
                 const deleteResult = await window.netlifyDataManager.deleteFixtures(idsToDelete);
-                
+
                 if (deleteResult.success) {
                     console.log('✅ Bulk delete successful:', deleteResult.data.results);
                     // Remove from local fixtures array
@@ -10781,17 +10849,17 @@ async function saveBulkEditFixtures() {
                 });
             }
         }
-        
+
         // ==========================================
-        // 2. HANDLE NEW FIXTURES
+        // 2. HANDLE NEW FIXTURES (cloud-first)
         // ==========================================
         if (hasNew) {
             const newFixtures = [];
-            
+
             bulkEditNewRows.forEach(tempId => {
                 const row = document.querySelector(`tr[data-fixture-id="${tempId}"]`);
                 if (!row) return;
-                
+
                 const teamInput = row.querySelector('select[data-field="team"]');
                 const opponentInput = row.querySelector('input[data-field="opponent"]');
                 const dateInput = row.querySelector('input[data-field="date"]');
@@ -10800,13 +10868,13 @@ async function saveBulkEditFixtures() {
                 const competitionInput = row.querySelector('input[data-field="competition"]');
                 const ourScoreInput = row.querySelector('input[data-field="ourScore"]');
                 const theirScoreInput = row.querySelector('input[data-field="theirScore"]');
-                
+
                 // Validate required fields
                 if (!teamInput.value || !opponentInput.value.trim() || !dateInput.value) {
                     console.warn(`⚠️ Skipping incomplete new fixture row: ${tempId}`);
                     return;
                 }
-                
+
                 newFixtures.push({
                     team: teamInput.value,
                     opponent: opponentInput.value.trim(),
@@ -10817,13 +10885,13 @@ async function saveBulkEditFixtures() {
                     theirScore: theirScoreInput.value ? parseInt(theirScoreInput.value) : null
                 });
             });
-            
+
             if (newFixtures.length > 0) {
                 console.log(`➕ Bulk creating ${newFixtures.length} fixtures...`);
-                
+
                 if (window.netlifyDataManager && typeof window.netlifyDataManager.createFixtures === 'function') {
                     const createResult = await window.netlifyDataManager.createFixtures(newFixtures);
-                    
+
                     if (createResult.success) {
                         console.log('✅ Bulk create successful:', createResult.data.results);
                         // Add to local fixtures array with IDs from server
@@ -10845,9 +10913,9 @@ async function saveBulkEditFixtures() {
                 }
             }
         }
-        
+
         // ==========================================
-        // 3. HANDLE UPDATES
+        // 3. HANDLE UPDATES (cloud-first)
         // ==========================================
         if (hasEdits) {
             // Get unique fixture IDs that have changes
@@ -10858,16 +10926,16 @@ async function saveBulkEditFixtures() {
                     changedFixtureIds.add(fixtureId);
                 }
             });
-            
+
             const fixturesToUpdate = [];
-            
+
             changedFixtureIds.forEach(fixtureId => {
                 const row = document.querySelector(`tr[data-fixture-id="${fixtureId}"]`);
                 if (!row || row.classList.contains('marked-for-delete')) return;
-                
+
                 const fixture = fixtures.find(f => f.id === fixtureId);
                 if (!fixture) return;
-                
+
                 const teamInput = row.querySelector('select[data-field="team"]');
                 const opponentInput = row.querySelector('input[data-field="opponent"]');
                 const dateInput = row.querySelector('input[data-field="date"]');
@@ -10876,7 +10944,7 @@ async function saveBulkEditFixtures() {
                 const competitionInput = row.querySelector('input[data-field="competition"]');
                 const ourScoreInput = row.querySelector('input[data-field="ourScore"]');
                 const theirScoreInput = row.querySelector('input[data-field="theirScore"]');
-                
+
                 // Update fixture data
                 fixture.team = teamInput.value;
                 fixture.opponent = opponentInput.value.trim();
@@ -10885,16 +10953,16 @@ async function saveBulkEditFixtures() {
                 fixture.competition = competitionInput.value.trim();
                 fixture.ourScore = ourScoreInput.value ? parseInt(ourScoreInput.value) : null;
                 fixture.theirScore = theirScoreInput.value ? parseInt(theirScoreInput.value) : null;
-                
+
                 fixturesToUpdate.push(fixture);
             });
-            
+
             if (fixturesToUpdate.length > 0) {
                 console.log(`✏️ Bulk updating ${fixturesToUpdate.length} fixtures...`);
-                
+
                 if (window.netlifyDataManager && typeof window.netlifyDataManager.updateFixtures === 'function') {
                     const updateResult = await window.netlifyDataManager.updateFixtures(fixturesToUpdate);
-                    
+
                     if (updateResult.success) {
                         console.log('✅ Bulk update successful:', updateResult.data.results);
                     } else {
@@ -10906,24 +10974,42 @@ async function saveBulkEditFixtures() {
                 }
             }
         }
-        
-        // Save to localStorage
-        adminSystem.saveData('fixtures', fixtures);
-        
+
+        // ==========================================
+        // OLS SAFETY: Sync localStorage from cloud after all operations complete
+        // This ensures localStorage reflects the true state of the cloud
+        // ==========================================
+        try {
+            const freshResponse = await fetch('/.netlify/functions/fixtures', { method: 'GET' });
+            if (freshResponse.ok) {
+                const freshResult = await freshResponse.json();
+                const freshFixtures = freshResult.data || [];
+                localStorage.setItem('olrfc_fixtures', JSON.stringify(freshFixtures));
+                console.log(`✅ Post-save sync: localStorage updated with ${freshFixtures.length} fixtures from cloud`);
+            } else {
+                // Cloud fetch failed after save - use our local copy as fallback
+                console.warn('⚠️ Post-save cloud sync failed, saving local copy');
+                adminSystem.saveData('fixtures', fixtures);
+            }
+        } catch (syncErr) {
+            console.warn('⚠️ Post-save cloud sync error, saving local copy:', syncErr.message);
+            adminSystem.saveData('fixtures', fixtures);
+        }
+
         // Success!
         const successParts = [];
         if (hasNew) successParts.push(`${bulkEditNewRows.length} created`);
         if (hasEdits) successParts.push(`${getChangedFixtureCount()} updated`);
         if (hasDeletes) successParts.push(`${bulkEditDeleteIds.size} deleted`);
-        
+
         showLoadingSuccess(successParts.join(', '));
-        
+
         // Close modal and refresh
         closeModal('bulkEditFixturesModal');
         const currentFilter = document.getElementById('admin-team-filter')?.value || 'all';
         adminSystem.loadFixtures(currentFilter, currentFixtureTimeFilter);
         adminSystem.updateStats();
-        
+
     } catch (error) {
         console.error('❌ Error saving bulk changes:', error);
         showLoadingError('Failed to save changes');
@@ -10960,31 +11046,44 @@ let bulkSponsorDeleteIds = new Set();
 let bulkSponsorSelectedIds = new Set();
 let bulkSponsorNewRowCounter = 0;
 
-function openBulkEditSponsors() {
+async function openBulkEditSponsors() {
+    // OLS SAFETY: Sync fresh data from cloud before opening bulk edit
+    showLoading('Loading sponsors from cloud...');
+    try {
+        const cloudResponse = await fetch('/.netlify/functions/sponsors', { method: 'GET' });
+        if (cloudResponse.ok) {
+            const cloudResult = await cloudResponse.json();
+            const cloudSponsors = cloudResult.data || [];
+            localStorage.setItem('olrfc_sponsors', JSON.stringify(cloudSponsors));
+            console.log(`✅ Bulk edit sponsors: Synced ${cloudSponsors.length} from cloud`);
+        }
+    } catch (err) { console.warn('⚠️ Cloud sync failed before bulk edit sponsors:', err.message); }
+    hideLoading();
+
     const sponsors = adminSystem.getData('sponsors') || [];
-    
+
     bulkSponsorOriginalData = {};
     bulkSponsorChangedCells.clear();
     bulkSponsorNewRows = [];
     bulkSponsorDeleteIds.clear();
     bulkSponsorSelectedIds.clear();
     bulkSponsorNewRowCounter = 0;
-    
+
     const selectAllCheckbox = document.getElementById('bulkSelectAllSponsors');
     if (selectAllCheckbox) selectAllCheckbox.checked = false;
-    
+
     const tbody = document.getElementById('bulkEditSponsorsBody');
     tbody.innerHTML = '';
-    
+
     sponsors.forEach(sponsor => {
         bulkSponsorOriginalData[sponsor.id] = JSON.parse(JSON.stringify(sponsor));
         const row = createBulkSponsorRow(sponsor, false);
         tbody.appendChild(row);
     });
-    
+
     updateBulkSponsorChangesCount();
     updateBulkDeleteSponsorsButton();
-    
+
     document.getElementById('bulkEditSponsorsModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
 }
@@ -11132,21 +11231,31 @@ async function saveBulkEditSponsors() {
     const hasNew = bulkSponsorNewRows.length > 0;
     const hasEdits = bulkSponsorChangedCells.size > 0;
     const hasDeletes = bulkSponsorDeleteIds.size > 0;
-    
+
     if (!hasNew && !hasEdits && !hasDeletes) { alert('No changes to save'); return; }
     if (!confirm('Save all changes?')) return;
-    
+
     showLoading('Processing sponsor changes...');
-    
+
     try {
-        let sponsors = adminSystem.getData('sponsors') || [];
-        
+        // OLS SAFETY: Fetch fresh cloud data as authoritative base
+        let sponsors = null;
+        try {
+            const cloudResponse = await fetch('/.netlify/functions/sponsors', { method: 'GET' });
+            if (cloudResponse.ok) {
+                const cloudResult = await cloudResponse.json();
+                sponsors = cloudResult.data || [];
+                console.log(`☁️ Fetched ${sponsors.length} sponsors from cloud before save`);
+            }
+        } catch (err) { console.warn('⚠️ Cloud fetch failed, using localStorage:', err.message); }
+        if (!sponsors) sponsors = adminSystem.getData('sponsors') || [];
+
         // Delete
         if (hasDeletes && window.netlifyDataManager?.deleteSponsors) {
             const result = await window.netlifyDataManager.deleteSponsors([...bulkSponsorDeleteIds]);
             if (result.success) sponsors = sponsors.filter(s => !bulkSponsorDeleteIds.has(s.id));
         }
-        
+
         // Create new
         if (hasNew) {
             const newSponsors = [];
@@ -11172,7 +11281,7 @@ async function saveBulkEditSponsors() {
                 }
             }
         }
-        
+
         // Update
         if (hasEdits) {
             const changedIds = new Set();
@@ -11196,8 +11305,16 @@ async function saveBulkEditSponsors() {
                 await window.netlifyDataManager.updateSponsors(toUpdate);
             }
         }
-        
-        adminSystem.saveData('sponsors', sponsors);
+
+        // OLS SAFETY: Re-sync localStorage from cloud after all operations
+        try {
+            const freshResponse = await fetch('/.netlify/functions/sponsors', { method: 'GET' });
+            if (freshResponse.ok) {
+                const freshResult = await freshResponse.json();
+                localStorage.setItem('olrfc_sponsors', JSON.stringify(freshResult.data || []));
+            } else { adminSystem.saveData('sponsors', sponsors); }
+        } catch (e) { adminSystem.saveData('sponsors', sponsors); }
+
         showLoadingSuccess('Sponsors updated!');
         closeModal('bulkEditSponsorsModal');
         adminSystem.loadSponsors();
@@ -11221,29 +11338,42 @@ let bulkContactNewRowCounter = 0;
 
 const contactCategories = ['Club Leadership', 'Coaching Staff', 'Senior Section', 'Minis & Juniors Section', 'Safeguarding & Welfare', 'Operations & Facilities', 'Communications & Media'];
 
-function openBulkEditContacts() {
+async function openBulkEditContacts() {
+    // OLS SAFETY: Sync fresh data from cloud before opening bulk edit
+    showLoading('Loading contacts from cloud...');
+    try {
+        const cloudResponse = await fetch('/.netlify/functions/contacts', { method: 'GET' });
+        if (cloudResponse.ok) {
+            const cloudResult = await cloudResponse.json();
+            const cloudContacts = cloudResult.data || [];
+            localStorage.setItem('olrfc_contacts', JSON.stringify(cloudContacts));
+            console.log(`✅ Bulk edit contacts: Synced ${cloudContacts.length} from cloud`);
+        }
+    } catch (err) { console.warn('⚠️ Cloud sync failed before bulk edit contacts:', err.message); }
+    hideLoading();
+
     const contacts = adminSystem.getData('contacts') || [];
-    
+
     bulkContactOriginalData = {};
     bulkContactChangedCells.clear();
     bulkContactNewRows = [];
     bulkContactDeleteIds.clear();
     bulkContactSelectedIds.clear();
     bulkContactNewRowCounter = 0;
-    
+
     document.getElementById('bulkSelectAllContacts').checked = false;
-    
+
     const tbody = document.getElementById('bulkEditContactsBody');
     tbody.innerHTML = '';
-    
+
     contacts.sort((a, b) => (a.displayOrder || 999) - (b.displayOrder || 999)).forEach(contact => {
         bulkContactOriginalData[contact.id] = JSON.parse(JSON.stringify(contact));
         tbody.appendChild(createBulkContactRow(contact, false));
     });
-    
+
     updateBulkContactChangesCount();
     updateBulkDeleteContactsButton();
-    
+
     document.getElementById('bulkEditContactsModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
 }
@@ -11356,15 +11486,25 @@ async function saveBulkEditContacts() {
     if (!hasNew && !hasEdits && !hasDeletes) { alert('No changes to save'); return; }
     if (!confirm('Save all changes?')) return;
     showLoading('Processing contact changes...');
-    
+
     try {
-        let contacts = adminSystem.getData('contacts') || [];
-        
+        // OLS SAFETY: Fetch fresh cloud data as authoritative base
+        let contacts = null;
+        try {
+            const cloudResponse = await fetch('/.netlify/functions/contacts', { method: 'GET' });
+            if (cloudResponse.ok) {
+                const cloudResult = await cloudResponse.json();
+                contacts = cloudResult.data || [];
+                console.log(`☁️ Fetched ${contacts.length} contacts from cloud before save`);
+            }
+        } catch (err) { console.warn('⚠️ Cloud fetch failed, using localStorage:', err.message); }
+        if (!contacts) contacts = adminSystem.getData('contacts') || [];
+
         if (hasDeletes && window.netlifyDataManager?.deleteContacts) {
             const result = await window.netlifyDataManager.deleteContacts([...bulkContactDeleteIds]);
             if (result.success) contacts = contacts.filter(c => !bulkContactDeleteIds.has(c.id));
         }
-        
+
         if (hasNew) {
             const newContacts = [];
             bulkContactNewRows.forEach(tempId => {
@@ -11381,7 +11521,7 @@ async function saveBulkEditContacts() {
                 if (result.success) result.data.details.createdContacts.forEach((c, i) => contacts.push({ ...newContacts[i], id: c.id }));
             }
         }
-        
+
         if (hasEdits) {
             const changedIds = new Set(); bulkContactChangedCells.forEach(k => changedIds.add(k.split('-')[0]));
             const toUpdate = [];
@@ -11400,8 +11540,16 @@ async function saveBulkEditContacts() {
             });
             if (toUpdate.length > 0 && window.netlifyDataManager?.updateContacts) await window.netlifyDataManager.updateContacts(toUpdate);
         }
-        
-        adminSystem.saveData('contacts', contacts);
+
+        // OLS SAFETY: Re-sync localStorage from cloud after all operations
+        try {
+            const freshResponse = await fetch('/.netlify/functions/contacts', { method: 'GET' });
+            if (freshResponse.ok) {
+                const freshResult = await freshResponse.json();
+                localStorage.setItem('olrfc_contacts', JSON.stringify(freshResult.data || []));
+            } else { adminSystem.saveData('contacts', contacts); }
+        } catch (e) { adminSystem.saveData('contacts', contacts); }
+
         showLoadingSuccess('Contacts updated!');
         closeModal('bulkEditContactsModal');
         if (typeof loadContacts === 'function') loadContacts();
@@ -11419,29 +11567,42 @@ let bulkVPDeleteIds = new Set();
 let bulkVPSelectedIds = new Set();
 let bulkVPNewRowCounter = 0;
 
-function openBulkEditVPs() {
+async function openBulkEditVPs() {
+    // OLS SAFETY: Sync fresh data from cloud before opening bulk edit
+    showLoading('Loading VPs from cloud...');
+    try {
+        const cloudResponse = await fetch('/.netlify/functions/vp-wall', { method: 'GET' });
+        if (cloudResponse.ok) {
+            const cloudResult = await cloudResponse.json();
+            const cloudVPs = cloudResult.data || [];
+            localStorage.setItem('olrfc_vps', JSON.stringify(cloudVPs));
+            console.log(`✅ Bulk edit VPs: Synced ${cloudVPs.length} from cloud`);
+        }
+    } catch (err) { console.warn('⚠️ Cloud sync failed before bulk edit VPs:', err.message); }
+    hideLoading();
+
     const vps = JSON.parse(localStorage.getItem('olrfc_vps') || '[]');
-    
+
     bulkVPOriginalData = {};
     bulkVPChangedCells.clear();
     bulkVPNewRows = [];
     bulkVPDeleteIds.clear();
     bulkVPSelectedIds.clear();
     bulkVPNewRowCounter = 0;
-    
+
     document.getElementById('bulkSelectAllVPs').checked = false;
-    
+
     const tbody = document.getElementById('bulkEditVPsBody');
     tbody.innerHTML = '';
-    
+
     vps.forEach(vp => {
         bulkVPOriginalData[vp.id] = JSON.parse(JSON.stringify(vp));
         tbody.appendChild(createBulkVPRow(vp, false));
     });
-    
+
     updateBulkVPChangesCount();
     updateBulkDeleteVPsButton();
-    
+
     document.getElementById('bulkEditVPsModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
 }
@@ -11554,15 +11715,25 @@ async function saveBulkEditVPs() {
     if (!hasNew && !hasEdits && !hasDeletes) { alert('No changes to save'); return; }
     if (!confirm('Save all changes?')) return;
     showLoading('Processing VP changes...');
-    
+
     try {
-        let vps = JSON.parse(localStorage.getItem('olrfc_vps') || '[]');
-        
+        // OLS SAFETY: Fetch fresh cloud data as authoritative base
+        let vps = null;
+        try {
+            const cloudResponse = await fetch('/.netlify/functions/vp-wall', { method: 'GET' });
+            if (cloudResponse.ok) {
+                const cloudResult = await cloudResponse.json();
+                vps = cloudResult.data || [];
+                console.log(`☁️ Fetched ${vps.length} VPs from cloud before save`);
+            }
+        } catch (err) { console.warn('⚠️ Cloud fetch failed, using localStorage:', err.message); }
+        if (!vps) vps = JSON.parse(localStorage.getItem('olrfc_vps') || '[]');
+
         if (hasDeletes && window.netlifyDataManager?.deleteVPs) {
             const result = await window.netlifyDataManager.deleteVPs([...bulkVPDeleteIds]);
             if (result.success) vps = vps.filter(v => !bulkVPDeleteIds.has(v.id));
         }
-        
+
         if (hasNew) {
             const newVPs = [];
             bulkVPNewRows.forEach(tempId => {
@@ -11578,7 +11749,7 @@ async function saveBulkEditVPs() {
                 if (result.success) result.data.details.createdVPs.forEach((c, i) => vps.push({ ...newVPs[i], id: c.id }));
             }
         }
-        
+
         if (hasEdits) {
             const changedIds = new Set(); bulkVPChangedCells.forEach(k => changedIds.add(k.split('-')[0]));
             const toUpdate = [];
@@ -11594,8 +11765,16 @@ async function saveBulkEditVPs() {
             });
             if (toUpdate.length > 0 && window.netlifyDataManager?.updateVPs) await window.netlifyDataManager.updateVPs(toUpdate);
         }
-        
-        localStorage.setItem('olrfc_vps', JSON.stringify(vps));
+
+        // OLS SAFETY: Re-sync localStorage from cloud after all operations
+        try {
+            const freshResponse = await fetch('/.netlify/functions/vp-wall', { method: 'GET' });
+            if (freshResponse.ok) {
+                const freshResult = await freshResponse.json();
+                localStorage.setItem('olrfc_vps', JSON.stringify(freshResult.data || []));
+            } else { localStorage.setItem('olrfc_vps', JSON.stringify(vps)); }
+        } catch (e) { localStorage.setItem('olrfc_vps', JSON.stringify(vps)); }
+
         showLoadingSuccess('VPs updated!');
         closeModal('bulkEditVPsModal');
         if (typeof loadVPList === 'function') loadVPList();
@@ -11615,31 +11794,44 @@ let bulkPlayerSelectedIds = new Set();
 let bulkPlayerNewRowCounter = 0;
 let bulkPlayerTeamFilter = 'all';
 
-function openBulkEditPlayers(teamFilter = null) {
+async function openBulkEditPlayers(teamFilter = null) {
+    // OLS SAFETY: Sync fresh data from cloud before opening bulk edit
+    showLoading('Loading players from cloud...');
+    try {
+        const cloudResponse = await fetch('/.netlify/functions/players', { method: 'GET' });
+        if (cloudResponse.ok) {
+            const cloudResult = await cloudResponse.json();
+            const cloudPlayers = cloudResult.data || [];
+            localStorage.setItem('olrfc_players', JSON.stringify(cloudPlayers));
+            console.log(`✅ Bulk edit players: Synced ${cloudPlayers.length} from cloud`);
+        }
+    } catch (err) { console.warn('⚠️ Cloud sync failed before bulk edit players:', err.message); }
+    hideLoading();
+
     const allPlayers = adminSystem.getData('players') || [];
     const teams = adminSystem.getData('teams') || [];
-    
+
     if (teamFilter === null) {
         teamFilter = document.getElementById('player-team-filter')?.value || 'all';
     }
     bulkPlayerTeamFilter = teamFilter;
-    
+
     bulkPlayerOriginalData = {};
     bulkPlayerChangedCells.clear();
     bulkPlayerNewRows = [];
     bulkPlayerDeleteIds.clear();
     bulkPlayerSelectedIds.clear();
     bulkPlayerNewRowCounter = 0;
-    
+
     document.getElementById('bulkSelectAllPlayers').checked = false;
-    
+
     // Populate team filter dropdown
     const filterSelect = document.getElementById('bulk-edit-player-team-filter');
     filterSelect.innerHTML = '<option value="all">All Teams</option>';
     teams.forEach(team => {
         filterSelect.innerHTML += `<option value="${team.slug}" ${teamFilter === team.slug ? 'selected' : ''}>${team.name}</option>`;
     });
-    
+
     // Add filter change handler
     filterSelect.onchange = function() {
         const hasChanges = bulkPlayerChangedCells.size > 0 || bulkPlayerNewRows.length > 0 || bulkPlayerDeleteIds.size > 0;
@@ -11650,34 +11842,34 @@ function openBulkEditPlayers(teamFilter = null) {
         closeModal('bulkEditPlayersModal');
         setTimeout(() => openBulkEditPlayers(this.value), 100);
     };
-    
+
     // Filter players
     let players = teamFilter === 'all' ? allPlayers : allPlayers.filter(p => p.team === teamFilter);
-    
+
     // Sort by name
     players.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    
+
     // Update count
     document.getElementById('bulk-edit-player-count').textContent = `${players.length} player${players.length !== 1 ? 's' : ''}`;
-    
+
     // Build team options HTML
     let teamOptionsHTML = '<option value="">-- Select team --</option>';
     teams.forEach(team => {
         teamOptionsHTML += `<option value="${team.slug}">${team.name}</option>`;
     });
     window.bulkPlayerTeamOptionsHTML = teamOptionsHTML;
-    
+
     const tbody = document.getElementById('bulkEditPlayersBody');
     tbody.innerHTML = '';
-    
+
     players.forEach(player => {
         bulkPlayerOriginalData[player.id] = JSON.parse(JSON.stringify(player));
         tbody.appendChild(createBulkPlayerRow(player, false));
     });
-    
+
     updateBulkPlayerChangesCount();
     updateBulkDeletePlayersButton();
-    
+
     document.getElementById('bulkEditPlayersModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
 }
@@ -11832,16 +12024,26 @@ async function saveBulkEditPlayers() {
     if (!hasNew && !hasEdits && !hasDeletes) { alert('No changes to save'); return; }
     if (!confirm('Save all changes?')) return;
     showLoading('Processing player changes...');
-    
+
     try {
-        let players = adminSystem.getData('players') || [];
-        
+        // OLS SAFETY: Fetch fresh cloud data as authoritative base
+        let players = null;
+        try {
+            const cloudResponse = await fetch('/.netlify/functions/players', { method: 'GET' });
+            if (cloudResponse.ok) {
+                const cloudResult = await cloudResponse.json();
+                players = cloudResult.data || [];
+                console.log(`☁️ Fetched ${players.length} players from cloud before save`);
+            }
+        } catch (err) { console.warn('⚠️ Cloud fetch failed, using localStorage:', err.message); }
+        if (!players) players = adminSystem.getData('players') || [];
+
         // Delete
         if (hasDeletes && window.netlifyDataManager?.deletePlayers) {
             const result = await window.netlifyDataManager.deletePlayers([...bulkPlayerDeleteIds]);
             if (result.success) players = players.filter(p => !bulkPlayerDeleteIds.has(p.id));
         }
-        
+
         // Create new
         if (hasNew) {
             const newPlayers = [];
@@ -11866,7 +12068,7 @@ async function saveBulkEditPlayers() {
                 }
             }
         }
-        
+
         // Update
         if (hasEdits) {
             const changedIds = new Set();
@@ -11887,15 +12089,23 @@ async function saveBulkEditPlayers() {
                 await window.netlifyDataManager.updatePlayers(toUpdate);
             }
         }
-        
-        adminSystem.saveData('players', players);
+
+        // OLS SAFETY: Re-sync localStorage from cloud after all operations
+        try {
+            const freshResponse = await fetch('/.netlify/functions/players', { method: 'GET' });
+            if (freshResponse.ok) {
+                const freshResult = await freshResponse.json();
+                localStorage.setItem('olrfc_players', JSON.stringify(freshResult.data || []));
+            } else { adminSystem.saveData('players', players); }
+        } catch (e) { adminSystem.saveData('players', players); }
+
         showLoadingSuccess('Players updated!');
         closeModal('bulkEditPlayersModal');
         adminSystem.loadPlayers();
         adminSystem.updateStats();
-    } catch (error) { 
-        showLoadingError('Failed to save'); 
-        alert('Error: ' + error.message); 
+    } catch (error) {
+        showLoadingError('Failed to save');
+        alert('Error: ' + error.message);
     }
 }
 
