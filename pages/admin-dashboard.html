@@ -7863,29 +7863,39 @@ forceStatsRefresh() {
 
             async deleteFilter(index) {
                 const filters = this.getData('team_filters');
-                if (confirm(`Delete filter "${filters[index].name}"?`)) {
-                    filters.splice(index, 1);
-                    this.saveData('team_filters', filters);
-                    
-                    // 🆕 OLS 119: Save updated filters to site-settings (Blobs)
+                const filter = filters[index];
+
+                if (!filter) {
+                    console.error('Filter not found at index:', index);
+                    return;
+                }
+
+                if (confirm(`Delete filter "${filter.name}"?`)) {
                     try {
+                        // 1. CLOUD-FIRST: Build filtered array and save to cloud
+                        const updatedFilters = filters.filter((_, i) => i !== index);
+
                         const response = await fetch('/.netlify/functions/site-settings', {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                'team-display-filters': JSON.stringify(filters)
+                                'team-display-filters': JSON.stringify(updatedFilters)
                             })
                         });
-                        
-                        if (response.ok) {
-                            console.log('✅ Filter deleted from site-settings');
+
+                        if (!response.ok) {
+                            throw new Error('Cloud deletion failed');
                         }
+                        console.log('Filter deleted from site-settings');
+
+                        // 2. Only update localStorage AFTER cloud succeeds
+                        this.saveData('team_filters', updatedFilters);
+                        this.loadFilters();
+                        this.showAlert('filters', 'Filter deleted successfully', 'success');
                     } catch (error) {
-                        console.error('❌ Error deleting filter from site-settings:', error);
+                        console.error('Error deleting filter:', error);
+                        this.showAlert('filters', 'Error deleting filter: ' + error.message, 'danger');
                     }
-                    
-                    this.loadFilters();
-                    this.showAlert('filters', 'Filter deleted successfully', 'success');
                 }
             }
 
@@ -9021,43 +9031,38 @@ document.getElementById('teamForm').addEventListener('submit', async function(e)
         
         showLoading(actionText);
         
-        // 1. IMMEDIATE localStorage update
+        // 1. CLOUD-FIRST: Save to cloud storage first
+        if (window.netlifyDataManager) {
+            const result = await window.netlifyDataManager.createTeam(teamData);
+
+            if (!result.success) {
+                throw new Error(result.error || 'Cloud save failed');
+            }
+            console.log('Team successfully synced to cloud storage');
+        }
+
+        // 2. Only update localStorage AFTER cloud succeeds
         let teams = adminSystem.getData('teams');
-        
-        if (adminSystem.currentEditIndex !== null) {
-            teams[adminSystem.currentEditIndex] = teamData;
+
+        if (isEdit) {
+            const localIndex = teams.findIndex(t => t.id === teamData.id);
+            if (localIndex !== -1) {
+                teams[localIndex] = teamData;
+            }
         } else {
             teams.unshift(teamData);
         }
-        
+
         adminSystem.saveData('teams', teams);
         adminSystem.loadTeams();
         adminSystem.updateStats();
-        
+
         // Update all team dropdowns
         updatePlayerTeamDropdown();
         updateFixtureTeamDropdown();
         updateGalleryTeamDropdown();
-        
-        // 2. BACKGROUND cloud storage
-        if (window.netlifyDataManager) {
-            try {
-                const result = await window.netlifyDataManager.createTeam(teamData);
-                
-                if (result.success) {
-                    console.log('Team successfully synced to cloud storage');
-                    showLoadingSuccess(successText);
-                } else {
-                    throw new Error(result.error);
-                }
-                
-            } catch (cloudError) {
-                console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
-                showLoadingError('Saved locally (cloud sync failed)');
-            }
-        } else {
-            showLoadingSuccess(successText);
-        }
+
+        showLoadingSuccess(successText);
         
         closeModal('teamModal');
         document.getElementById('teamForm').reset();
@@ -9297,20 +9302,22 @@ document.getElementById('galleryForm').addEventListener('submit', async function
             album.description = albumDescription;
             album.updatedAt = new Date().toISOString();
             
-            // Save to localStorage
+            // 1. CLOUD-FIRST: Sync to Netlify Blobs first
+            if (window.netlifyDataManager) {
+                const cloudResult = await window.netlifyDataManager.updateGalleryAlbum(album.id, album);
+                if (!cloudResult.success) {
+                    throw new Error(cloudResult.error || 'Cloud update failed');
+                }
+                console.log('Album updated in cloud storage');
+            }
+
+            // 2. Only update localStorage AFTER cloud succeeds
             adminSystem.saveData('gallery', gallery);
             adminSystem.loadGallery();
             adminSystem.updateStats();
-            
+
             adminSystem.showAlert('gallery', 'Album updated successfully!', 'success');
-            
-            // Background sync to Netlify Blobs
-            if (window.netlifyDataManager) {
-                window.netlifyDataManager.updateGalleryAlbum(album.id, album).catch(err => {
-                    console.warn('Background Netlify sync failed:', err);
-                });
-            }
-            
+
             closeModal('galleryModal');
             return;
             
@@ -9402,35 +9409,25 @@ document.getElementById('galleryForm').addEventListener('submit', async function
             albumTag: successfulUploads[0]?.albumTag || null
         };
 
-        // 1. IMMEDIATE localStorage update
+        updateProgress('Syncing to cloud storage...', successfulUploads.length, galleryFiles.length);
+
+        // 1. CLOUD-FIRST: Save to Netlify Blobs first
+        if (window.netlifyDataManager) {
+            const cloudResult = await window.netlifyDataManager.createGalleryAlbum(albumData);
+
+            if (!cloudResult.success) {
+                throw new Error(cloudResult.error || 'Cloud save failed');
+            }
+            console.log('Album successfully synced to cloud storage');
+        }
+
+        // 2. Only update localStorage AFTER cloud succeeds
         const existingGallery = adminSystem.getData('gallery');
         existingGallery.unshift(albumData);
         adminSystem.saveData('gallery', existingGallery);
 
-        // Update UI immediately
         adminSystem.loadGallery();
         adminSystem.updateStats();
-
-        updateProgress('Syncing to cloud storage...', successfulUploads.length, galleryFiles.length);
-
-        // 2. BACKGROUND cloud storage (Netlify Forms)
-        if (window.netlifyDataManager) {
-            try {
-                const result = await window.netlifyDataManager.createGalleryAlbum(albumData);
-                
-                if (result.success) {
-                    console.log('✅ Album successfully synced to cloud storage');
-                    setTimeout(() => {
-                        adminSystem.showAlert('gallery', 'Album synced to cloud storage ✓', 'success');
-                    }, 1000);
-                } else {
-                    throw new Error(result.error);
-                }
-            } catch (cloudError) {
-                console.warn('⚠️ Cloud storage failed, but localStorage succeeded:', cloudError);
-                adminSystem.showAlert('gallery', 'Album saved locally (cloud sync failed - will retry)', 'warning');
-            }
-        }
 
         // Remove progress indicator
         progressDiv.remove();
@@ -16441,13 +16438,24 @@ async function saveNavigationSettings() {
         }
         
         console.log('✅ All navigation settings saved to Blobs');
-        
+
+        // Log activity
+        if (window.activityLogger) {
+            const visiblePages = Object.entries(settings).filter(([, v]) => v).map(([k]) => k);
+            const hiddenPages = Object.entries(settings).filter(([, v]) => !v).map(([k]) => k);
+            let desc = 'Updated navigation settings';
+            if (hiddenPages.length > 0) {
+                desc += ` - hidden: ${hiddenPages.join(', ')}`;
+            }
+            window.activityLogger.logUpdate('site-settings', 'Navigation Settings', null, desc);
+        }
+
         // Show success message
         statusDiv.style.display = 'block';
         statusDiv.style.background = 'var(--success-green)';
         statusDiv.style.color = 'white';
         statusDiv.innerHTML = '✅ All navigation settings saved!';
-        
+
         console.log('✅ All navigation settings saved successfully');
         
         // Hide message after 3 seconds
@@ -16847,7 +16855,14 @@ async function saveHomePageContent() {
         }
         
         console.log('✅ Homepage content saved to Blobs:', Object.keys(updates));
-        
+
+        // Log activity
+        if (window.activityLogger) {
+            const fieldNames = changedFields.map(f => f.name.replace('homepage-', '').replace(/-/g, ' '));
+            window.activityLogger.logUpdate('site-settings', 'Homepage Content', null,
+                `Updated homepage content: ${fieldNames.join(', ')} (${changeCount} field${changeCount > 1 ? 's' : ''})`);
+        }
+
         // Update original values for change detection
         changedFields.forEach(field => {
             const fieldElement = document.getElementById(field.name);
@@ -16855,7 +16870,7 @@ async function saveHomePageContent() {
                 fieldElement.dataset.originalValue = field.value;
             }
         });
-        
+
         // Show success message
         showContentAlert('success', `✅ ${changeCount} field(s) saved successfully! Refresh homepage to see changes.`);
         
@@ -16955,7 +16970,14 @@ async function saveFixturesPageContent() {
         }
         
         console.log('✅ Fixtures content saved to Blobs:', Object.keys(updates));
-        
+
+        // Log activity
+        if (window.activityLogger) {
+            const fieldNames = changedFields.map(f => f.name.replace('fixtures-', '').replace(/-/g, ' '));
+            window.activityLogger.logUpdate('site-settings', 'Fixtures Page Content', null,
+                `Updated fixtures page content: ${fieldNames.join(', ')} (${changeCount} field${changeCount > 1 ? 's' : ''})`);
+        }
+
         // Update original values for change detection
         changedFields.forEach(field => {
             const fieldElement = document.getElementById(field.name);
@@ -17056,7 +17078,14 @@ async function saveNewsPageContent() {
         }
         
         console.log('✅ News page content saved to Blobs:', Object.keys(updates));
-        
+
+        // Log activity
+        if (window.activityLogger) {
+            const fieldNames = changedFields.map(f => f.name.replace('news-', '').replace(/-/g, ' '));
+            window.activityLogger.logUpdate('site-settings', 'News Page Content', null,
+                `Updated news page content: ${fieldNames.join(', ')} (${changeCount} field${changeCount > 1 ? 's' : ''})`);
+        }
+
         // Update original values in DOM
         changedFields.forEach(field => {
             const fieldElement = document.getElementById(field.name);
@@ -17160,7 +17189,14 @@ async function saveEventsPageContent() {
         }
         
         console.log('✅ Events page content saved to Blobs:', Object.keys(updates));
-        
+
+        // Log activity
+        if (window.activityLogger) {
+            const fieldNames = changedFields.map(f => f.name.replace('events-', '').replace(/-/g, ' '));
+            window.activityLogger.logUpdate('site-settings', 'Events Page Content', null,
+                `Updated events page content: ${fieldNames.join(', ')} (${changeCount} field${changeCount > 1 ? 's' : ''})`);
+        }
+
         // Update original values in DOM
         changedFields.forEach(field => {
             const fieldElement = document.getElementById(field.name);
@@ -17652,7 +17688,14 @@ async function saveGalleryPageContent() {
         }
         
         console.log('✅ Gallery content saved to Blobs:', Object.keys(updates));
-        
+
+        // Log activity
+        if (window.activityLogger) {
+            const fieldNames = changedFields.map(f => f.name.replace('gallery-', '').replace(/-/g, ' '));
+            window.activityLogger.logUpdate('site-settings', 'Gallery Page Content', null,
+                `Updated gallery page content: ${fieldNames.join(', ')} (${changeCount} field${changeCount > 1 ? 's' : ''})`);
+        }
+
         // Update original values for change detection
         changedFields.forEach(field => {
             const fieldElement = document.getElementById(field.name);
@@ -17832,7 +17875,14 @@ async function saveContactsPageContent() {
         }
         
         console.log('✅ Contacts content saved to Blobs:', Object.keys(updates));
-        
+
+        // Log activity
+        if (window.activityLogger) {
+            const fieldNames = changedFields.map(f => f.name.replace('contacts-', '').replace(/-/g, ' '));
+            window.activityLogger.logUpdate('site-settings', 'Contacts Page Content', null,
+                `Updated contacts page content: ${fieldNames.join(', ')} (${changeCount} field${changeCount > 1 ? 's' : ''})`);
+        }
+
         // Update original values for change detection
         changedFields.forEach(field => {
             const fieldElement = document.getElementById(field.name);
@@ -17967,6 +18017,13 @@ async function saveTeamsPageContent() {
             
             showContentAlert('success', `✅ ${changeCount} field(s) saved! Refresh teams page to see changes.`);
             console.log('✅ Teams page content saved to Netlify Blobs');
+
+            // Log activity
+            if (window.activityLogger) {
+                const fieldNames = Object.keys(updates).map(f => f.replace('teams-', '').replace(/-/g, ' '));
+                window.activityLogger.logUpdate('site-settings', 'Teams Page Content', null,
+                    `Updated teams page content: ${fieldNames.join(', ')} (${changeCount} field${changeCount > 1 ? 's' : ''})`);
+            }
         } else {
             throw new Error(result.error || 'Unknown error');
         }
@@ -18135,7 +18192,14 @@ async function saveSponsorsPageContent() {
         }
         
         console.log('✅ Sponsors content saved to Blobs:', Object.keys(updates));
-        
+
+        // Log activity
+        if (window.activityLogger) {
+            const fieldNames = changedFields.map(f => f.name.replace('sponsors-', '').replace(/-/g, ' '));
+            window.activityLogger.logUpdate('site-settings', 'Sponsors Page Content', null,
+                `Updated sponsors page content: ${fieldNames.join(', ')} (${changeCount} field${changeCount > 1 ? 's' : ''})`);
+        }
+
         // Update original values for change detection
         changedFields.forEach(field => {
             const fieldElement = document.getElementById(field.name);
@@ -18276,7 +18340,14 @@ async function saveVPWallPageContent() {
         }
         
         console.log('✅ VP Wall content saved to Blobs:', Object.keys(updates));
-        
+
+        // Log activity
+        if (window.activityLogger) {
+            const fieldNames = changedFields.map(f => f.name.replace('vpwall-', '').replace(/-/g, ' '));
+            window.activityLogger.logUpdate('site-settings', 'VP Wall Page Content', null,
+                `Updated VP Wall page content: ${fieldNames.join(', ')} (${changeCount} field${changeCount > 1 ? 's' : ''})`);
+        }
+
         // Update original values
         changedFields.forEach(field => {
             const fieldElement = document.getElementById(field.name);
@@ -18284,7 +18355,7 @@ async function saveVPWallPageContent() {
                 fieldElement.dataset.originalValue = field.value;
             }
         });
-        
+
         showContentAlert('success', `✅ ${changeCount} field(s) saved successfully! Refresh VP Wall page to see changes.`);
         
     } catch (error) {
@@ -19468,11 +19539,22 @@ async function saveVP(event) {
             closeVPModal();
             loadVPList();
             updateVPStats();
-            
+
+            // Log activity
+            if (window.activityLogger) {
+                if (vpId) {
+                    window.activityLogger.logUpdate('vp-wall', vpData.name, vpId,
+                        `Updated VP: ${vpData.name} (${vpData.type})`);
+                } else {
+                    window.activityLogger.logCreate('vp-wall', vpData.name, vpData.id,
+                        `Added VP: ${vpData.name} (${vpData.type})`);
+                }
+            }
+
             if (window.showLoadingSuccess) {
                 showLoadingSuccess(vpId ? 'VP Updated!' : 'VP Added!');
             }
-            
+
             showVPAlert(vpId ? 'Vice President updated successfully!' : 'Vice President added successfully!', 'success');
         } else {
             throw new Error(result.error || 'Failed to save VP');
@@ -19517,14 +19599,19 @@ async function deleteVP(vpId) {
             let vps = JSON.parse(localStorage.getItem('olrfc_vps') || '[]');
             vps = vps.filter(v => v.id !== vpId);
             localStorage.setItem('olrfc_vps', JSON.stringify(vps));
-            
+
+            // Log activity
+            if (window.activityLogger) {
+                window.activityLogger.logDelete('vp-wall', vpName, vpId);
+            }
+
             loadVPList();
             updateVPStats();
-            
+
             if (window.showLoadingSuccess) {
                 showLoadingSuccess('VP Removed!');
             }
-            
+
             showVPAlert('Vice President removed from the wall', 'success');
         } else {
             throw new Error(result.error || 'Failed to delete VP');

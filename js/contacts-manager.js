@@ -187,11 +187,11 @@ class ContactsManager {
     try {
       // Generate unique ID
       const contactId = 'contact_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      
+
       // Get category info
-      const categoryInfo = this.defaultCategories.find(dc => dc.name === contactData.category) || 
+      const categoryInfo = this.defaultCategories.find(dc => dc.name === contactData.category) ||
                           { color: 'green', emoji: '👤' };
-      
+
       // Create contact object
       const contact = {
         id: contactId,
@@ -210,17 +210,42 @@ class ContactsManager {
         updatedAt: new Date().toISOString()
       };
 
-      // Add to array
-      this.contacts.push(contact);
+      // 1. CLOUD-FIRST: Build new array and sync to cloud
+      const contactsWithNew = [...this.contacts, contact];
 
-      // Save to localStorage AND Netlify Blobs
-      await this.saveContacts();
+      const response = await fetch('/.netlify/functions/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: contactsWithNew })
+      });
 
-      console.log('✅ Contact added:', contactId);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Cloud save failed: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Cloud save failed');
+      }
+
+      // 2. Only update local data AFTER cloud succeeds
+      this.contacts = contactsWithNew;
+      localStorage.setItem(this.storageKey, JSON.stringify(this.contacts));
+
+      console.log('Contact added:', contactId);
+
+      // Log activity
+      if (window.activityLogger) {
+        window.activityLogger.logCreate('contacts', contact.name, contactId,
+          `Created contact: ${contact.name} (${contact.role}, ${contact.category})`
+        );
+      }
+
       return { success: true, contactId: contactId, contact: contact };
 
     } catch (error) {
-      console.error('❌ Error adding contact:', error);
+      console.error('Error adding contact:', error);
       throw error;
     }
   }
@@ -229,17 +254,20 @@ class ContactsManager {
   async updateContact(contactId, contactData) {
     try {
       const index = this.contacts.findIndex(c => c.id === contactId);
-      
+
       if (index === -1) {
         throw new Error('Contact not found: ' + contactId);
       }
 
+      // Capture old state for activity logging before any changes
+      const oldContact = { ...this.contacts[index] };
+
       // Get category info
-      const categoryInfo = this.defaultCategories.find(dc => dc.name === contactData.category) || 
+      const categoryInfo = this.defaultCategories.find(dc => dc.name === contactData.category) ||
                           { color: 'green', emoji: '👤' };
 
-      // Update contact - preserve existing fields not in update
-      this.contacts[index] = {
+      // Build updated contact
+      const updatedContact = {
         ...this.contacts[index],
         name: contactData.name,
         role: contactData.role,
@@ -255,14 +283,53 @@ class ContactsManager {
         updatedAt: new Date().toISOString()
       };
 
-      // Save to localStorage AND Netlify Blobs
-      await this.saveContacts();
+      // 1. CLOUD-FIRST: Build updated array and sync to cloud
+      const updatedContacts = [...this.contacts];
+      updatedContacts[index] = updatedContact;
 
-      console.log('✅ Contact updated:', contactId);
-      return { success: true, contact: this.contacts[index] };
+      const response = await fetch('/.netlify/functions/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: updatedContacts })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Cloud save failed: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Cloud save failed');
+      }
+
+      // 2. Only update local data AFTER cloud succeeds
+      this.contacts = updatedContacts;
+      localStorage.setItem(this.storageKey, JSON.stringify(this.contacts));
+
+      console.log('Contact updated:', contactId);
+
+      // Log activity with field-level detail
+      if (window.activityLogger) {
+        const changedFields = {};
+        const trackFields = ['name', 'role', 'category', 'email', 'phone', 'active', 'displayOrder'];
+        trackFields.forEach(field => {
+          if (String(oldContact[field] || '') !== String(updatedContact[field] || '')) {
+            changedFields[field] = { from: oldContact[field], to: updatedContact[field] };
+          }
+        });
+
+        if (Object.keys(changedFields).length > 0) {
+          window.activityLogger.logDetailedUpdate('contacts', updatedContact.name, contactId, changedFields);
+        } else {
+          window.activityLogger.logUpdate('contacts', updatedContact.name, contactId);
+        }
+      }
+
+      return { success: true, contact: updatedContact };
 
     } catch (error) {
-      console.error('❌ Error updating contact:', error);
+      console.error('Error updating contact:', error);
       throw error;
     }
   }
@@ -302,6 +369,12 @@ class ContactsManager {
       localStorage.setItem(this.storageKey, JSON.stringify(this.contacts));
 
       console.log('Contact deleted:', contactId);
+
+      // Log activity
+      if (window.activityLogger) {
+        window.activityLogger.logDelete('contacts', deletedContact.name, contactId);
+      }
+
       return { success: true, deletedContact };
 
     } catch (error) {
@@ -389,6 +462,12 @@ class ContactsManager {
     });
 
     await this.saveContacts();
+
+    // Log activity
+    if (window.activityLogger) {
+      window.activityLogger.logUpdate('contacts', categoryName, null,
+        `Reordered ${orderedContactIds.length} contacts in "${categoryName}"`);
+    }
   }
 }
 

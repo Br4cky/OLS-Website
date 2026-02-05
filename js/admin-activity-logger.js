@@ -56,16 +56,47 @@ class AdminActivityLogger {
             // Determine if this is create, update, or delete
             const previousData = JSON.parse(localStorage.getItem(`olrfc_${key}`) || '[]');
             const actionType = logger.determineActionType(previousData, data);
-            
+
             // Get a title for the item being modified
             const itemTitle = logger.extractItemTitle(key, data, previousData);
+
+            // Build detailed log info
+            const logDetails = { itemTitle };
+
+            if (actionType === 'update' && Array.isArray(previousData) && Array.isArray(data)) {
+                // Get field-level changes for updates
+                const changed = logger.findChangedItem(key, previousData, data);
+                if (changed) {
+                    const changeInfo = logger.generateChangeDescription(key, changed.oldItem, changed.newItem);
+                    if (changeInfo) {
+                        logDetails.description = changeInfo.description;
+                        logDetails.metadata = {
+                            changedFields: changeInfo.changedFields,
+                            changeCount: changeInfo.changeCount
+                        };
+                    }
+                    logDetails.itemId = changed.newItem.id || null;
+                }
+            } else if (actionType === 'create') {
+                const newItem = logger.findNewItem(key, previousData, data);
+                if (newItem) {
+                    logDetails.itemId = newItem.id || null;
+                    logDetails.description = `Created new ${key.replace(/s$/, '')}: ${itemTitle}`;
+                }
+            } else if (actionType === 'delete') {
+                const removedItem = logger.findRemovedItem(key, previousData, data);
+                if (removedItem) {
+                    logDetails.itemId = removedItem.id || null;
+                    logDetails.description = `Deleted ${key.replace(/s$/, '')}: ${logger.getItemTitle(key, removedItem)}`;
+                }
+            }
 
             // Call original saveData
             const result = originalSaveData(key, data);
 
             // Log the activity (async, don't block)
             if (logger.enabled) {
-                logger.logActivity(actionType, key, { itemTitle }).catch(err => {
+                logger.logActivity(actionType, key, logDetails).catch(err => {
                     console.warn('Activity logging failed:', err);
                 });
             }
@@ -153,107 +184,112 @@ class AdminActivityLogger {
 
     /**
      * Find which item in the array actually changed
+     * Returns { oldItem, newItem } so callers can compute field diffs
      */
     findChangedItem(key, previousData, newData) {
-        // Use content-specific comparison to find the changed item
-        switch(key) {
-            case 'fixtures':
-                // Find fixture that changed by comparing opponent, date, homeTeam
-                for (let i = 0; i < newData.length; i++) {
-                    const newItem = newData[i];
-                    const oldItem = previousData.find(p => 
-                        p.opponent === newItem.opponent &&
-                        p.date === newItem.date &&
-                        p.homeTeam === newItem.homeTeam
+        // Helper: match by ID first (most reliable), then content-specific fallback
+        const findMatch = (item, candidates) => {
+            // Always try ID match first
+            if (item.id) {
+                const match = candidates.find(c => c.id === item.id);
+                if (match) return match;
+            }
+
+            // Content-specific fallback
+            switch(key) {
+                case 'fixtures':
+                    return candidates.find(c =>
+                        c.opponent === item.opponent && c.date === item.date && c.homeTeam === item.homeTeam
                     );
-                    
-                    // If found, check if anything changed
-                    if (oldItem && JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-                        return newItem;
-                    }
-                }
-                break;
-                
-            case 'news':
-                // Find news that changed by comparing title and date
-                for (let i = 0; i < newData.length; i++) {
-                    const newItem = newData[i];
-                    const oldItem = previousData.find(p => 
-                        p.title === newItem.title &&
-                        p.date === newItem.date
+                case 'news':
+                    return candidates.find(c => c.title === item.title && c.date === item.date);
+                case 'players':
+                    return candidates.find(c => c.name === item.name);
+                case 'sponsors':
+                    return candidates.find(c => c.name === item.name);
+                case 'teams':
+                    return candidates.find(c => c.slug === item.slug);
+                case 'shop':
+                    return candidates.find(c => (c.sku && c.sku === item.sku) || c.name === item.name);
+                case 'gallery':
+                    return candidates.find(c =>
+                        (c.cloudinaryId && c.cloudinaryId === item.cloudinaryId) || (c.url && c.url === item.url)
                     );
-                    
-                    if (oldItem && JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-                        return newItem;
-                    }
-                }
-                break;
-                
-            case 'players':
-                // Find player that changed by comparing name
-                for (let i = 0; i < newData.length; i++) {
-                    const newItem = newData[i];
-                    const oldItem = previousData.find(p => p.name === newItem.name);
-                    
-                    if (oldItem && JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-                        return newItem;
-                    }
-                }
-                break;
-                
-            case 'sponsors':
-                // Find sponsor that changed by comparing id or name
-                for (let i = 0; i < newData.length; i++) {
-                    const newItem = newData[i];
-                    const oldItem = previousData.find(p => 
-                        (p.id && p.id === newItem.id) || p.name === newItem.name
-                    );
-                    
-                    if (oldItem && JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-                        return newItem;
-                    }
-                }
-                break;
-                
-            case 'teams':
-                // Find team that changed by comparing slug (unique identifier)
-                for (let i = 0; i < newData.length; i++) {
-                    const newItem = newData[i];
-                    const oldItem = previousData.find(p => p.slug === newItem.slug);
-                    
-                    if (oldItem && JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-                        return newItem;
-                    }
-                }
-                break;
-                
-            case 'shop':
-                // Find shop item that changed by comparing sku or name
-                for (let i = 0; i < newData.length; i++) {
-                    const newItem = newData[i];
-                    const oldItem = previousData.find(p => 
-                        (p.sku && p.sku === newItem.sku) || p.name === newItem.name
-                    );
-                    
-                    if (oldItem && JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-                        return newItem;
-                    }
-                }
-                break;
-                
-            default:
-                // Generic comparison: find any item that changed
-                for (let i = 0; i < newData.length; i++) {
-                    const newItem = newData[i];
-                    const oldItem = previousData[i];
-                    
-                    if (oldItem && JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-                        return newItem;
-                    }
-                }
+                default:
+                    return candidates.find(c => JSON.stringify(c) === JSON.stringify(item));
+            }
+        };
+
+        for (let i = 0; i < newData.length; i++) {
+            const newItem = newData[i];
+            const oldItem = findMatch(newItem, previousData);
+
+            if (oldItem && JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
+                return { oldItem, newItem };
+            }
         }
-        
+
         return null;
+    }
+
+    /**
+     * Generate a human-readable description of what fields changed
+     */
+    generateChangeDescription(key, oldItem, newItem) {
+        if (!oldItem || !newItem) return null;
+
+        // Fields to skip in diff (internal/meta fields)
+        const skipFields = ['id', 'dateAdded', 'createdAt', 'updatedAt', 'lastUpdated'];
+
+        // Human-readable field name mapping
+        const fieldLabels = {
+            opponent: 'opponent', ourScore: 'our score', theirScore: 'their score',
+            dateTime: 'date/time', venue: 'venue', competition: 'competition',
+            team: 'team', name: 'name', title: 'title', content: 'content',
+            category: 'category', author: 'author', featured: 'featured',
+            position: 'position', appearances: 'appearances', photo: 'photo',
+            tier: 'tier', phone: 'phone', email: 'email', website: 'website',
+            active: 'active status', showInBanner: 'banner visibility',
+            logo: 'logo', slug: 'slug', description: 'description',
+            price: 'price', stock: 'stock', image: 'image'
+        };
+
+        const changes = [];
+        const changedFields = {};
+
+        // Get all keys from both objects
+        const allKeys = new Set([...Object.keys(oldItem), ...Object.keys(newItem)]);
+
+        for (const field of allKeys) {
+            if (skipFields.includes(field)) continue;
+
+            const oldVal = oldItem[field];
+            const newVal = newItem[field];
+
+            // Skip if values are the same
+            if (JSON.stringify(oldVal) === JSON.stringify(newVal)) continue;
+
+            const label = fieldLabels[field] || field;
+
+            // Format values for display
+            const formatVal = (val) => {
+                if (val === null || val === undefined || val === '') return 'empty';
+                if (typeof val === 'boolean') return val ? 'yes' : 'no';
+                if (typeof val === 'string' && val.length > 50) return val.substring(0, 50) + '...';
+                return String(val);
+            };
+
+            changes.push(`${label}: "${formatVal(oldVal)}" → "${formatVal(newVal)}"`);
+            changedFields[field] = { from: oldVal, to: newVal };
+        }
+
+        if (changes.length === 0) return null;
+
+        return {
+            description: `Changed ${changes.join(', ')}`,
+            changedFields: changedFields,
+            changeCount: changes.length
+        };
     }
 
     /**
@@ -318,12 +354,12 @@ class AdminActivityLogger {
 
         // For UPDATE operations (same array length, but content changed)
         if (Array.isArray(previousData) && Array.isArray(data) && data.length === previousData.length) {
-            // Find which item changed
-            const changedItem = this.findChangedItem(key, previousData, data);
-            if (changedItem) {
-                return this.getItemTitle(key, changedItem);
+            // Find which item changed (returns { oldItem, newItem })
+            const changed = this.findChangedItem(key, previousData, data);
+            if (changed) {
+                return this.getItemTitle(key, changed.newItem);
             }
-            
+
             // Fallback: if we can't determine which changed, use last item
             if (data.length > 0) {
                 return this.getItemTitle(key, data[data.length - 1]);
@@ -494,18 +530,55 @@ class AdminActivityLogger {
     }
 
     /**
-     * Convenience methods for manual logging (if needed)
+     * Convenience methods for manual logging from external code
+     * (contacts, VPs, site-settings, etc. that bypass adminSystem.saveData)
      */
-    logCreate(contentType, itemTitle, itemId = null) {
-        return this.logActivity('create', contentType, { itemTitle, itemId });
+    logCreate(contentType, itemTitle, itemId = null, description = null) {
+        return this.logActivity('create', contentType, {
+            itemTitle,
+            itemId,
+            description: description || `Created new ${contentType.replace(/s$/, '')}: ${itemTitle}`
+        });
     }
 
-    logUpdate(contentType, itemTitle, itemId = null) {
-        return this.logActivity('update', contentType, { itemTitle, itemId });
+    logUpdate(contentType, itemTitle, itemId = null, description = null, metadata = null) {
+        return this.logActivity('update', contentType, {
+            itemTitle,
+            itemId,
+            description: description || `Updated ${contentType.replace(/s$/, '')}: ${itemTitle}`,
+            metadata: metadata || {}
+        });
     }
 
     logDelete(contentType, itemTitle, itemId = null) {
-        return this.logActivity('delete', contentType, { itemTitle, itemId });
+        return this.logActivity('delete', contentType, {
+            itemTitle,
+            itemId,
+            description: `Deleted ${contentType.replace(/s$/, '')}: ${itemTitle}`
+        });
+    }
+
+    /**
+     * Log a field-level update with before/after values
+     * Used by external code that knows exactly what changed
+     */
+    logDetailedUpdate(contentType, itemTitle, itemId, changedFields) {
+        const changes = Object.entries(changedFields).map(([field, { from, to }]) => {
+            const formatVal = (val) => {
+                if (val === null || val === undefined || val === '') return 'empty';
+                if (typeof val === 'boolean') return val ? 'yes' : 'no';
+                if (typeof val === 'string' && val.length > 50) return val.substring(0, 50) + '...';
+                return String(val);
+            };
+            return `${field}: "${formatVal(from)}" → "${formatVal(to)}"`;
+        });
+
+        return this.logActivity('update', contentType, {
+            itemTitle,
+            itemId,
+            description: `Changed ${changes.join(', ')}`,
+            metadata: { changedFields, changeCount: changes.length }
+        });
     }
 }
 
