@@ -1,6 +1,31 @@
 const { getStore } = require('@netlify/blobs');
+const { requireAuth } = require('./auth-middleware');
 
 exports.handler = async (event, context) => {
+    // Handle OPTIONS for CORS
+    if (event.httpMethod === 'OPTIONS') {
+        return {
+            statusCode: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+            },
+            body: ''
+        };
+    }
+
+    // Require auth for write operations
+    if (['POST', 'PUT', 'DELETE'].includes(event.httpMethod)) {
+        const headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+        };
+        const authError = await requireAuth(event, headers);
+        if (authError) return authError;
+    }
+
     const store = getStore({
         name: 'ols-sponsors',
         siteID: process.env.SITE_ID,
@@ -252,19 +277,6 @@ exports.handler = async (event, context) => {
                 })
             };
         }
-    }
-
-    // Handle OPTIONS for CORS
-    if (event.httpMethod === 'OPTIONS') {
-        return {
-            statusCode: 200,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
-            },
-            body: ''
-        };
     }
 
     return {

@@ -3,6 +3,7 @@
 // Tracks all admin actions for accountability and security
 
 const { getStore } = require('@netlify/blobs');
+const { requireAuth } = require('./auth-middleware');
 
 exports.handler = async (event) => {
     // Enable CORS
@@ -15,6 +16,12 @@ exports.handler = async (event) => {
     // Handle preflight requests
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers, body: '' };
+    }
+
+    // Require auth for write operations
+    if (['POST', 'PUT', 'DELETE'].includes(event.httpMethod)) {
+        const authError = await requireAuth(event, headers);
+        if (authError) return authError;
     }
 
     try {

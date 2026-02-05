@@ -9,6 +9,27 @@ class OLRFCNetlifyDataManager {
         this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
     }
 
+    // Get auth headers for authenticated API calls
+    getAuthHeaders() {
+        // Use server-provided HMAC token if available
+        const token = localStorage.getItem('olrfc_auth_token');
+        if (token) {
+            return { 'Authorization': `Bearer ${token}` };
+        }
+        // Fallback: build legacy token from session (backwards compatibility)
+        const session = JSON.parse(localStorage.getItem('olrfc_admin_session') || '{}');
+        if (session.userId && session.email) {
+            const legacyToken = btoa(JSON.stringify({
+                userId: session.userId,
+                email: session.email,
+                role: session.role,
+                timestamp: Date.now()
+            }));
+            return { 'Authorization': `Bearer ${legacyToken}` };
+        }
+        return {};
+    }
+
     // Generic method to submit data to Netlify Forms
     async submitToNetlify(formName, data) {
         try {
@@ -76,7 +97,7 @@ async createVP(vpData) {
     try {
         const response = await fetch('/.netlify/functions/vp-wall', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
             body: JSON.stringify(vpData)
         });
         return await response.json();
@@ -89,7 +110,7 @@ async updateVP(vpId, vpData) {
     try {
         const response = await fetch('/.netlify/functions/vp-wall', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
             body: JSON.stringify({ id: vpId, ...vpData })
         });
         return await response.json();
@@ -102,7 +123,7 @@ async deleteVP(vpId) {
     try {
         const response = await fetch('/.netlify/functions/vp-wall', {
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
             body: JSON.stringify({ id: vpId })
         });
         return await response.json();
@@ -118,7 +139,7 @@ async createVPs(vps) {
 
         const response = await fetch('/.netlify/functions/vp-bulk', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
             body: JSON.stringify({ action: 'create', vps })
         });
 
@@ -148,7 +169,7 @@ async updateVPs(vps) {
 
         const response = await fetch('/.netlify/functions/vp-bulk', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
             body: JSON.stringify({ action: 'update', vps })
         });
 
@@ -178,7 +199,7 @@ async deleteVPs(vpIds) {
 
         const response = await fetch('/.netlify/functions/vp-bulk', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
             body: JSON.stringify({ action: 'delete', vpIds })
         });
 
@@ -708,7 +729,7 @@ async createPlayers(players) {
 
         const response = await fetch('/.netlify/functions/players-bulk', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
             body: JSON.stringify({ action: 'create', players })
         });
 
@@ -738,7 +759,7 @@ async updatePlayers(players) {
 
         const response = await fetch('/.netlify/functions/players-bulk', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
             body: JSON.stringify({ action: 'update', players })
         });
 
@@ -768,7 +789,7 @@ async deletePlayers(playerIds) {
 
         const response = await fetch('/.netlify/functions/players-bulk', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
             body: JSON.stringify({ action: 'delete', playerIds })
         });
 
@@ -981,7 +1002,7 @@ async deletePlayers(playerIds) {
 
             const response = await fetch('/.netlify/functions/sponsors-bulk', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
                 body: JSON.stringify({ action: 'create', sponsors })
             });
 
@@ -1011,7 +1032,7 @@ async deletePlayers(playerIds) {
 
             const response = await fetch('/.netlify/functions/sponsors-bulk', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
                 body: JSON.stringify({ action: 'update', sponsors })
             });
 
@@ -1038,7 +1059,7 @@ async deletePlayers(playerIds) {
 
             const response = await fetch('/.netlify/functions/sponsors-bulk', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
                 body: JSON.stringify({ action: 'delete', sponsorIds })
             });
 
@@ -1351,19 +1372,8 @@ async deletePlayers(playerIds) {
      */
     async getAdminUsers() {
         try {
-            // Build auth token from session
-            const session = JSON.parse(localStorage.getItem('olrfc_admin_session') || '{}');
-            const authToken = btoa(JSON.stringify({
-                userId: session.userId,
-                email: session.email,
-                role: session.role,
-                timestamp: Date.now()
-            }));
-
             const response = await fetch('/.netlify/functions/admin-users', {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
+                headers: this.getAuthHeaders()
             });
 
             if (!response.ok) {
@@ -1723,7 +1733,7 @@ async deletePlayers(playerIds) {
 
             const response = await fetch('/.netlify/functions/contacts-bulk', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
                 body: JSON.stringify({ action: 'create', contacts })
             });
 
@@ -1753,7 +1763,7 @@ async deletePlayers(playerIds) {
 
             const response = await fetch('/.netlify/functions/contacts-bulk', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
                 body: JSON.stringify({ action: 'update', contacts })
             });
 
@@ -1783,7 +1793,7 @@ async deletePlayers(playerIds) {
 
             const response = await fetch('/.netlify/functions/contacts-bulk', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
                 body: JSON.stringify({ action: 'delete', contactIds })
             });
 

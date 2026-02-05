@@ -25,20 +25,10 @@ let footerSettingsLoaded = false;
  */
 async function fetchFooterSettings() {
     if (footerSettingsLoaded) return footerSettings;
-    
+
     try {
-        const response = await fetch('/.netlify/functions/site-settings', {
-            method: 'GET'
-        });
-        
-        if (!response.ok) {
-            console.log('Using default footer settings');
-            footerSettingsLoaded = true;
-            return footerSettings;
-        }
-        
-        const result = await response.json();
-        const settings = result.data || {};
+        // Use shared settings service to avoid redundant API calls
+        const settings = window.siteSettings ? await window.siteSettings.get() : {};
         
         // Extract footer settings directly from object
         if (settings['contact-address']) footerSettings.contactAddress = settings['contact-address'];
@@ -164,8 +154,10 @@ function generateFooter(currentPage = 'home', settings = null) {
         `<a href="${link.href}">${link.text}</a>`
     ).join('\n                    ');
 
-    // Format address for HTML (replace newlines with <br>)
-    const formattedAddress = activeSettings.contactAddress.replace(/\n/g, '<br>');
+    // Format address for HTML (escape then replace newlines with <br>)
+    const formattedAddress = window.escapeHtmlWithBreaks
+        ? window.escapeHtmlWithBreaks(activeSettings.contactAddress)
+        : activeSettings.contactAddress.replace(/\n/g, '<br>');
     
     // Build social media links (only show if URL is provided)
     let socialLinksHTML = '';
@@ -190,8 +182,8 @@ function generateFooter(currentPage = 'home', settings = null) {
                 <div class="footer-section">
                     <h3>Contact Information</h3>
                     <p>📍 ${formattedAddress}</p>
-                    <p>📧 ${activeSettings.contactEmail}</p>
-                    ${activeSettings.contactPhone ? `<p>📞 ${activeSettings.contactPhone}</p>` : ''}
+                    <p>📧 ${window.escapeHtml ? window.escapeHtml(activeSettings.contactEmail) : activeSettings.contactEmail}</p>
+                    ${activeSettings.contactPhone ? `<p>📞 ${window.escapeHtml ? window.escapeHtml(activeSettings.contactPhone) : activeSettings.contactPhone}</p>` : ''}
                 </div>
                 
                 <div class="footer-section">
@@ -218,7 +210,7 @@ function generateFooter(currentPage = 'home', settings = null) {
             </div>
             
             <div class="footer-bottom">
-                <p>${activeSettings.copyright}</p>
+                <p>${window.escapeHtml ? window.escapeHtml(activeSettings.copyright) : activeSettings.copyright}</p>
             </div>
         </div>
     </footer>

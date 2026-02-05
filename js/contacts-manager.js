@@ -23,6 +23,18 @@ class ContactsManager {
     this.autoInitialize();
   }
 
+  // Get auth headers for authenticated API calls
+  getAuthHeaders() {
+    const token = localStorage.getItem('olrfc_auth_token');
+    if (token) return { 'Authorization': `Bearer ${token}` };
+    const session = JSON.parse(localStorage.getItem('olrfc_admin_session') || '{}');
+    if (session.userId && session.email) {
+      const legacyToken = btoa(JSON.stringify({ userId: session.userId, email: session.email, role: session.role, timestamp: Date.now() }));
+      return { 'Authorization': `Bearer ${legacyToken}` };
+    }
+    return {};
+  }
+
   // 🔧 NEW: Auto-initialize synchronously from localStorage
   autoInitialize() {
     console.log('📥 Auto-initializing contacts manager...');
@@ -98,7 +110,8 @@ class ContactsManager {
       const response = await fetch('/.netlify/functions/contacts', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...this.getAuthHeaders()
         },
         body: JSON.stringify({
           data: this.contacts
@@ -215,7 +228,7 @@ class ContactsManager {
 
       const response = await fetch('/.netlify/functions/contacts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
         body: JSON.stringify({ data: contactsWithNew })
       });
 
@@ -289,7 +302,7 @@ class ContactsManager {
 
       const response = await fetch('/.netlify/functions/contacts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
         body: JSON.stringify({ data: updatedContacts })
       });
 
@@ -350,7 +363,7 @@ class ContactsManager {
 
       const response = await fetch('/.netlify/functions/contacts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
         body: JSON.stringify({ data: contactsWithoutDeleted })
       });
 

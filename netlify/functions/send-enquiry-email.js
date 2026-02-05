@@ -54,8 +54,32 @@ exports.handler = async (event, context) => {
             };
         }
         
+        // Sanitize user input to prevent HTML injection in emails
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Sanitize all user-provided fields
+        const safe = {
+            eventType: escapeHtml(enquiryData.eventType),
+            name: escapeHtml(enquiryData.name),
+            email: escapeHtml(enquiryData.email),
+            phone: escapeHtml(enquiryData.phone),
+            eventDate: escapeHtml(enquiryData.eventDate),
+            guests: escapeHtml(enquiryData.guests),
+            message: escapeHtml(enquiryData.message),
+            id: escapeHtml(enquiryData.id),
+            createdAt: enquiryData.createdAt
+        };
+
         // Step 2: Build email content
-        const emailSubject = `New ${enquiryData.eventType} Enquiry - ${enquiryData.name}`;
+        const emailSubject = `New ${safe.eventType} Enquiry - ${safe.name}`;
         
         const emailHtml = `
 <!DOCTYPE html>
@@ -77,50 +101,50 @@ exports.handler = async (event, context) => {
     <div class="container">
         <div class="header">
             <h2 style="margin: 0;">🏉 New Events Enquiry</h2>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Received ${new Date(enquiryData.createdAt).toLocaleString()}</p>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Received ${new Date(safe.createdAt).toLocaleString()}</p>
         </div>
         
         <div class="content">
             <div class="field">
                 <div class="label">Event Type:</div>
-                <div class="value">${enquiryData.eventType}</div>
+                <div class="value">${safe.eventType}</div>
             </div>
             
             <div class="field">
                 <div class="label">Name:</div>
-                <div class="value">${enquiryData.name}</div>
+                <div class="value">${safe.name}</div>
             </div>
             
             <div class="field">
                 <div class="label">Email:</div>
-                <div class="value"><a href="mailto:${enquiryData.email}">${enquiryData.email}</a></div>
+                <div class="value"><a href="mailto:${safe.email}">${safe.email}</a></div>
             </div>
             
             <div class="field">
                 <div class="label">Phone:</div>
-                <div class="value">${enquiryData.phone || 'Not provided'}</div>
+                <div class="value">${safe.phone || 'Not provided'}</div>
             </div>
             
             <div class="field">
                 <div class="label">Event Date:</div>
-                <div class="value">${enquiryData.eventDate || 'Not specified'}</div>
+                <div class="value">${safe.eventDate || 'Not specified'}</div>
             </div>
             
             <div class="field">
                 <div class="label">Number of Guests:</div>
-                <div class="value">${enquiryData.guests || 'Not specified'}</div>
+                <div class="value">${safe.guests || 'Not specified'}</div>
             </div>
             
             <div class="field">
                 <div class="label">Message:</div>
-                <div class="value">${enquiryData.message || 'No message provided'}</div>
+                <div class="value">${safe.message || 'No message provided'}</div>
             </div>
             
             <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #ddd;">
                 <p style="margin: 0; color: #666; font-size: 0.9em;">
-                    <strong>Enquiry ID:</strong> ${enquiryData.id}<br>
+                    <strong>Enquiry ID:</strong> ${safe.id}<br>
                     <strong>Status:</strong> New<br>
-                    <strong>Submitted:</strong> ${new Date(enquiryData.createdAt).toLocaleString()}
+                    <strong>Submitted:</strong> ${new Date(safe.createdAt).toLocaleString()}
                 </p>
             </div>
         </div>
@@ -136,19 +160,19 @@ exports.handler = async (event, context) => {
         
         // Plain text version
         const emailText = `
-New ${enquiryData.eventType} Enquiry
+New ${safe.eventType} Enquiry
 
-Name: ${enquiryData.name}
-Email: ${enquiryData.email}
-Phone: ${enquiryData.phone || 'Not provided'}
-Event Date: ${enquiryData.eventDate || 'Not specified'}
-Guests: ${enquiryData.guests || 'Not specified'}
+Name: ${safe.name}
+Email: ${safe.email}
+Phone: ${safe.phone || 'Not provided'}
+Event Date: ${safe.eventDate || 'Not specified'}
+Guests: ${safe.guests || 'Not specified'}
 
 Message:
-${enquiryData.message || 'No message provided'}
+${safe.message || 'No message provided'}
 
-Enquiry ID: ${enquiryData.id}
-Submitted: ${new Date(enquiryData.createdAt).toLocaleString()}
+Enquiry ID: ${safe.id}
+Submitted: ${new Date(safe.createdAt).toLocaleString()}
         `;
         
         // Step 3: Send email via SendGrid

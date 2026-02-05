@@ -31,6 +31,23 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Edge Functions - SEO meta tag injection from CMS settings
+[[edge_functions]]
+  function = "seo-injector"
+  path = "/"
+
+[[edge_functions]]
+  function = "seo-injector"
+  path = "/index.html"
+
+[[edge_functions]]
+  function = "seo-injector"
+  path = "/pages/*"
+
+[[edge_functions]]
+  function = "seo-injector"
+  path = "/vp-wall.html"
+
 # Development settings
 [dev]
   port = 3000

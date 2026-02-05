@@ -19,8 +19,21 @@ class BackgroundRemovalService {
         if (this.initialized) return true;
         
         try {
-            // Fetch API key from Netlify Function (keeps it secure)
-            const response = await fetch('/.netlify/functions/get-removebg-key');
+            // Fetch API key from Netlify Function (keeps it secure, requires auth)
+            const authHeaders = {};
+            const token = localStorage.getItem('olrfc_auth_token');
+            if (token) {
+                authHeaders['Authorization'] = `Bearer ${token}`;
+            } else {
+                const session = JSON.parse(localStorage.getItem('olrfc_admin_session') || '{}');
+                if (session.userId && session.email) {
+                    const legacyToken = btoa(JSON.stringify({ userId: session.userId, email: session.email, role: session.role, timestamp: Date.now() }));
+                    authHeaders['Authorization'] = `Bearer ${legacyToken}`;
+                }
+            }
+            const response = await fetch('/.netlify/functions/get-removebg-key', {
+                headers: authHeaders
+            });
             if (response.ok) {
                 const data = await response.json();
                 this.apiKey = data.apiKey;

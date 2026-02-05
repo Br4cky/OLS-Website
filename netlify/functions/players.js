@@ -3,11 +3,12 @@
 // OLS 85 - Netlify Blobs Migration from Forms
 
 const { getStore } = require('@netlify/blobs');
+const { requireAuth } = require('./auth-middleware');
 
 exports.handler = async (event, context) => {
     const headers = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
     };
 
@@ -17,6 +18,12 @@ exports.handler = async (event, context) => {
             headers,
             body: ''
         };
+    }
+
+    // Require auth for write operations
+    if (['POST', 'PUT', 'DELETE'].includes(event.httpMethod)) {
+        const authError = await requireAuth(event, headers);
+        if (authError) return authError;
     }
 
     try {

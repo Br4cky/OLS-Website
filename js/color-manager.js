@@ -248,17 +248,12 @@ class ColorManager {
      */
     async fetchCustomColors() {
         try {
-            const response = await fetch('/.netlify/functions/site-settings', {
-                method: 'GET'
-            });
-
-            if (!response.ok) {
+            // Use shared settings service to avoid redundant API calls
+            const settings = window.siteSettings ? await window.siteSettings.get() : {};
+            if (!settings || Object.keys(settings).length === 0) {
                 console.log('No custom colors found, using defaults');
                 return;
             }
-
-            const result = await response.json();
-            const settings = result.data || {};
 
             // Extract color settings from the settings object
             const colors = {};
@@ -286,16 +281,8 @@ class ColorManager {
      */
     async fetchCustomColorsQuiet() {
         try {
-            const response = await fetch('/.netlify/functions/site-settings', {
-                method: 'GET'
-            });
-
-            if (!response.ok) {
-                return {};
-            }
-
-            const result = await response.json();
-            const settings = result.data || {};
+            // Use shared settings service for background validation too
+            const settings = window.siteSettings ? await window.siteSettings.get() : {};
 
             const colors = {};
             

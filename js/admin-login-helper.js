@@ -6,28 +6,31 @@
  * Handle successful login - stores complete user data including permissions
  * @param {Object} userData - User data returned from backend login
  */
-function createAdminSession(userData) {
+function createAdminSession(userData, authToken) {
     console.log('🔐 Creating admin session with permissions...');
-    console.log('User data received:', userData);
-    
+
     // Create complete session object
     const session = {
         userId: userData.id,
         username: userData.username,
         email: userData.email,
         role: userData.role,
-        permissions: userData.permissions || {}, // CRITICAL: Include permissions
+        permissions: userData.permissions || {},
         status: userData.status,
         lastLogin: userData.lastLogin,
         createdAt: new Date().toISOString()
     };
-    
-    // Save to localStorage
+
+    // Save session to localStorage
     localStorage.setItem('olrfc_admin_session', JSON.stringify(session));
-    
+
+    // Save server-provided HMAC-signed auth token separately
+    if (authToken) {
+        localStorage.setItem('olrfc_auth_token', authToken);
+    }
+
     console.log('✅ Session created with permissions:', session.permissions);
-    console.log('✅ User has access to sections:', getAccessibleSections(session));
-    
+
     return session;
 }
 

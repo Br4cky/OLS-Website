@@ -102,37 +102,17 @@ const SEO_PAGE_CONFIG = {
     }
 };
 
-// Cache for settings
-let seoSettings = null;
-let seoSettingsLoaded = false;
-
 /**
- * Fetch SEO settings from Netlify Blobs
+ * Fetch SEO settings via shared settings service
  */
 async function fetchSEOSettings() {
-    if (seoSettingsLoaded && seoSettings) return seoSettings;
-    
     try {
-        const response = await fetch('/.netlify/functions/site-settings', {
-            method: 'GET'
-        });
-        
-        if (!response.ok) {
-            console.log('SEO Manager: Using default settings');
-            seoSettingsLoaded = true;
-            return {};
-        }
-        
-        const result = await response.json();
-        seoSettings = result.data || {};
-        seoSettingsLoaded = true;
-        
-        console.log('🔍 SEO Manager: Settings loaded from Netlify Blobs');
-        return seoSettings;
-        
+        // Use shared settings service to avoid redundant API calls
+        const settings = window.siteSettings ? await window.siteSettings.get() : {};
+        console.log('🔍 SEO Manager: Settings loaded via shared service');
+        return settings;
     } catch (error) {
         console.error('SEO Manager: Error fetching settings:', error);
-        seoSettingsLoaded = true;
         return {};
     }
 }

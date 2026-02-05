@@ -4,6 +4,7 @@
 
 const { getStore } = require('@netlify/blobs');
 const crypto = require('crypto');
+const { createAuthToken, verifyAuthToken, hashPasswordSecure, verifyPassword, needsPasswordUpgrade } = require('./auth-middleware');
 
 exports.handler = async (event) => {
     // Enable CORS
@@ -75,7 +76,7 @@ exports.handler = async (event) => {
 async function getAdminUsers(store, requestHeaders, headers) {
     try {
         // Require authenticated session to list admin users
-        const sessionUser = await verifySessionToken(store, requestHeaders);
+        const sessionUser = await verifyAuthToken(requestHeaders, { requireSuperAdmin: true });
         if (!sessionUser) {
             return {
                 statusCode: 401,
@@ -119,21 +120,21 @@ async function getAdminUsers(store, requestHeaders, headers) {
 async function saveAllAdminUsers(store, body, requestHeaders, responseHeaders) {
     try {
         // ✅ VERIFY AUTHENTICATION - Only super-admins can modify users
-        const authenticatedUser = await verifySessionToken(store, requestHeaders);
-        
+        const authenticatedUser = await verifyAuthToken(requestHeaders, { requireSuperAdmin: true });
+
         if (!authenticatedUser) {
             return {
                 statusCode: 401,
                 headers: responseHeaders,
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     error: 'Unauthorized',
                     message: 'Super-admin authentication required to modify admin users'
                 })
             };
         }
-        
+
         const incomingUsers = body.users || body;
-        
+
         if (!Array.isArray(incomingUsers)) {
             return {
                 statusCode: 400,
@@ -142,28 +143,25 @@ async function saveAllAdminUsers(store, body, requestHeaders, responseHeaders) {
             };
         }
 
-        // 🛡️ CRITICAL FIX (OLS 98): Preserve existing passwords when not provided
-        // Fetch existing users from Blobs (with passwords intact)
+        // Preserve existing passwords when not provided
         const existingUsers = await store.get('all-admin-users', { type: 'json' }) || [];
-        
-        // Create a map of existing users by ID for quick lookup
+
         const existingUsersMap = {};
         existingUsers.forEach(user => {
             existingUsersMap[user.id] = user;
         });
 
-        // Process incoming users and preserve passwords if not provided
+        // Process incoming users and preserve/hash passwords
         const processedUsers = incomingUsers.map(user => {
-            // If user doesn't have a password, try to preserve from existing data
             if (!user.password && existingUsersMap[user.id]) {
                 user.password = existingUsersMap[user.id].password;
             }
-            
-            // If password exists and doesn't start with 'hashed:', hash it
-            if (user.password && !user.password.startsWith('hashed:')) {
-                user.password = hashPassword(user.password);
+
+            // Hash new plaintext passwords with PBKDF2
+            if (user.password && !user.password.startsWith('hashed:') && !user.password.startsWith('pbkdf2:')) {
+                user.password = hashPasswordSecure(user.password);
             }
-            
+
             return user;
         });
 
@@ -196,19 +194,19 @@ async function saveAllAdminUsers(store, body, requestHeaders, responseHeaders) {
 async function deleteAdminUser(store, event, responseHeaders) {
     try {
         // ✅ VERIFY AUTHENTICATION - Only super-admins can delete users
-        const authenticatedUser = await verifySessionToken(store, event.headers);
-        
+        const authenticatedUser = await verifyAuthToken(event.headers, { requireSuperAdmin: true });
+
         if (!authenticatedUser) {
             return {
                 statusCode: 401,
                 headers: responseHeaders,
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     error: 'Unauthorized',
                     message: 'Super-admin authentication required to delete admin users'
                 })
             };
         }
-        
+
         const params = new URLSearchParams(event.queryStringParameters);
         const userId = params.get('id');
 
@@ -323,9 +321,8 @@ async function loginAdmin(store, body, headers) {
             };
         }
 
-        // Verify password
-        const hashedInput = hashPassword(password);
-        if (user.password !== hashedInput) {
+        // Verify password (supports both PBKDF2 and legacy SHA-256)
+        if (!verifyPassword(password, user.password)) {
             await recordFailedAttempt(store, email);
             return {
                 statusCode: 401,
@@ -337,6 +334,12 @@ async function loginAdmin(store, body, headers) {
         // ✅ SUCCESS - Clear rate limit
         await clearRateLimit(store, email);
 
+        // Upgrade legacy password hash to PBKDF2 on successful login
+        if (needsPasswordUpgrade(user.password)) {
+            user.password = hashPasswordSecure(password);
+            console.log(`🔑 Upgraded password hash for ${email} to PBKDF2`);
+        }
+
         // Update last login time
         user.lastLogin = new Date().toISOString();
         await store.set('all-admin-users', JSON.stringify(users));
@@ -346,7 +349,10 @@ async function loginAdmin(store, body, headers) {
             cleanupRateLimits(store).catch(err => console.error('Cleanup error:', err));
         }
 
-        // Return user data (without password)
+        // Create HMAC-signed auth token
+        const authToken = createAuthToken(user);
+
+        // Return user data (without password) + signed token
         const { password: _, ...safeUser } = user;
 
         return {
@@ -355,6 +361,7 @@ async function loginAdmin(store, body, headers) {
             body: JSON.stringify({
                 success: true,
                 user: safeUser,
+                authToken: authToken,
                 message: 'Login successful'
             })
         };
@@ -379,71 +386,7 @@ function hashPassword(password) {
         .digest('hex');
 }
 
-/**
- * Verify session token and check if user is super-admin (OLS 98)
- * @param {Object} store - Netlify Blobs store
- * @param {Object} headers - Request headers
- * @returns {Promise<Object|null>} User object if valid super-admin, null otherwise
- */
-async function verifySessionToken(store, headers) {
-    try {
-        // Get authorization header (case-insensitive)
-        const authHeader = headers.authorization || headers.Authorization;
-        
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            console.log('❌ No authorization header found');
-            return null;
-        }
-        
-        // Extract and decode token
-        const token = authHeader.replace('Bearer ', '');
-        const decoded = Buffer.from(token, 'base64').toString('utf8');
-        const sessionData = JSON.parse(decoded);
-        
-        // Verify token has required fields
-        if (!sessionData.userId || !sessionData.email || !sessionData.role) {
-            console.log('❌ Invalid session data structure');
-            return null;
-        }
-        
-        // Check if token is too old (24 hours)
-        const tokenAge = Date.now() - sessionData.timestamp;
-        const maxAge = 24 * 60 * 60 * 1000; // 24 hours in ms
-        
-        if (tokenAge > maxAge) {
-            console.log('❌ Session token expired');
-            return null;
-        }
-        
-        // Fetch all users and verify user exists
-        const users = await store.get('all-admin-users', { type: 'json' }) || [];
-        const user = users.find(u => u.id === sessionData.userId && u.email === sessionData.email);
-        
-        if (!user) {
-            console.log('❌ User not found in database');
-            return null;
-        }
-        
-        // Check if user is active
-        if (user.status !== 'active') {
-            console.log('❌ User account is not active');
-            return null;
-        }
-        
-        // Verify user is super-admin
-        if (user.role !== 'super-admin') {
-            console.log('❌ User is not a super-admin');
-            return null;
-        }
-        
-        console.log('✅ Session verified: super-admin', user.email);
-        return user;
-        
-    } catch (error) {
-        console.error('Error verifying session token:', error);
-        return null;
-    }
-}
+// NOTE: verifySessionToken replaced by shared verifyAuthToken from auth-middleware.js
 
 /**
  * Rate Limiting for Login Attempts (OLS 98)
@@ -567,13 +510,13 @@ async function cleanupRateLimits(store) {
 async function resetUserPassword(store, body, requestHeaders, responseHeaders) {
     try {
         // ✅ VERIFY AUTHENTICATION - Only super-admins can reset passwords
-        const authenticatedUser = await verifySessionToken(store, requestHeaders);
-        
+        const authenticatedUser = await verifyAuthToken(requestHeaders, { requireSuperAdmin: true });
+
         if (!authenticatedUser) {
             return {
                 statusCode: 401,
                 headers: responseHeaders,
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     error: 'Unauthorized',
                     message: 'Super-admin authentication required to reset passwords'
                 })
@@ -624,8 +567,8 @@ async function resetUserPassword(store, body, requestHeaders, responseHeaders) {
             };
         }
         
-        // Hash the new password
-        const hashedPassword = hashPassword(newPassword);
+        // Hash the new password with PBKDF2
+        const hashedPassword = hashPasswordSecure(newPassword);
         
         // Update the user's password
         users[userIndex].password = hashedPassword;

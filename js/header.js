@@ -31,22 +31,10 @@ let settingsLoaded = false;
  */
 async function fetchHeaderSettings() {
     if (settingsLoaded) return headerSettings;
-    
+
     try {
-        const response = await fetch('/.netlify/functions/site-settings', {
-            method: 'GET'
-        });
-        
-        if (!response.ok) {
-            console.log('Using default header settings');
-            settingsLoaded = true;
-            return headerSettings;
-        }
-        
-        const result = await response.json();
-        const settings = result.data || {};
-        
-        console.log('📊 Fetched settings from Netlify Blobs');
+        // Use shared settings service to avoid redundant API calls
+        const settings = window.siteSettings ? await window.siteSettings.get() : {};
         
         // Initialize navigation settings with defaults (all enabled)
         headerSettings.navigation = {

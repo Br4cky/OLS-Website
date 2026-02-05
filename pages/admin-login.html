@@ -404,8 +404,8 @@
                     const response = await window.netlifyDataManager.loginAdminUser(email, password);
 
                     if (response.success && response.user) {
-                        // Create proper session with userId, email, role, permissions
-                        createAdminSession(response.user);
+                        // Create proper session with userId, email, role, permissions + HMAC token
+                        createAdminSession(response.user, response.authToken);
 
                         this.setLoading(false);
                         this.showSuccess('Login successful! Redirecting to admin dashboard...');

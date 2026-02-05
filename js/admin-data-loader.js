@@ -410,8 +410,8 @@ class OLRFCDataLoader {
             </div>
             <div class="news-content">
                 <div class="news-date">Published On ${formattedDate}</div>
-                <h3 class="news-title">${article.title}</h3>
-                <p class="news-excerpt">${this.truncateText(article.content, 120)}</p>
+                <h3 class="news-title">${window.escapeHtml ? window.escapeHtml(article.title) : this.escapeHtml(article.title)}</h3>
+                <p class="news-excerpt">${window.escapeHtml ? window.escapeHtml(this.truncateText(article.content, 120)) : this.escapeHtml(this.truncateText(article.content, 120))}</p>
                 <a href="#" class="btn btn-primary" onclick="showNewsModal('${this.escapeHtml(article.title)}', '${this.escapeHtml(article.content)}', '${formattedDate}', '${this.escapeHtml(article.author)}')">Read More</a>
             </div>
         `;
@@ -704,12 +704,12 @@ function showNewsModal(title, content, date, author) {
                 transition: background 0.3s ease;
             " onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='none'">&times;</button>
             
-            <h2 style="color: var(--primary-green); margin-bottom: 1rem;">${title}</h2>
+            <h2 style="color: var(--primary-green); margin-bottom: 1rem;">${window.escapeHtml ? window.escapeHtml(title) : title}</h2>
             <div style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
-                📅 ${date} | ✍️ ${author}
+                📅 ${window.escapeHtml ? window.escapeHtml(date) : date} | ✍️ ${window.escapeHtml ? window.escapeHtml(author) : author}
             </div>
             <div style="line-height: 1.6; color: var(--text-dark);">
-                ${content.replace(/\n/g, '<br>')}
+                ${window.sanitizeHTML ? window.sanitizeHTML(content) : content.replace(/\n/g, '<br>')}
             </div>
         </div>
     `;
@@ -770,8 +770,8 @@ class GalleryDataLoader {
         item.innerHTML = `
             <img src="${photo.url}" alt="${album.title}" style="width: 100%; height: 250px; object-fit: cover; border-radius: 10px;">
             <div class="gallery-overlay">
-                <h3>${album.title}</h3>
-                <p>${album.description || ''}</p>
+                <h3>${window.escapeHtml ? window.escapeHtml(album.title) : album.title}</h3>
+                <p>${window.escapeHtml ? window.escapeHtml(album.description || '') : (album.description || '')}</p>
             </div>
         `;
 

@@ -290,8 +290,9 @@ function formatSocialTime(timestamp) {
 }
 
 function formatPostMessage(message) {
-    // Convert line breaks to HTML and add hashtag styling
-    return message
+    // Escape HTML first, then convert line breaks and add hashtag styling
+    const escaped = window.escapeHtml ? window.escapeHtml(message) : message;
+    return escaped
         .replace(/\n/g, '<br>')
         .replace(/#(\w+)/g, '<span class="hashtag">#$1</span>');
 }

@@ -3,12 +3,13 @@
 // Handles CRUD operations for events enquiry form settings
 
 const { getStore } = require("@netlify/blobs");
+const { requireAuth } = require('./auth-middleware');
 
 exports.handler = async (event, context) => {
     // CORS headers
     const headers = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
         'Content-Type': 'application/json'
     };
@@ -16,6 +17,12 @@ exports.handler = async (event, context) => {
     // Handle OPTIONS request for CORS
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers, body: '' };
+    }
+
+    // Require auth for write operations
+    if (['POST', 'PUT'].includes(event.httpMethod)) {
+        const authError = await requireAuth(event, headers);
+        if (authError) return authError;
     }
 
     try {
