@@ -1,0 +1,356 @@
+/**
+ * Admin News Manager - OLS-WEBSITE
+ * News article CRUD operations with cloud integration
+ */
+
+class AdminNewsManager {
+    constructor(adminSystem) {
+        this.adminSystem = adminSystem;
+        this.formHandlerAttached = false; // ADD THIS FLAG
+        // REMOVE setupFormHandler() call from constructor
+    }
+
+    // ADD THIS METHOD - Lazy form handler initialization
+    ensureFormHandler() {
+        if (this.formHandlerAttached) return;
+        
+        const form = document.getElementById('newsForm');
+        if (form) {
+            form.addEventListener('submit', (e) => this.handleNewsSubmission(e));
+            this.formHandlerAttached = true;
+            console.log('AdminNewsManager form handler attached');
+        }
+    }
+
+    async handleNewsSubmission(e) {
+        e.preventDefault();
+        
+        const newsData = {
+            id: this.adminSystem.currentEditIndex !== null ? 
+                this.adminSystem.getData('news')[this.adminSystem.currentEditIndex].id : 
+                Date.now().toString(),
+            title: document.getElementById('newsTitle').value.trim(),
+            content: document.getElementById('newsContent').value.trim(),
+            category: document.getElementById('newsCategory').value,
+            author: document.getElementById('newsAuthor').value.trim() || 'Club Admin',
+            date: new Date().toISOString().split('T')[0],
+            featured: false
+        };
+
+        // Validate required fields
+        if (!newsData.title || !newsData.content) {
+            alert('Please fill in both title and content fields');
+            return;
+        }
+
+        try {
+            // 1. IMMEDIATE localStorage update (preserves existing UX)
+            let existingNews = this.adminSystem.getData('news');
+            
+            if (this.adminSystem.currentEditIndex !== null) {
+                existingNews[this.adminSystem.currentEditIndex] = newsData;
+            } else {
+                existingNews.unshift(newsData);
+            }
+            
+            this.adminSystem.saveData('news', existingNews);
+            this.adminSystem.loadNews();
+            this.adminSystem.updateStats();
+            
+            const action = this.adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+            this.adminSystem.showAlert('news', `News article ${action} successfully!`, 'success');
+            
+            // 2. BACKGROUND cloud storage
+            if (window.netlifyDataManager) {
+                try {
+                    const result = await window.netlifyDataManager.createNews(newsData);
+                    
+                    if (result.success) {
+                        console.log('News article successfully synced to cloud storage');
+                        setTimeout(() => {
+                            this.adminSystem.showAlert('news', 'Article synced to cloud storage ✓', 'success');
+                        }, 1000);
+                    } else {
+                        throw new Error(result.error);
+                    }
+                    
+                } catch (cloudError) {
+                    console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
+                    this.adminSystem.showAlert('news', 'Article saved locally (cloud sync failed - will retry)', 'warning');
+                    
+                    // Store for retry when network available
+                    let pendingSync = JSON.parse(localStorage.getItem('olrfc_pending_sync') || '{}');
+                    if (!pendingSync.news) pendingSync.news = [];
+                    pendingSync.news.push(newsData);
+                    localStorage.setItem('olrfc_pending_sync', JSON.stringify(pendingSync));
+                }
+            } else {
+                console.log('Netlify data manager not available, localStorage only');
+            }
+            
+            // Close modal and reset form
+            closeModal('newsModal');
+            document.getElementById('newsForm').reset();
+            this.adminSystem.currentEditIndex = null;
+            
+        } catch (error) {
+            console.error('Error saving news article:', error);
+            this.adminSystem.showAlert('news', 'Error saving news article: ' + error.message, 'danger');
+        }
+    }
+
+    editNews(index) {
+        const news = this.adminSystem.getData('news');
+        const article = news[index];
+        
+        if (!article) {
+            console.error('Article not found at index:', index);
+            return;
+        }
+        
+        this.adminSystem.currentEditIndex = index;
+        this.adminSystem.currentSection = 'news';
+        
+        // CRITICAL: Ensure form handler before opening modal
+        setTimeout(() => {
+            this.ensureFormHandler();
+            
+            // Populate form with existing data
+            document.getElementById('newsTitle').value = article.title || '';
+            document.getElementById('newsContent').value = article.content || '';
+            document.getElementById('newsCategory').value = article.category || 'club';
+            document.getElementById('newsAuthor').value = article.author || 'Club Admin';
+        }, 50);
+        
+        openModal('newsModal');
+    }
+
+    async deleteNews(index) {
+    const news = this.adminSystem.getData('news');
+    const article = news[index];
+    
+    if (!article) {
+        console.error('Article not found at index:', index);
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to delete "${article.title}"?`)) {
+        try {
+            // 1. Delete from localStorage (immediate UI update)
+            news.splice(index, 1);
+            this.adminSystem.saveData('news', news);
+            
+            // 2. Delete from Netlify Blobs (cloud persistence)
+            if (window.netlifyDataManager) {
+                const result = await window.netlifyDataManager.deleteNews(article.id);
+                
+                if (result.success) {
+                    console.log('✅ News article deleted from cloud storage');
+                } else {
+                    console.warn('⚠️ Cloud delete failed, but localStorage deleted');
+                }
+            }
+            
+            // Update UI
+            this.adminSystem.loadNews();
+            this.adminSystem.updateStats();
+            
+            this.adminSystem.showAlert('news', 'News article deleted successfully', 'success');
+            
+        } catch (error) {
+            console.error('Error deleting news:', error);
+            this.adminSystem.showAlert('news', 'Error deleting news: ' + error.message, 'danger');
+        }
+    }
+}
+
+
+    duplicateNews(index) {
+        const news = this.adminSystem.getData('news');
+        const article = news[index];
+        
+        if (!article) {
+            console.error('Article not found at index:', index);
+            return;
+        }
+        
+        const duplicatedArticle = {
+            ...article,
+            id: Date.now().toString(),
+            title: article.title + ' (Copy)',
+            date: new Date().toISOString().split('T')[0]
+        };
+        
+        news.unshift(duplicatedArticle);
+        this.adminSystem.saveData('news', news);
+        this.adminSystem.loadNews();
+        this.adminSystem.updateStats();
+        
+        this.adminSystem.showAlert('news', 'News article duplicated successfully', 'success');
+    }
+
+    getNewsByCategory(category) {
+        const news = this.adminSystem.getData('news');
+        if (category === 'all') {
+            return news;
+        }
+        return news.filter(article => article.category === category);
+    }
+
+    getFeaturedNews() {
+        return this.adminSystem.getData('news').filter(article => article.featured);
+    }
+
+    toggleFeaturedStatus(index) {
+        const news = this.adminSystem.getData('news');
+        const article = news[index];
+        
+        if (!article) {
+            console.error('Article not found at index:', index);
+            return;
+        }
+        
+        article.featured = !article.featured;
+        this.adminSystem.saveData('news', news);
+        this.adminSystem.loadNews();
+        
+        const status = article.featured ? 'featured' : 'unfeatured';
+        this.adminSystem.showAlert('news', `Article ${status} successfully`, 'success');
+    }
+}
+
+// ============================================
+// INITIALIZE AND GLOBAL EXPORTS WITH DEBUGGING
+// ============================================
+
+let adminNewsManager;
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== MANAGER DEBUG (News) ===');
+    console.log('Manager DOMContentLoaded fired at:', new Date().toISOString());
+    
+    // Check AdminSystem availability
+    console.log('AdminSystem class available?', !!window.AdminSystem);
+    console.log('AdminSystem type:', typeof window.AdminSystem);
+    
+    // Check adminSystem instance availability
+    console.log('adminSystem instance available?', !!window.adminSystem);
+    console.log('adminSystem type:', typeof window.adminSystem);
+    
+    if (window.adminSystem) {
+        console.log('✓ Manager can access adminSystem');
+        console.log('adminSystem methods available:');
+        console.log('  - getData:', typeof window.adminSystem.getData);
+        console.log('  - saveData:', typeof window.adminSystem.saveData);
+        console.log('  - deleteData:', typeof window.adminSystem.deleteData);
+        
+        // Test a getData call
+        try {
+            const testData = window.adminSystem.getData('news');
+            console.log('✓ getData test successful, returned:', typeof testData);
+        } catch (error) {
+            console.error('✗ getData test failed:', error);
+        }
+        
+        // Initialize manager
+        adminNewsManager = new AdminNewsManager(window.adminSystem);
+        console.log('✓ Admin News Manager initialized');
+        
+    } else {
+        console.error('✗ Manager cannot access adminSystem');
+        console.log('Available window admin properties:');
+        Object.keys(window).filter(key => key.toLowerCase().includes('admin')).forEach(key => {
+            console.log(`  - ${key}:`, typeof window[key]);
+        });
+    }
+    
+    // Check for form elements
+    const newsForm = document.getElementById('newsForm');
+    const newsList = document.getElementById('newsList');
+    console.log('Form element found:', !!newsForm);
+    console.log('List element found:', !!newsList);
+    
+    // Check timing vs other scripts
+    console.log('Other potential conflicts:');
+    console.log('  - OLRFCDataLoader:', typeof window.OLRFCDataLoader);
+    console.log('  - jQuery:', typeof window.$);
+    console.log('  - Other admin managers loaded:', Object.keys(window).filter(k => k.includes('Manager')));
+});
+
+// Also add a delayed check to see if adminSystem becomes available later
+setTimeout(function() {
+    console.log('=== DELAYED CHECK (News Manager) ===');
+    console.log('adminSystem available after 1s delay?', !!window.adminSystem);
+    if (window.adminSystem && !adminNewsManager) {
+        console.log('✓ adminSystem found after delay - timing issue confirmed');
+        console.log('Attempting delayed initialization...');
+        try {
+            adminNewsManager = new AdminNewsManager(window.adminSystem);
+            console.log('✓ Delayed initialization successful');
+        } catch (error) {
+            console.error('✗ Delayed initialization failed:', error);
+        }
+    } else if (!window.adminSystem) {
+        console.error('✗ adminSystem still not available after delay');
+    }
+}, 1000);
+
+// Export all CRUD functions to global scope for HTML onclick compatibility WITH DEBUGGING
+window.editNews = function(index) {
+    console.log('editNews called with index:', index);
+    if (adminNewsManager) {
+        console.log('✓ adminNewsManager available, calling editNews');
+        adminNewsManager.editNews(index);
+    } else {
+        console.error('✗ AdminNewsManager not initialized');
+        console.log('Debug info:');
+        console.log('  - window.adminSystem:', !!window.adminSystem);
+        console.log('  - AdminSystem class:', typeof window.AdminSystem);
+        console.log('  - adminNewsManager:', adminNewsManager);
+        
+        // Attempt emergency initialization
+        if (window.adminSystem && !adminNewsManager) {
+            console.log('Attempting emergency initialization...');
+            try {
+                adminNewsManager = new AdminNewsManager(window.adminSystem);
+                console.log('✓ Emergency initialization successful, retrying editNews');
+                adminNewsManager.editNews(index);
+            } catch (error) {
+                console.error('✗ Emergency initialization failed:', error);
+                alert('Admin system not properly initialized. Please refresh the page.');
+            }
+        } else {
+            alert('Admin system not properly initialized. Please refresh the page.');
+        }
+    }
+};
+
+window.deleteNews = function(index) {
+    console.log('deleteNews called with index:', index);
+    if (adminNewsManager) {
+        adminNewsManager.deleteNews(index);
+    } else {
+        console.error('✗ AdminNewsManager not initialized');
+        alert('Admin system not properly initialized. Please refresh the page.');
+    }
+};
+
+window.duplicateNews = function(index) {
+    console.log('duplicateNews called with index:', index);
+    if (adminNewsManager) {
+        adminNewsManager.duplicateNews(index);
+    } else {
+        console.error('✗ AdminNewsManager not initialized');
+        alert('Admin system not properly initialized. Please refresh the page.');
+    }
+};
+
+window.toggleFeaturedNews = function(index) {
+    console.log('toggleFeaturedNews called with index:', index);
+    if (adminNewsManager) {
+        adminNewsManager.toggleFeaturedStatus(index);
+    } else {
+        console.error('✗ AdminNewsManager not initialized');
+        alert('Admin system not properly initialized. Please refresh the page.');
+    }
+};

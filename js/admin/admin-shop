@@ -1,0 +1,573 @@
+/**
+ * Admin Shop Manager - OLS-WEBSITE
+ * E-commerce product management with inventory tracking
+ */
+
+class AdminShopManager {
+    constructor(adminSystem) {
+        this.adminSystem = adminSystem;
+        this.formHandlerAttached = false; // ADD THIS FLAG
+        // REMOVE setupFormHandler() call from constructor
+    }
+
+    // ADD THIS METHOD - Lazy form handler initialization
+    ensureFormHandler() {
+        if (this.formHandlerAttached) return;
+        
+        const form = document.getElementById('shopForm');
+        if (form) {
+            form.addEventListener('submit', (e) => this.handleShopSubmission(e));
+            this.formHandlerAttached = true;
+            console.log('AdminShopManager form handler attached');
+        }
+    }
+
+    async handleShopSubmission(e) {
+        e.preventDefault();
+        
+        // Collect size selections
+        const sizes = [];
+        ['XS', 'S', 'M', 'L', 'XL', 'XXL'].forEach(size => {
+            const checkbox = document.getElementById(`size${size}`);
+            if (checkbox && checkbox.checked) {
+                sizes.push(size);
+            }
+        });
+
+        const productData = {
+            id: this.adminSystem.currentEditIndex !== null ? 
+                this.adminSystem.getData('shop')[this.adminSystem.currentEditIndex].id : 
+                Date.now().toString(),
+            name: document.getElementById('shopProductName').value.trim(),
+            category: document.getElementById('shopCategory').value,
+            description: document.getElementById('shopDescription').value.trim(),
+            price: parseFloat(document.getElementById('shopPrice').value) || 0,
+            stock: parseInt(document.getElementById('shopStock').value) || 0,
+            sku: document.getElementById('shopSku').value.trim(),
+            sizes: sizes,
+            status: document.getElementById('shopStatus').value,
+            weight: parseFloat(document.getElementById('shopWeight').value) || 0,
+            shipping: parseFloat(document.getElementById('shopShipping').value) || 0,
+            images: [], // Handle image upload separately
+            dateAdded: this.adminSystem.currentEditIndex !== null ? 
+                this.adminSystem.getData('shop')[this.adminSystem.currentEditIndex].dateAdded :
+                new Date().toISOString()
+        };
+
+        // Validate required fields
+        if (!productData.name || productData.price <= 0) {
+            alert('Please fill in product name and valid price');
+            return;
+        }
+
+        try {
+            // 1. IMMEDIATE localStorage update
+            let existingShop = this.adminSystem.getData('shop');
+            
+            if (this.adminSystem.currentEditIndex !== null) {
+                existingShop[this.adminSystem.currentEditIndex] = productData;
+            } else {
+                existingShop.unshift(productData);
+            }
+            
+            this.adminSystem.saveData('shop', existingShop);
+            this.adminSystem.loadShop();
+            this.adminSystem.updateStats();
+            
+            const action = this.adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+            this.adminSystem.showAlert('shop', `Product ${action} successfully!`, 'success');
+            
+            // 2. BACKGROUND cloud storage (when available)
+            if (window.netlifyDataManager && window.netlifyDataManager.createShopProduct) {
+                try {
+                    const result = await window.netlifyDataManager.createShopProduct(productData);
+                    
+                    if (result.success) {
+                        console.log('Product successfully synced to cloud storage');
+                        setTimeout(() => {
+                            this.adminSystem.showAlert('shop', 'Product synced to cloud storage ✓', 'success');
+                        }, 1000);
+                    }
+                } catch (cloudError) {
+                    console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
+                    this.adminSystem.showAlert('shop', 'Product saved locally (cloud sync pending)', 'warning');
+                }
+            }
+            
+            closeModal('shopModal');
+            document.getElementById('shopForm').reset();
+            this.resetSizeCheckboxes();
+            this.adminSystem.currentEditIndex = null;
+            
+        } catch (error) {
+            console.error('Error saving product:', error);
+            this.adminSystem.showAlert('shop', 'Error saving product: ' + error.message, 'danger');
+        }
+    }
+
+    resetSizeCheckboxes() {
+        ['XS', 'S', 'M', 'L', 'XL', 'XXL'].forEach(size => {
+            const checkbox = document.getElementById(`size${size}`);
+            if (checkbox) {
+                checkbox.checked = false;
+            }
+        });
+    }
+
+    editShopProduct(index) {
+        const shop = this.adminSystem.getData('shop');
+        const product = shop[index];
+        
+        if (!product) {
+            console.error('Product not found at index:', index);
+            return;
+        }
+        
+        this.adminSystem.currentEditIndex = index;
+        this.adminSystem.currentSection = 'shop';
+        
+        // CRITICAL: Ensure form handler before opening modal
+        setTimeout(() => {
+            this.ensureFormHandler();
+            
+            // Populate form with existing data
+            document.getElementById('shopProductName').value = product.name || '';
+            document.getElementById('shopCategory').value = product.category || 'jerseys';
+            document.getElementById('shopDescription').value = product.description || '';
+            document.getElementById('shopPrice').value = product.price || '';
+            document.getElementById('shopStock').value = product.stock || '';
+            document.getElementById('shopSku').value = product.sku || '';
+            document.getElementById('shopStatus').value = product.status || 'active';
+            document.getElementById('shopWeight').value = product.weight || '';
+            document.getElementById('shopShipping').value = product.shipping || '';
+            
+            // Set size checkboxes
+            this.resetSizeCheckboxes();
+            if (product.sizes && Array.isArray(product.sizes)) {
+                product.sizes.forEach(size => {
+                    const checkbox = document.getElementById(`size${size}`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            }
+        }, 50);
+        
+        openModal('shopModal');
+    }
+
+    deleteShopProduct(index) {
+        const shop = this.adminSystem.getData('shop');
+        const product = shop[index];
+        
+        if (!product) {
+            console.error('Product not found at index:', index);
+            return;
+        }
+        
+        if (confirm(`Are you sure you want to delete "${product.name}"?`)) {
+            try {
+                shop.splice(index, 1);
+                this.adminSystem.saveData('shop', shop);
+                this.adminSystem.loadShop();
+                this.adminSystem.updateStats();
+                this.adminSystem.showAlert('shop', 'Product deleted successfully', 'success');
+            } catch (error) {
+                console.error('Error deleting product:', error);
+                this.adminSystem.showAlert('shop', 'Error deleting product: ' + error.message, 'danger');
+            }
+        }
+    }
+
+    duplicateShopProduct(index) {
+        const shop = this.adminSystem.getData('shop');
+        const product = shop[index];
+        
+        if (!product) {
+            console.error('Product not found at index:', index);
+            return;
+        }
+        
+        const duplicatedProduct = {
+            ...product,
+            id: Date.now().toString(),
+            name: product.name + ' (Copy)',
+            sku: product.sku ? product.sku + '-COPY' : '',
+            dateAdded: new Date().toISOString()
+        };
+        
+        shop.unshift(duplicatedProduct);
+        this.adminSystem.saveData('shop', shop);
+        this.adminSystem.loadShop();
+        this.adminSystem.updateStats();
+        
+        this.adminSystem.showAlert('shop', 'Product duplicated successfully', 'success');
+    }
+
+    // Inventory management
+    updateStock(productIndex, newStock) {
+        const shop = this.adminSystem.getData('shop');
+        const product = shop[productIndex];
+        
+        if (!product) {
+            console.error('Product not found at index:', productIndex);
+            return;
+        }
+        
+        const oldStock = product.stock;
+        product.stock = parseInt(newStock) || 0;
+        
+        this.adminSystem.saveData('shop', shop);
+        this.adminSystem.loadShop();
+        this.adminSystem.updateStats();
+        
+        this.adminSystem.showAlert('shop', 
+            `${product.name} stock updated: ${oldStock} → ${product.stock}`, 'success');
+    }
+
+    adjustStock(productIndex, adjustment) {
+        const shop = this.adminSystem.getData('shop');
+        const product = shop[productIndex];
+        
+        if (!product) {
+            console.error('Product not found at index:', productIndex);
+            return;
+        }
+        
+        const newStock = Math.max(0, (product.stock || 0) + adjustment);
+        this.updateStock(productIndex, newStock);
+    }
+
+    markOutOfStock(productIndex) {
+        const shop = this.adminSystem.getData('shop');
+        const product = shop[productIndex];
+        
+        if (!product) {
+            console.error('Product not found at index:', productIndex);
+            return;
+        }
+        
+        product.status = 'out-of-stock';
+        product.stock = 0;
+        
+        this.adminSystem.saveData('shop', shop);
+        this.adminSystem.loadShop();
+        this.adminSystem.updateStats();
+        
+        this.adminSystem.showAlert('shop', `${product.name} marked as out of stock`, 'warning');
+    }
+
+    restockProduct(productIndex, quantity) {
+        const shop = this.adminSystem.getData('shop');
+        const product = shop[productIndex];
+        
+        if (!product) {
+            console.error('Product not found at index:', productIndex);
+            return;
+        }
+        
+        product.stock = (product.stock || 0) + parseInt(quantity);
+        if (product.status === 'out-of-stock') {
+            product.status = 'active';
+        }
+        
+        this.adminSystem.saveData('shop', shop);
+        this.adminSystem.loadShop();
+        this.adminSystem.updateStats();
+        
+        this.adminSystem.showAlert('shop', 
+            `${product.name} restocked with ${quantity} items`, 'success');
+    }
+
+    // Product filtering and search
+    getProductsByCategory(category) {
+        const shop = this.adminSystem.getData('shop');
+        if (category === 'all') {
+            return shop;
+        }
+        return shop.filter(product => product.category === category);
+    }
+
+    getProductsByStatus(status) {
+        const shop = this.adminSystem.getData('shop');
+        return shop.filter(product => product.status === status);
+    }
+
+    getLowStockProducts(threshold = 5) {
+        const shop = this.adminSystem.getData('shop');
+        return shop.filter(product => (product.stock || 0) <= threshold && product.status !== 'out-of-stock');
+    }
+
+    searchProducts(searchTerm) {
+        const shop = this.adminSystem.getData('shop');
+        
+        if (!searchTerm || searchTerm.trim() === '') {
+            return shop;
+        }
+        
+        const term = searchTerm.toLowerCase();
+        
+        return shop.filter(product => 
+            (product.name || '').toLowerCase().includes(term) ||
+            (product.description || '').toLowerCase().includes(term) ||
+            (product.sku || '').toLowerCase().includes(term) ||
+            this.adminSystem.formatShopCategory(product.category).toLowerCase().includes(term)
+        );
+    }
+
+    // Price management
+    updatePrice(productIndex, newPrice) {
+        const shop = this.adminSystem.getData('shop');
+        const product = shop[productIndex];
+        
+        if (!product) {
+            console.error('Product not found at index:', productIndex);
+            return;
+        }
+        
+        const oldPrice = product.price;
+        product.price = parseFloat(newPrice) || 0;
+        
+        this.adminSystem.saveData('shop', shop);
+        this.adminSystem.loadShop();
+        this.adminSystem.updateStats();
+        
+        this.adminSystem.showAlert('shop', 
+            `${product.name} price updated: £${oldPrice} → £${product.price}`, 'success');
+    }
+
+    bulkPriceUpdate(categoryOrProducts, adjustment, isPercentage = false) {
+        const shop = this.adminSystem.getData('shop');
+        let productsToUpdate = [];
+        
+        if (typeof categoryOrProducts === 'string') {
+            productsToUpdate = shop.filter(p => p.category === categoryOrProducts);
+        } else if (Array.isArray(categoryOrProducts)) {
+            productsToUpdate = categoryOrProducts;
+        }
+        
+        let updatedCount = 0;
+        
+        productsToUpdate.forEach(product => {
+            if (isPercentage) {
+                product.price = Math.round((product.price * (1 + adjustment / 100)) * 100) / 100;
+            } else {
+                product.price = Math.max(0, product.price + adjustment);
+            }
+            updatedCount++;
+        });
+        
+        if (updatedCount > 0) {
+            this.adminSystem.saveData('shop', shop);
+            this.adminSystem.loadShop();
+            this.adminSystem.updateStats();
+            
+            const adjustmentText = isPercentage ? `${adjustment}%` : `£${adjustment}`;
+            this.adminSystem.showAlert('shop', 
+                `Updated prices for ${updatedCount} products (${adjustmentText})`, 'success');
+        }
+    }
+
+    // Analytics and reporting
+    getShopAnalytics() {
+        const shop = this.adminSystem.getData('shop');
+        
+        const analytics = {
+            totalProducts: shop.length,
+            totalValue: shop.reduce((sum, p) => sum + ((p.price || 0) * (p.stock || 0)), 0),
+            categories: {},
+            statusBreakdown: {
+                active: 0,
+                inactive: 0,
+                outOfStock: 0
+            },
+            priceRanges: {
+                under10: 0,
+                from10to25: 0,
+                from25to50: 0,
+                over50: 0
+            },
+            stockLevels: {
+                lowStock: 0,
+                inStock: 0,
+                overStocked: 0
+            }
+        };
+        
+        // Calculate analytics
+        shop.forEach(product => {
+            // Category breakdown
+            if (!analytics.categories[product.category]) {
+                analytics.categories[product.category] = {
+                    count: 0,
+                    totalValue: 0,
+                    averagePrice: 0
+                };
+            }
+            analytics.categories[product.category].count++;
+            analytics.categories[product.category].totalValue += (product.price || 0) * (product.stock || 0);
+            
+            // Status breakdown
+            if (product.status === 'active') analytics.statusBreakdown.active++;
+            else if (product.status === 'inactive') analytics.statusBreakdown.inactive++;
+            else if (product.status === 'out-of-stock') analytics.statusBreakdown.outOfStock++;
+            
+            // Price ranges
+            const price = product.price || 0;
+            if (price < 10) analytics.priceRanges.under10++;
+            else if (price < 25) analytics.priceRanges.from10to25++;
+            else if (price < 50) analytics.priceRanges.from25to50++;
+            else analytics.priceRanges.over50++;
+            
+            // Stock levels
+            const stock = product.stock || 0;
+            if (stock <= 5) analytics.stockLevels.lowStock++;
+            else if (stock <= 20) analytics.stockLevels.inStock++;
+            else analytics.stockLevels.overStocked++;
+        });
+        
+        // Calculate average prices
+        Object.keys(analytics.categories).forEach(category => {
+            const categoryData = analytics.categories[category];
+            if (categoryData.count > 0) {
+                const categoryProducts = shop.filter(p => p.category === category);
+                const totalPrice = categoryProducts.reduce((sum, p) => sum + (p.price || 0), 0);
+                categoryData.averagePrice = Math.round((totalPrice / categoryData.count) * 100) / 100;
+            }
+        });
+        
+        return analytics;
+    }
+
+    generateInventoryReport() {
+        const shop = this.adminSystem.getData('shop');
+        const analytics = this.getShopAnalytics();
+        
+        const report = {
+            generatedAt: new Date().toISOString(),
+            summary: analytics,
+            lowStockProducts: this.getLowStockProducts(),
+            topValueProducts: shop
+                .map(p => ({ ...p, totalValue: (p.price || 0) * (p.stock || 0) }))
+                .sort((a, b) => b.totalValue - a.totalValue)
+                .slice(0, 10),
+            reorderSuggestions: this.getLowStockProducts(3).map(product => ({
+                name: product.name,
+                currentStock: product.stock,
+                suggestedOrder: 20 // Basic suggestion
+            }))
+        };
+        
+        return report;
+    }
+
+    // Export functionality
+    exportProducts(options = {}) {
+        let products = this.adminSystem.getData('shop');
+        
+        if (options.category && options.category !== 'all') {
+            products = products.filter(p => p.category === options.category);
+        }
+        
+        if (options.status) {
+            products = products.filter(p => p.status === options.status);
+        }
+        
+        const csvData = this.convertProductsToCSV(products);
+        const filename = `olrfc_shop_${options.category || 'all'}_${new Date().toISOString().split('T')[0]}.csv`;
+        
+        this.downloadCSV(csvData, filename);
+    }
+
+    convertProductsToCSV(products) {
+        const headers = ['Name', 'Category', 'Price', 'Stock', 'SKU', 'Status', 'Sizes', 'Description'];
+        let csv = headers.join(',') + '\n';
+        
+        products.forEach(product => {
+            const row = [
+                product.name || '',
+                this.adminSystem.formatShopCategory(product.category),
+                product.price || 0,
+                product.stock || 0,
+                product.sku || '',
+                product.status || 'active',
+                (product.sizes || []).join(';'),
+                (product.description || '').replace(/,/g, ';')
+            ];
+            
+            csv += row.map(field => `"${field}"`).join(',') + '\n';
+        });
+        
+        return csv;
+    }
+
+    downloadCSV(csvContent, filename) {
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+    }
+}
+
+// ============================================
+// INITIALIZE AND GLOBAL EXPORTS
+// ============================================
+
+let adminShopManager;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.adminSystem) {
+        adminShopManager = new AdminShopManager(window.adminSystem);
+        console.log('Admin Shop Manager initialized');
+    }
+});
+
+// Export all CRUD functions to global scope for HTML onclick compatibility
+window.editShopProduct = function(index) {
+    if (adminShopManager) {
+        adminShopManager.editShopProduct(index);
+    } else {
+        console.error('AdminShopManager not initialized');
+    }
+};
+
+window.deleteShopProduct = function(index) {
+    if (adminShopManager) {
+        adminShopManager.deleteShopProduct(index);
+    } else {
+        console.error('AdminShopManager not initialized');
+    }
+};
+
+window.duplicateShopProduct = function(index) {
+    if (adminShopManager) {
+        adminShopManager.duplicateShopProduct(index);
+    } else {
+        console.error('AdminShopManager not initialized');
+    }
+};
+
+window.updateProductStock = function(index, stock) {
+    if (adminShopManager) {
+        adminShopManager.updateStock(index, stock);
+    } else {
+        console.error('AdminShopManager not initialized');
+    }
+};
+
+window.markProductOutOfStock = function(index) {
+    if (adminShopManager) {
+        adminShopManager.markOutOfStock(index);
+    } else {
+        console.error('AdminShopManager not initialized');
+    }
+};
+
+window.restockProduct = function(index, quantity) {
+    if (adminShopManager) {
+        adminShopManager.restockProduct(index, quantity);
+    } else {
+        console.error('AdminShopManager not initialized');
+    }
+};

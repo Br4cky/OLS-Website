@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Article</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <script src="../js/color-manager.js"></script>
+    <style>
+        /* Article Page Styles */
+        .article-page {
+            min-height: 100vh;
+            background: var(--bg-light);
+            padding: 120px 0 3rem;
+        }
+
+        .article-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .article-header {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .article-category {
+            display: inline-block;
+            background: var(--accent-gold);
+            color: var(--primary-green);
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .article-title {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+            font-weight: bold;
+        }
+
+        .article-meta {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+
+        .article-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .article-featured-image {
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 4rem;
+            position: relative;
+        }
+
+        .article-featured-image::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .article-body {
+            padding: 3rem 2rem;
+        }
+
+        .article-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--text-dark);
+            margin-bottom: 2rem;
+        }
+
+        .article-content p {
+            margin-bottom: 1.5rem;
+        }
+
+        .article-footer {
+            border-top: 2px solid var(--bg-light);
+            padding: 2rem;
+            background: var(--bg-light);
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            background: var(--primary-green);
+            color: white;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-button:hover {
+            background: var(--primary-maroon);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
+        .share-section {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #ddd;
+        }
+
+        .share-section h4 {
+            color: var(--primary-green);
+            margin-bottom: 1rem;
+        }
+
+        .share-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .share-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .share-btn.facebook {
+            background: #1877f2;
+            color: white;
+        }
+
+        .share-btn.twitter {
+            background: #1da1f2;
+            color: white;
+        }
+
+        .share-btn.email {
+            background: var(--accent-gold);
+            color: var(--primary-green);
+        }
+
+        .share-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* No Article State */
+        .no-article {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .no-article h2 {
+            color: var(--primary-green);
+            margin-bottom: 1rem;
+        }
+
+        .no-article p {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .article-page {
+                padding: 100px 0 2rem;
+            }
+
+            .article-header {
+                padding: 2rem 1.5rem;
+            }
+
+            .article-title {
+                font-size: 1.8rem;
+            }
+
+            .article-meta {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .article-featured-image {
+                height: 250px;
+                font-size: 3rem;
+            }
+
+            .article-body {
+                padding: 2rem 1.5rem;
+            }
+
+            .article-content {
+                font-size: 1rem;
+            }
+
+            .article-footer {
+                padding: 1.5rem;
+            }
+
+            .share-buttons {
+                flex-direction: column;
+            }
+
+            .share-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .article-title {
+                font-size: 1.5rem;
+            }
+
+            .article-body {
+                padding: 1.5rem 1rem;
+            }
+
+            .back-button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Placeholder - OLS 119 -->
+    <div id="header-placeholder" data-page="news"></div>
+
+    <!-- Article Content -->
+    <main class="article-page">
+        <div class="container">
+            <div class="article-container" id="articleContainer">
+                <!-- Article will be loaded here by JavaScript -->
+                <div class="no-article">
+                    <h2>Loading Article...</h2>
+                    <p>Please wait while we load the article.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer Placeholder - OLS 119 -->
+    <div id="footer-placeholder" data-page="news"></div>
+
+    <!-- Scripts -->
+    <script src="../js/main.js"></script>
+    <script src="../js/header.js"></script>
+    <script src="../js/footer.js"></script>
+    
+    <script>
+        // Store club name for article author fallback
+        let clubName = 'Club News';
+        
+        // OLS 128: Store categories from CMS
+        let newsCategories = [];
+        
+        // OLS 128: Default match images from CMS (null = not configured, use gradient)
+        let defaultWinImage = null;
+        let defaultLossImage = null;
+        
+        // Fetch club name and other settings from site-settings
+        async function fetchClubName() {
+            try {
+                const response = await fetch('/.netlify/functions/site-settings', {
+                    method: 'GET'
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    const settings = result.data || {};
+                    if (settings['club-name']) {
+                        clubName = settings['club-name'];
+                    }
+                    // OLS 128: Also load news categories
+                    if (settings['news-categories']) {
+                        newsCategories = JSON.parse(settings['news-categories']);
+                    }
+                    // OLS 128: Load default match images from CMS (no hardcoded fallbacks)
+                    if (settings['default-match-win-image']) {
+                        defaultWinImage = settings['default-match-win-image'];
+                        console.log('✅ Loaded custom win image from CMS');
+                    }
+                    if (settings['default-match-loss-image']) {
+                        defaultLossImage = settings['default-match-loss-image'];
+                        console.log('✅ Loaded custom loss image from CMS');
+                    }
+                }
+            } catch (error) {
+                console.warn('Could not fetch settings, using defaults');
+            }
+        }
+        
+        // OLS 128: Get category info from CMS (with defaults)
+        function getCategoryFromCMS(categoryId) {
+            const category = newsCategories.find(c => c.id === categoryId);
+            if (category) {
+                return { name: category.name, icon: category.icon };
+            }
+            // Fallback defaults
+            const defaults = {
+                'match': { name: 'Match Report', icon: '🏉' },
+                'training': { name: 'Training', icon: '🏃' },
+                'social': { name: 'Social Event', icon: '🎉' },
+                'club': { name: 'Club Update', icon: '📢' }
+            };
+            return defaults[categoryId] || { name: 'News', icon: '📰' };
+        }
+        
+        // OLS 128: Determine which default match image to show - returns CMS URL or null
+        function getDefaultMatchImageForArticle(article) {
+            // Check if article has match result data
+            if (article.matchResult) {
+                return article.matchResult === 'win' ? defaultWinImage : defaultLossImage;
+            }
+            
+            // Try to extract result from article content or title
+            const content = (article.title + ' ' + article.content).toLowerCase();
+            
+            // Look for win indicators
+            if (content.includes('win') || 
+                content.includes('victory') || 
+                content.includes('triumph') ||
+                content.includes('beat') ||
+                (content.includes('defeat') && content.includes('opponent'))) {
+                return defaultWinImage; // May be null if not configured
+            }
+            
+            // Look for loss indicators
+            if (content.includes('loss') || 
+                content.includes('lost') || 
+                (content.includes('defeat') && !content.includes('opponent')) ||
+                content.includes('fell to')) {
+                return defaultLossImage; // May be null if not configured
+            }
+            
+            // Default to loss image if can't determine
+            return defaultLossImage; // May be null if not configured
+        }
+
+        // OLS 122: Load article from URL parameter (id) or fall back to sessionStorage
+        async function loadArticle() {
+            const container = document.getElementById('articleContainer');
+            let article = null;
+            
+            // First, check for URL parameter ?id=
+            const urlParams = new URLSearchParams(window.location.search);
+            const articleId = urlParams.get('id');
+            
+            if (articleId) {
+                // Try to find article by ID from localStorage
+                try {
+                    const news = JSON.parse(localStorage.getItem('olrfc_news') || '[]');
+                    article = news.find(a => a.id === articleId);
+                    
+                    if (article) {
+                        console.log('✅ Loaded article from localStorage by ID:', articleId);
+                    } else {
+                        // Try fetching from Netlify if not in localStorage
+                        console.log('📡 Article not in cache, fetching from Netlify...');
+                        const response = await fetch('/.netlify/functions/news');
+                        if (response.ok) {
+                            const result = await response.json();
+                            const allNews = result.data || [];
+                            article = allNews.find(a => a.id === articleId);
+                            if (article) {
+                                console.log('✅ Loaded article from Netlify by ID:', articleId);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading article by ID:', error);
+                }
+            }
+            
+            // Fall back to sessionStorage if no ID or article not found
+            if (!article) {
+                const articleData = sessionStorage.getItem('currentArticle');
+                if (articleData) {
+                    article = JSON.parse(articleData);
+                    console.log('📦 Loaded article from sessionStorage');
+                }
+            }
+            
+            if (!article) {
+                container.innerHTML = `
+                    <div class="no-article">
+                        <h2>Article Not Found</h2>
+                        <p>Sorry, we couldn't find the article you're looking for.</p>
+                        <a href="news.html" class="back-button">
+                            ← Back to News
+                        </a>
+                    </div>
+                `;
+                return;
+            }
+            
+            // OLS 128: Use CMS categories with fallback
+            const getCategoryIcon = (category) => {
+                return getCategoryFromCMS(category).icon;
+            };
+            
+            const getCategoryName = (category) => {
+                return getCategoryFromCMS(category).name;
+            };
+            
+            const formatDate = (dateString) => {
+                const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                return new Date(dateString).toLocaleDateString('en-GB', options);
+            };
+            
+            // Render article - use clubName for author fallback
+            container.innerHTML = `
+    <div class="article-header">
+        <div class="article-category">
+            ${getCategoryIcon(article.category)} ${getCategoryName(article.category)}
+        </div>
+        <h1 class="article-title">${article.title}</h1>
+        <div class="article-meta">
+            <div class="article-meta-item">
+                <span>📅</span>
+                <span>${formatDate(article.date)}</span>
+            </div>
+            <div class="article-meta-item">
+                <span>✍️</span>
+                <span>${article.author || clubName}</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="article-featured-image" style="${article.image || (article.category === 'match' && getDefaultMatchImageForArticle(article)) ? 'height: 400px; background: none; overflow: hidden;' : ''}">
+        ${(() => {
+            // Priority 1: Custom uploaded image
+            if (article.image) {
+                const imgSrc = article.image.startsWith('http') ? article.image : '../' + article.image;
+                return `<img src="${imgSrc}" alt="${article.title}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            }
+            
+            // Priority 2: CMS default match image (only if configured)
+            if (article.category === 'match') {
+                const defaultImg = getDefaultMatchImageForArticle(article);
+                if (defaultImg) {
+                    return `<img src="${defaultImg}" alt="Match Report" style="width: 100%; height: 100%; object-fit: cover;">`;
+                }
+            }
+            
+            // Priority 3: Gradient placeholder with emoji (no hardcoded fallbacks)
+            return getCategoryIcon(article.category);
+        })()}
+    </div>
+    
+    <div class="article-body">
+        <div class="article-content">
+            ${article.content.split('\n').map(para => `<p>${para}</p>`).join('')}
+        </div>
+    </div>
+    
+    <div class="article-footer">
+        <a href="news.html" class="back-button">
+            ← Back to News
+        </a>
+        
+        <div class="share-section">
+            <h4>Share this article:</h4>
+            <div class="share-buttons">
+                <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}" 
+                   target="_blank" 
+                   class="share-btn facebook">
+                    📘 Share on Facebook
+                </a>
+                <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(window.location.href)}" 
+                   target="_blank" 
+                   class="share-btn twitter">
+                    🐦 Share on Twitter
+                </a>
+                <a href="mailto:?subject=${encodeURIComponent(article.title)}&body=${encodeURIComponent('Check out this article: ' + window.location.href)}" 
+                   class="share-btn email">
+                    ✉️ Share via Email
+                </a>
+            </div>
+        </div>
+    </div>
+`;
+            
+            // Update page title with article title (no hardcoded club name)
+            document.title = article.title;
+            
+            // Inject NewsArticle schema for SEO (OLS 126)
+            injectArticleSchema(article);
+        }
+        
+        /**
+         * Inject NewsArticle schema markup (OLS 126)
+         * Generates rich snippets for Google search results
+         */
+        async function injectArticleSchema(article) {
+            // Fetch club settings for publisher info
+            let publisherName = clubName;
+            let publisherLogo = '';
+            
+            try {
+                const response = await fetch('/.netlify/functions/site-settings', {
+                    method: 'GET'
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    const settings = result.data || {};
+                    publisherName = settings['club-name'] || clubName;
+                    publisherLogo = settings['logo-url'] || '';
+                }
+            } catch (error) {
+                console.warn('Could not fetch settings for schema');
+            }
+            
+            // Create description from content (first 160 chars)
+            const plainContent = article.content.replace(/<[^>]*>/g, '').replace(/\n/g, ' ');
+            const description = plainContent.substring(0, 160) + (plainContent.length > 160 ? '...' : '');
+            
+            // Determine article type based on category
+            const articleType = article.category === 'match' ? 'SportsNewsArticle' : 'NewsArticle';
+            
+            // Build schema object
+            const schema = {
+                "@context": "https://schema.org",
+                "@type": articleType,
+                "headline": article.title,
+                "description": description,
+                "datePublished": article.date || article.createdAt,
+                "dateModified": article.updatedAt || article.date || article.createdAt,
+                "author": {
+                    "@type": "Person",
+                    "name": article.author || publisherName
+                },
+                "publisher": {
+                    "@type": "SportsOrganization",
+                    "name": publisherName,
+                    "sport": "Rugby Union"
+                },
+                "mainEntityOfPage": {
+                    "@type": "WebPage",
+                    "@id": window.location.href
+                }
+            };
+            
+            // Add image if available
+            if (article.image) {
+                const imageUrl = article.image.startsWith('http') 
+                    ? article.image 
+                    : window.location.origin + '/' + article.image.replace('../', '');
+                schema.image = {
+                    "@type": "ImageObject",
+                    "url": imageUrl
+                };
+            }
+            
+            // Add publisher logo if available
+            if (publisherLogo) {
+                schema.publisher.logo = {
+                    "@type": "ImageObject",
+                    "url": publisherLogo
+                };
+            }
+            
+            // Remove any existing article schema
+            const existingSchema = document.querySelector('script[type="application/ld+json"][data-article-schema]');
+            if (existingSchema) {
+                existingSchema.remove();
+            }
+            
+            // Inject schema into head
+            const script = document.createElement('script');
+            script.type = 'application/ld+json';
+            script.setAttribute('data-article-schema', 'true');
+            script.textContent = JSON.stringify(schema, null, 2);
+            document.head.appendChild(script);
+            
+            console.log('✅ NewsArticle schema injected for:', article.title);
+            
+            // Also update meta tags for this specific article
+            updateArticleMetaTags(article, publisherName, schema.image?.url);
+        }
+        
+        /**
+         * Update meta tags for specific article (OLS 126)
+         * Overrides generic SEO manager tags with article-specific content
+         */
+        function updateArticleMetaTags(article, publisherName, imageUrl) {
+            // Create description from content
+            const plainContent = article.content.replace(/<[^>]*>/g, '').replace(/\n/g, ' ');
+            const description = plainContent.substring(0, 160) + (plainContent.length > 160 ? '...' : '');
+            
+            // Helper to set meta tag
+            const setMeta = (nameOrProp, content, isProperty = false) => {
+                if (!content) return;
+                const attr = isProperty ? 'property' : 'name';
+                let meta = document.querySelector(`meta[${attr}="${nameOrProp}"]`);
+                if (!meta) {
+                    meta = document.createElement('meta');
+                    meta.setAttribute(attr, nameOrProp);
+                    document.head.appendChild(meta);
+                }
+                meta.setAttribute('content', content);
+            };
+            
+            // Update basic meta
+            setMeta('description', description);
+            
+            // Update Open Graph
+            setMeta('og:title', article.title, true);
+            setMeta('og:description', description, true);
+            setMeta('og:type', 'article', true);
+            setMeta('og:url', window.location.href, true);
+            if (imageUrl) {
+                setMeta('og:image', imageUrl, true);
+            }
+            
+            // Update Twitter
+            setMeta('twitter:title', article.title);
+            setMeta('twitter:description', description);
+            if (imageUrl) {
+                setMeta('twitter:image', imageUrl);
+            }
+            
+            // Article-specific OG tags
+            setMeta('article:published_time', article.date || article.createdAt, true);
+            if (article.updatedAt) {
+                setMeta('article:modified_time', article.updatedAt, true);
+            }
+            setMeta('article:author', article.author || publisherName, true);
+            
+            console.log('✅ Article meta tags updated');
+        }
+        
+        // Load article when page loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Fetch club name first, then load article
+            await fetchClubName();
+            await loadArticle();
+        });
+    </script>
+</body>
+</html>

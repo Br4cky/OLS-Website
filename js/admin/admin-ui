@@ -1,0 +1,229 @@
+/**
+ * Admin UI Manager - OLS-WEBSITE
+ * Modal management and user interface interactions for static DOM modals
+ */
+
+class AdminUIManager {
+    constructor() {
+        this.setupEventListeners();
+        console.log('Admin UI Manager initialized (static modal version)');
+    }
+
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+
+    setupEventListeners() {
+        // Modal close on background click
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                const modalId = e.target.id;
+                this.closeModal(modalId);
+            }
+        });
+
+        // Logo preview for sponsor modal
+        document.addEventListener('change', (e) => {
+            if (e.target.id === 'sponsorLogo') {
+                this.handleLogoPreview(e.target);
+            }
+        });
+
+        // File upload previews for gallery and other forms
+        document.addEventListener('change', (e) => {
+            if (e.target.type === 'file' && e.target.accept && e.target.accept.includes('image/*')) {
+                this.handleImagePreview(e.target);
+            }
+        });
+    }
+
+    // ============================================
+    // FILE HANDLING
+    // ============================================
+
+    handleLogoPreview(input) {
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('logoPreview');
+                const img = document.getElementById('logoPreviewImg');
+                if (preview && img) {
+                    preview.style.display = 'block';
+                    img.src = e.target.result;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    handleImagePreview(input) {
+        // Generic image preview handler for other file inputs
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Look for a preview container near the input
+                const previewContainer = input.parentElement.querySelector('.image-preview');
+                if (previewContainer) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.style.maxHeight = '100px';
+                    img.style.maxWidth = '100px';
+                    img.style.border = '2px solid #ddd';
+                    img.style.borderRadius = '8px';
+                    img.style.marginTop = '10px';
+                    
+                    // Clear previous preview
+                    const existingPreview = previewContainer.querySelector('img');
+                    if (existingPreview) {
+                        existingPreview.remove();
+                    }
+                    
+                    previewContainer.appendChild(img);
+                }
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // ============================================
+    // MODAL CONTROL FUNCTIONS
+    // ============================================
+
+    openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            console.log(`Modal ${modalId} opened`);
+        } else {
+            console.error(`Modal ${modalId} not found in DOM`);
+        }
+    }
+
+    closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            
+            // Reset form
+            const form = modal.querySelector('form');
+            if (form) {
+                form.reset();
+            }
+
+            // Reset logo preview
+            const logoPreview = document.getElementById('logoPreview');
+            if (logoPreview) {
+                logoPreview.style.display = 'none';
+            }
+            
+            // Reset any image previews
+            const imagePreviews = modal.querySelectorAll('.image-preview img');
+            imagePreviews.forEach(img => img.remove());
+            
+            // Reset edit state
+            if (window.adminSystem) {
+                window.adminSystem.currentEditIndex = null;
+            }
+            
+            console.log(`Modal ${modalId} closed`);
+        }
+    }
+
+    // ============================================
+    // FILTER FUNCTIONS
+    // ============================================
+
+    filterShopItems(category) {
+        const shopItems = document.querySelectorAll('.shop-item');
+        const filterButtons = document.querySelectorAll('#shopCategoryFilters .btn');
+        
+        // Update active button
+        filterButtons.forEach(btn => btn.classList.remove('active'));
+        const activeButton = document.querySelector(`[data-category="${category}"]`);
+        if (activeButton) {
+            activeButton.classList.add('active');
+        }
+        
+        // Filter items
+        shopItems.forEach(item => {
+            if (category === 'all' || item.dataset.category === category) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        console.log(`Shop items filtered by category: ${category}`);
+    }
+
+    filterSponsors(tier) {
+        const sponsorItems = document.querySelectorAll('.sponsor-item');
+        const filterButtons = document.querySelectorAll('#sponsorTierFilters .btn');
+        
+        // Update active button
+        filterButtons.forEach(btn => btn.classList.remove('active'));
+        const activeButton = document.querySelector(`[data-tier="${tier}"]`);
+        if (activeButton) {
+            activeButton.classList.add('active');
+        }
+        
+        // Filter items
+        sponsorItems.forEach(item => {
+            if (tier === 'all' || item.dataset.tier === tier) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        console.log(`Sponsors filtered by tier: ${tier}`);
+    }
+}
+
+// ============================================
+// INITIALIZE AND GLOBAL EXPORTS
+// ============================================
+
+let adminUIManager;
+
+// Initialize UI manager when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    adminUIManager = new AdminUIManager();
+    console.log('Admin UI Manager initialized with static modals');
+});
+
+// Export global functions for HTML onclick compatibility
+window.openModal = function(modalId) {
+    if (adminUIManager) {
+        adminUIManager.openModal(modalId);
+    } else {
+        console.error('AdminUIManager not initialized');
+    }
+};
+
+window.closeModal = function(modalId) {
+    if (adminUIManager) {
+        adminUIManager.closeModal(modalId);
+    } else {
+        console.error('AdminUIManager not initialized');
+    }
+};
+
+window.filterShopItems = function(category) {
+    if (adminUIManager) {
+        adminUIManager.filterShopItems(category);
+    } else {
+        console.error('AdminUIManager not initialized');
+    }
+};
+
+window.filterSponsors = function(tier) {
+    if (adminUIManager) {
+        adminUIManager.filterSponsors(tier);
+    } else {
+        console.error('AdminUIManager not initialized');
+    }
+};

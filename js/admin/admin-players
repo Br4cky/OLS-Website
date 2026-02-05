@@ -1,0 +1,414 @@
+/**
+ * Admin Players Manager - OLS-WEBSITE
+ * Player roster CRUD operations with cloud integration
+ */
+
+class AdminPlayersManager {
+    constructor(adminSystem) {
+        this.adminSystem = adminSystem;
+        this.formHandlerAttached = false; // ADD THIS FLAG
+        // REMOVE setupFormHandler() call from constructor
+    }
+
+    // ADD THIS METHOD - Lazy form handler initialization
+    ensureFormHandler() {
+        if (this.formHandlerAttached) return;
+        
+        const form = document.getElementById('playerForm');
+        if (form) {
+            form.addEventListener('submit', (e) => this.handlePlayerSubmission(e));
+            this.formHandlerAttached = true;
+            console.log('AdminPlayersManager form handler attached');
+        }
+    }
+
+    async handlePlayerSubmission(e) {
+        e.preventDefault();
+        
+        const playerData = {
+            id: this.adminSystem.currentEditIndex !== null ? 
+                this.adminSystem.getData('players')[this.adminSystem.currentEditIndex].id : 
+                Date.now().toString(),
+            name: document.getElementById('playerName').value.trim(),
+            team: document.getElementById('playerTeam').value,
+            position: document.getElementById('playerPosition').value.trim(),
+            appearances: parseInt(document.getElementById('playerApps').value) || 0,
+            photo: null // Handle photo upload separately if needed
+        };
+
+        // Validate required fields
+        if (!playerData.name) {
+            alert('Please enter the player name');
+            return;
+        }
+
+        try {
+            // 1. IMMEDIATE localStorage update
+            let existingPlayers = this.adminSystem.getData('players');
+            
+            if (this.adminSystem.currentEditIndex !== null) {
+                existingPlayers[this.adminSystem.currentEditIndex] = playerData;
+            } else {
+                existingPlayers.unshift(playerData);
+            }
+            
+            this.adminSystem.saveData('players', existingPlayers);
+            this.adminSystem.loadPlayers();
+            this.adminSystem.updateStats();
+            
+            const action = this.adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+            this.adminSystem.showAlert('players', `Player ${action} successfully!`, 'success');
+            
+            // 2. BACKGROUND cloud storage
+            if (window.netlifyDataManager) {
+                try {
+                    const result = await window.netlifyDataManager.createPlayer(playerData);
+                    
+                    if (result.success) {
+                        console.log('Player successfully synced to cloud storage');
+                        setTimeout(() => {
+                            this.adminSystem.showAlert('players', 'Player synced to cloud storage ✓', 'success');
+                        }, 1000);
+                    } else {
+                        throw new Error(result.error);
+                    }
+                    
+                } catch (cloudError) {
+                    console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
+                    this.adminSystem.showAlert('players', 'Player saved locally (cloud sync failed)', 'warning');
+                }
+            }
+            
+            closeModal('playerModal');
+            document.getElementById('playerForm').reset();
+            this.adminSystem.currentEditIndex = null;
+            
+        } catch (error) {
+            console.error('Error saving player:', error);
+            this.adminSystem.showAlert('players', 'Error saving player: ' + error.message, 'danger');
+        }
+    }
+
+    editPlayer(index) {
+        const players = this.adminSystem.getData('players');
+        const player = players[index];
+        
+        if (!player) {
+            console.error('Player not found at index:', index);
+            return;
+        }
+        
+        this.adminSystem.currentEditIndex = index;
+        this.adminSystem.currentSection = 'players';
+        
+        // CRITICAL: Ensure form handler before opening modal
+        setTimeout(() => {
+            this.ensureFormHandler();
+            
+            // Populate form with existing data
+            document.getElementById('playerName').value = player.name || '';
+            document.getElementById('playerTeam').value = player.team || 'mens-1st';
+            document.getElementById('playerPosition').value = player.position || '';
+            document.getElementById('playerApps').value = player.appearances || 0;
+        }, 50);
+        
+        openModal('playerModal');
+    }
+
+    deletePlayer(index) {
+        const players = this.adminSystem.getData('players');
+        const player = players[index];
+        
+        if (!player) {
+            console.error('Player not found at index:', index);
+            return;
+        }
+        
+        if (confirm(`Are you sure you want to delete ${player.name}?`)) {
+            try {
+                players.splice(index, 1);
+                this.adminSystem.saveData('players', players);
+                this.adminSystem.loadPlayers();
+                this.adminSystem.updateStats();
+                this.adminSystem.showAlert('players', 'Player deleted successfully', 'success');
+            } catch (error) {
+                console.error('Error deleting player:', error);
+                this.adminSystem.showAlert('players', 'Error deleting player: ' + error.message, 'danger');
+            }
+        }
+    }
+
+    duplicatePlayer(index) {
+        const players = this.adminSystem.getData('players');
+        const player = players[index];
+        
+        if (!player) {
+            console.error('Player not found at index:', index);
+            return;
+        }
+        
+        const duplicatedPlayer = {
+            ...player,
+            id: Date.now().toString(),
+            name: player.name + ' (Copy)',
+            appearances: 0
+        };
+        
+        players.unshift(duplicatedPlayer);
+        this.adminSystem.saveData('players', players);
+        this.adminSystem.loadPlayers();
+        this.adminSystem.updateStats();
+        
+        this.adminSystem.showAlert('players', 'Player duplicated successfully', 'success');
+    }
+
+    // Team management methods
+    getPlayersByTeam(team) {
+        const players = this.adminSystem.getData('players');
+        if (team === 'all') {
+            return players;
+        }
+        return players.filter(player => player.team === team);
+    }
+
+    getTeamRoster(team) {
+        const players = this.getPlayersByTeam(team);
+        
+        // Group by position for better organization
+        const positionGroups = {};
+        
+        players.forEach(player => {
+            const position = player.position || 'Other';
+            if (!positionGroups[position]) {
+                positionGroups[position] = [];
+            }
+            positionGroups[position].push(player);
+        });
+        
+        return {
+            totalPlayers: players.length,
+            positions: positionGroups,
+            averageAppearances: players.length > 0 
+                ? Math.round(players.reduce((sum, p) => sum + (p.appearances || 0), 0) / players.length) 
+                : 0
+        };
+    }
+
+    movePlayerToTeam(playerIndex, newTeam) {
+        const players = this.adminSystem.getData('players');
+        const player = players[playerIndex];
+        
+        if (!player) {
+            console.error('Player not found at index:', playerIndex);
+            return;
+        }
+        
+        const oldTeam = this.adminSystem.formatTeam(player.team);
+        const newTeamFormatted = this.adminSystem.formatTeam(newTeam);
+        
+        if (confirm(`Move ${player.name} from ${oldTeam} to ${newTeamFormatted}?`)) {
+            player.team = newTeam;
+            
+            this.adminSystem.saveData('players', players);
+            this.adminSystem.loadPlayers();
+            
+            this.adminSystem.showAlert('players', 
+                `${player.name} moved to ${newTeamFormatted}`, 'success');
+        }
+    }
+
+    updateAppearances(playerIndex, newAppearances) {
+        const players = this.adminSystem.getData('players');
+        const player = players[playerIndex];
+        
+        if (!player) {
+            console.error('Player not found at index:', playerIndex);
+            return;
+        }
+        
+        player.appearances = parseInt(newAppearances) || 0;
+        
+        this.adminSystem.saveData('players', players);
+        this.adminSystem.loadPlayers();
+        
+        this.adminSystem.showAlert('players', 
+            `${player.name} appearances updated to ${player.appearances}`, 'success');
+    }
+
+    // Player statistics and analysis
+    getTopScorers(limit = 10) {
+        const players = this.adminSystem.getData('players')
+            .filter(player => player.appearances > 0)
+            .sort((a, b) => (b.appearances || 0) - (a.appearances || 0))
+            .slice(0, limit);
+        
+        return players;
+    }
+
+    getTeamStats() {
+        const players = this.adminSystem.getData('players');
+        const teams = ['mens-1st', 'mens-2nd', 'ladies', 'colts', 'u16s', 'u14s'];
+        
+        const stats = {};
+        
+        teams.forEach(team => {
+            const teamPlayers = players.filter(p => p.team === team);
+            stats[team] = {
+                playerCount: teamPlayers.length,
+                totalAppearances: teamPlayers.reduce((sum, p) => sum + (p.appearances || 0), 0),
+                averageAppearances: teamPlayers.length > 0 
+                    ? Math.round(teamPlayers.reduce((sum, p) => sum + (p.appearances || 0), 0) / teamPlayers.length)
+                    : 0
+            };
+        });
+        
+        return stats;
+    }
+
+    searchPlayers(searchTerm) {
+        const players = this.adminSystem.getData('players');
+        
+        if (!searchTerm || searchTerm.trim() === '') {
+            return players;
+        }
+        
+        const term = searchTerm.toLowerCase();
+        
+        return players.filter(player => 
+            (player.name || '').toLowerCase().includes(term) ||
+            (player.position || '').toLowerCase().includes(term) ||
+            this.adminSystem.formatTeam(player.team).toLowerCase().includes(term)
+        );
+    }
+
+    // Export players data
+    exportPlayersByTeam(team) {
+        const players = this.getPlayersByTeam(team);
+        const csvData = this.convertPlayersToCSV(players);
+        const teamName = team === 'all' ? 'all_teams' : team;
+        const filename = `olrfc_players_${teamName}_${new Date().toISOString().split('T')[0]}.csv`;
+        
+        this.downloadCSV(csvData, filename);
+    }
+
+    convertPlayersToCSV(players) {
+        const headers = ['Name', 'Team', 'Position', 'Appearances'];
+        let csv = headers.join(',') + '\n';
+        
+        players.forEach(player => {
+            const row = [
+                player.name || '',
+                this.adminSystem.formatTeam(player.team),
+                player.position || '',
+                player.appearances || 0
+            ];
+            
+            csv += row.map(field => `"${field}"`).join(',') + '\n';
+        });
+        
+        return csv;
+    }
+
+    downloadCSV(csvContent, filename) {
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+    }
+
+    // Bulk operations
+    bulkUpdateAppearances(updates) {
+        const players = this.adminSystem.getData('players');
+        let updatedCount = 0;
+        
+        updates.forEach(update => {
+            const player = players.find(p => p.id === update.id);
+            if (player) {
+                player.appearances = (player.appearances || 0) + update.increment;
+                updatedCount++;
+            }
+        });
+        
+        if (updatedCount > 0) {
+            this.adminSystem.saveData('players', players);
+            this.adminSystem.loadPlayers();
+            this.adminSystem.showAlert('players', 
+                `Updated appearances for ${updatedCount} players`, 'success');
+        }
+    }
+
+    bulkTeamTransfer(playerIds, newTeam) {
+        const players = this.adminSystem.getData('players');
+        let transferCount = 0;
+        
+        playerIds.forEach(playerId => {
+            const player = players.find(p => p.id === playerId);
+            if (player) {
+                player.team = newTeam;
+                transferCount++;
+            }
+        });
+        
+        if (transferCount > 0) {
+            this.adminSystem.saveData('players', players);
+            this.adminSystem.loadPlayers();
+            this.adminSystem.showAlert('players', 
+                `Transferred ${transferCount} players to ${this.adminSystem.formatTeam(newTeam)}`, 'success');
+        }
+    }
+}
+
+// ============================================
+// INITIALIZE AND GLOBAL EXPORTS
+// ============================================
+
+let adminPlayersManager;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.adminSystem) {
+        adminPlayersManager = new AdminPlayersManager(window.adminSystem);
+        console.log('Admin Players Manager initialized');
+    }
+});
+
+// Export all CRUD functions to global scope for HTML onclick compatibility
+window.editPlayer = function(index) {
+    if (adminPlayersManager) {
+        adminPlayersManager.editPlayer(index);
+    } else {
+        console.error('AdminPlayersManager not initialized');
+    }
+};
+
+window.deletePlayer = function(index) {
+    if (adminPlayersManager) {
+        adminPlayersManager.deletePlayer(index);
+    } else {
+        console.error('AdminPlayersManager not initialized');
+    }
+};
+
+window.duplicatePlayer = function(index) {
+    if (adminPlayersManager) {
+        adminPlayersManager.duplicatePlayer(index);
+    } else {
+        console.error('AdminPlayersManager not initialized');
+    }
+};
+
+window.movePlayerToTeam = function(index, team) {
+    if (adminPlayersManager) {
+        adminPlayersManager.movePlayerToTeam(index, team);
+    } else {
+        console.error('AdminPlayersManager not initialized');
+    }
+};
+
+window.updatePlayerAppearances = function(index, appearances) {
+    if (adminPlayersManager) {
+        adminPlayersManager.updateAppearances(index, appearances);
+    } else {
+        console.error('AdminPlayersManager not initialized');
+    }
+};

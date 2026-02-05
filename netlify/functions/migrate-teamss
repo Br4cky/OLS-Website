@@ -1,0 +1,135 @@
+// netlify/functions/migrate-teams.js
+// ONE-TIME MIGRATION: Transfer existing teams to Netlify Blobs
+// OLS 89
+
+const { getStore } = require('@netlify/blobs');
+
+exports.handler = async (event, context) => {
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type'
+    };
+
+    try {
+        // Your existing 7 teams from localStorage
+        const existingTeams = [
+            {
+                "id": "1762550266903",
+                "name": "Colts",
+                "slug": "colts",
+                "ageGroup": "youth",
+                "description": "",
+                "photo": "",
+                "createdAt": "2025-11-07T21:17:46.907Z",
+                "ip": "95.146.130.192",
+                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+                "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+            },
+            {
+                "id": "1762448303257",
+                "name": "Phoenix Ladies",
+                "slug": "ladies",
+                "ageGroup": "senior",
+                "description": "",
+                "photo": "",
+                "createdAt": "2025-11-06T16:58:32.813Z",
+                "ip": "95.146.130.192",
+                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+                "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+            },
+            {
+                "id": "1762447957308",
+                "name": "U14's",
+                "slug": "u14s",
+                "ageGroup": "junior",
+                "description": "",
+                "photo": "",
+                "createdAt": "2025-11-06T16:52:37.311Z",
+                "ip": "95.146.130.192",
+                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+                "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+            },
+            {
+                "id": "1762447942962",
+                "name": "U15's",
+                "slug": "u15s",
+                "ageGroup": "junior",
+                "description": "",
+                "photo": "",
+                "createdAt": "2025-11-06T16:52:22.967Z",
+                "ip": "95.146.130.192",
+                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+                "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+            },
+            {
+                "id": "1762447927220",
+                "name": "U16's",
+                "slug": "u16s",
+                "ageGroup": "junior",
+                "description": "",
+                "photo": "",
+                "createdAt": "2025-11-06T16:52:07.228Z",
+                "ip": "95.146.130.192",
+                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+                "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+            },
+            {
+                "id": "1762302991854",
+                "name": "Mens 2nd XV",
+                "slug": "mens-2nd",
+                "ageGroup": "senior",
+                "description": "",
+                "photo": "",
+                "createdAt": "2025-11-05T00:36:31.856Z",
+                "ip": "95.146.130.192",
+                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+                "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+            },
+            {
+                "id": "1762302802403",
+                "name": "Mens 1st XV",
+                "slug": "mens-1st",
+                "ageGroup": "senior",
+                "description": "",
+                "photo": "",
+                "createdAt": "2025-11-05T00:33:22.406Z",
+                "ip": "95.146.130.192",
+                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+                "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+            }
+        ];
+
+        // Save to Netlify Blobs
+        const store = getStore({
+            name: 'ols-teams',
+            siteID: process.env.SITE_ID,
+            token: process.env.NETLIFY_ACCESS_TOKEN
+        });
+        await store.set('all-teams', JSON.stringify(existingTeams));
+
+        console.log(`✅ Migrated ${existingTeams.length} teams to Netlify Blobs`);
+
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+                success: true,
+                message: `Successfully migrated ${existingTeams.length} teams to Netlify Blobs`,
+                count: existingTeams.length,
+                teams: existingTeams.map(t => ({ id: t.id, name: t.name, slug: t.slug }))
+            })
+        };
+
+    } catch (error) {
+        console.error('Migration error:', error);
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+                success: false,
+                error: 'Migration failed',
+                message: error.message
+            })
+        };
+    }
+};

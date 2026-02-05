@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Events Calendar</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <script src="../js/color-manager.js"></script>
+    <link rel="stylesheet" href="../css/calendar-widget.css">
+    <style>
+        /* Admin controlled elements */
+        .nav-item[data-admin-controlled="true"] {
+            display: none;
+        }
+
+        .nav-item[data-admin-controlled="true"].admin-enabled {
+            display: block;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--bg-light);
+            color: var(--text-dark);
+        }
+
+        /* Page Header */
+        .page-header {
+    background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+    color: white;
+    padding: 6rem 0 3rem;
+    text-align: center;
+    margin-top: 80px;
+}
+
+        .page-header h1 {
+            margin: 0;
+            font-size: 3rem;
+            font-weight: bold;
+        }
+
+        .page-header p {
+            margin: 1rem 0 0;
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .hero-cta {
+            margin-top: 2rem;
+        }
+
+        .hero-cta .btn {
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-block;
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+            cursor: pointer;
+        }
+
+        .hero-cta .btn:hover {
+            background: white;
+            color: var(--primary-green);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Navigation Loading Spinner */
+        #nav-loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(3px);
+        }
+
+        #nav-loading-overlay.active {
+            display: flex;
+        }
+
+        .nav-spinner-content {
+            text-align: center;
+            color: white;
+        }
+
+        .nav-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .nav-spinner-text {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Filter Section */
+        .filter-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .filter-title {
+            font-size: 1.5rem;
+            color: var(--primary-green);
+            font-weight: bold;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .filter-btn {
+            padding: 0.8rem 1.5rem;
+            border: 2px solid var(--filter-color, #666);
+            color: var(--filter-color, #666);
+            background: white;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .filter-btn.active {
+            background: var(--filter-color, #666);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        /* Special styling for "All" button */
+        .filter-btn-all {
+            --filter-color: var(--primary-green);
+        }
+
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        /* Calendar Section */
+        .calendar-section {
+            margin-bottom: 3rem;
+        }
+
+        /* Events List Section */
+        .events-list-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .events-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 3px solid var(--primary-maroon);
+            padding-bottom: 1rem;
+        }
+
+        .events-list-title {
+            font-size: 2rem;
+            color: var(--primary-green);
+            font-weight: bold;
+        }
+
+        .event-count {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            font-weight: normal;
+        }
+
+        /* Event Cards */
+        .events-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .event-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border-left: 5px solid;
+            cursor: pointer;
+        }
+
+        .event-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .event-card-header {
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .event-card-left {
+            flex: 1;
+        }
+
+        .event-type-badge {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .event-card-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+            color: var(--text-dark);
+        }
+
+        .event-card-subtitle {
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+
+        .event-card-date {
+            text-align: right;
+            min-width: 100px;
+        }
+
+        .event-date-day {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-green);
+            line-height: 1;
+        }
+
+        .event-date-month {
+            font-size: 1rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .event-card-body {
+            padding: 0 1.5rem 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .event-detail {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-dark);
+        }
+
+        .event-detail-icon {
+            font-size: 1.2rem;
+        }
+
+        .event-detail-text {
+            font-size: 0.95rem;
+        }
+
+        /* Fixture Score Display */
+        .fixture-score {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, rgba(0,103,71,0.05), rgba(122,16,52,0.05));
+            border-radius: 8px;
+            margin: 1rem 1.5rem;
+        }
+
+        .fixture-score-team {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .fixture-score-display {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary-maroon);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-light);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0,103,71,0.1);
+            border-top: 4px solid var(--primary-green);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modal for Event Details */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .modal-content {
+    background: white;
+    border-radius: 15px;
+    max-width: 900px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+        .modal-header {
+            padding: 2rem;
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .modal-close {
+            float: right;
+            font-size: 2rem;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        .modal-close:hover {
+            opacity: 1;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .modal-section {
+            margin-bottom: 2rem;
+        }
+
+        .modal-section-title {
+            font-size: 1.3rem;
+            color: var(--primary-green);
+            font-weight: bold;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--primary-maroon);
+            padding-bottom: 0.5rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+        }
+
+        /* 🎯 PREVENT FLASH OF DEFAULT CONTENT */
+        .page-header {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .cms-content-loaded .page-header {
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .page-header {
+        margin-top: 70px;
+        padding: 5rem 1rem 2rem;
+    }
+            .page-header h1 {
+                font-size: 2rem;
+            }
+
+            .filter-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .filter-buttons {
+                width: 100%;
+            }
+
+            .filter-btn {
+                flex: 1;
+                min-width: 140px;
+                justify-content: center;
+            }
+
+            .event-card-header {
+                flex-direction: column-reverse;
+            }
+
+            .event-card-date {
+                text-align: left;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+        }
+
+        /* OLS 107: Venue Enquiry Section */
+        .venue-enquiry-section {
+            background: linear-gradient(135deg, 
+                rgba(var(--primary-green-rgb, 0,103,71), 0.03), 
+                rgba(var(--primary-maroon-rgb, 122,16,52), 0.03));
+            padding: 4rem 0;
+            margin-top: 3rem;
+        }
+
+        .enquiry-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .enquiry-header {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .enquiry-header h2 {
+            margin: 0 0 1rem 0;
+            font-size: 2.5rem;
+        }
+
+        .enquiry-header p {
+            margin: 0;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .enquiry-form {
+            padding: 3rem 2rem;
+        }
+
+        .form-fields {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group label .required {
+            color: #dc3545;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.9rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(var(--primary-green-rgb, 0,103,71), 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-group .field-hint {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-top: 0.25rem;
+        }
+
+        .btn-large {
+            width: 100%;
+            padding: 1.2rem 2rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+
+        .btn-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .enquiry-message {
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .message-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .enquiry-message h3 {
+            margin: 0 0 1rem 0;
+            font-size: 2rem;
+            color: var(--text-dark);
+        }
+
+        .enquiry-message p {
+            margin: 0.5rem 0;
+            font-size: 1.1rem;
+            color: var(--text-light);
+        }
+
+        .reference-id {
+            margin-top: 1.5rem !important;
+            padding: 1rem;
+            background: var(--bg-light);
+            border-radius: 8px;
+            font-size: 0.95rem !important;
+        }
+
+        .success-message {
+            color: #155724;
+        }
+
+        .error-message {
+            color: #721c24;
+        }
+
+        @media (max-width: 768px) {
+            .venue-enquiry-section {
+                padding: 2rem 0;
+            }
+
+            .enquiry-header {
+                padding: 2rem 1.5rem;
+            }
+
+            .enquiry-header h2 {
+                font-size: 1.8rem;
+            }
+
+            .enquiry-form {
+                padding: 2rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Loading Overlay -->
+    <div id="nav-loading-overlay">
+        <div class="nav-spinner-content">
+            <div class="nav-spinner"></div>
+            <div class="nav-spinner-text">Loading venue form...</div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div id="header-placeholder" data-page="events"></div>
+
+    <!-- Hero Section -->
+    <section class="page-header" style="background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon)); color: white; padding: 6rem 0 3rem; text-align: center;">
+        <div class="container">
+            <h1 style="font-size: 3rem; margin-bottom: 1rem;">🏉 Events Calendar</h1>
+            <p style="font-size: 1.2rem; opacity: 0.9;">All fixtures, training sessions, and social events in one place</p>
+            <div class="hero-cta">
+                <a href="#venue-enquiry-section" class="btn" onclick="smoothScrollToForm(event)">📍 Book Our Venue</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="container">
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <div class="filter-header">
+                <h2 class="filter-title">Filter Events</h2>
+                <!-- Dynamic filter buttons - populated by JavaScript from calendar config -->
+                <div class="filter-buttons" id="dynamic-filter-buttons">
+                    <!-- Buttons will be generated dynamically -->
+                    <button class="filter-btn filter-btn-all active" onclick="filterEvents('all')">
+                        All Events
+                    </button>
+                    <!-- Loading placeholder -->
+                    <span id="filter-loading" style="color: var(--text-light); font-size: 0.9rem;">Loading filters...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Section -->
+        <div class="calendar-section">
+            <div id="ols-calendar-widget"></div>
+        </div>
+
+        <!-- Events List Section -->
+        <div class="events-list-section">
+            <div class="events-list-header">
+                <h2 class="events-list-title">
+                    Upcoming Events
+                    <span class="event-count" id="event-count"></span>
+                </h2>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Loading events...</p>
+            </div>
+
+            <!-- Events Grid -->
+            <div id="events-grid" class="events-grid" style="display: none;"></div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">📅</div>
+                <div class="empty-state-title">No Events Found</div>
+                <p>There are no events matching your filter criteria.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Venue Hire Enquiry Section (OLS 107) -->
+    <div id="venue-enquiry-section" class="venue-enquiry-section" style="display: none;">
+        <div class="container">
+            <div class="enquiry-card">
+                <div class="enquiry-header">
+                    <h2 id="enquiry-title">🏟️ Venue Hire Enquiry</h2>
+                    <p id="enquiry-description">Interested in hiring our facilities for your event? Fill out the form below and we'll get back to you within 24 hours.</p>
+                </div>
+                
+                <form id="venue-enquiry-form" class="enquiry-form">
+                    <!-- Honeypot field for spam protection -->
+                    <input type="text" name="website" id="website" style="display: none;" tabindex="-1" autocomplete="off">
+                    
+                    <div id="form-fields" class="form-fields">
+                        <!-- Fields will be dynamically loaded here -->
+                    </div>
+                    
+                    <button type="submit" id="enquiry-submit-btn" class="btn btn-primary btn-large">
+                        <span id="submit-text">Send Enquiry</span>
+                        <span id="submit-spinner" style="display: none;">
+                            <span class="btn-spinner"></span> Sending...
+                        </span>
+                    </button>
+                </form>
+                
+                <div id="enquiry-success" class="enquiry-message success-message" style="display: none;">
+                    <div class="message-icon">✅</div>
+                    <h3>Thank You!</h3>
+                    <p id="success-message-text">We've received your enquiry and will respond within 24 hours.</p>
+                    <p class="reference-id">Reference: <strong id="reference-id"></strong></p>
+                </div>
+                
+                <div id="enquiry-error" class="enquiry-message error-message" style="display: none;">
+                    <div class="message-icon">⚠️</div>
+                    <h3>Something Went Wrong</h3>
+                    <p id="error-message-text">Please try again or contact us directly.</p>
+                    <button onclick="resetEnquiryForm()" class="btn btn-secondary">Try Again</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div id="footer-placeholder" data-page="events"></div>
+
+    <!-- Scripts -->
+    <script src="../js/olrfc-netlify-data.js"></script>
+    <script src="../js/main.js"></script>
+    <script src="../js/header.js"></script>
+    <script src="../js/footer.js"></script>
+
+    <!-- Event Detail Modal -->
+    <div id="event-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+                <div id="modal-event-type" class="event-type-badge"></div>
+                <h2 id="modal-title"></h2>
+                <p id="modal-subtitle"></p>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <div id="modal-details"></div>
+                </div>
+                <div class="modal-section" id="modal-fixture-section" style="display: none;">
+                    <h3 class="modal-section-title">Match Details</h3>
+                    <div id="modal-fixture-details"></div>
+                </div>
+                <div class="modal-section">
+                    <h3 class="modal-section-title">Description</h3>
+                    <div id="modal-description"></div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-actions">
+                        <a id="modal-add-calendar" class="btn btn-primary" target="_blank">
+                            📅 Add to Calendar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/calendar-data-fetcher.js"></script>
+    <script src="../js/calendar-widget.js"></script>
+    <script>
+        // Mobile menu toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.getElementById('menuToggle');
+            const nav = document.querySelector('.nav');
+            
+            if (menuToggle && nav) {
+                menuToggle.addEventListener('click', function() {
+                    nav.classList.toggle('active');
+                    this.classList.toggle('active');
+                });
+            }
+        });
+    </script>
+    
+    <script>
+        // Smooth scroll to venue enquiry form
+        function smoothScrollToForm(event) {
+            event.preventDefault();
+            
+            // Show loading overlay
+            const overlay = document.getElementById('nav-loading-overlay');
+            overlay.classList.add('active');
+            
+            const formSection = document.getElementById('venue-enquiry-section');
+            if (formSection) {
+                // Make section visible first
+                formSection.style.display = 'block';
+                
+                // Then scroll to it
+                setTimeout(() => {
+                    formSection.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                    
+                    // Hide overlay after scroll completes
+                    setTimeout(() => {
+                        overlay.classList.remove('active');
+                    }, 800);
+                }, 100);
+            }
+        }
+    </script>
+    
+    <script>
+        // Load feature states from admin settings
+        async function loadFeatureStates() {
+            try {
+                const response = await fetch('/.netlify/functions/netlify-forms-get?form_name=admin-settings');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch settings');
+                }
+                
+                const result = await response.json();
+                const settings = result.data || [];
+                
+                const featureStates = {
+                    shop: false,
+                    events: false,
+                    members: false,
+                    payments: false,
+                    sponsors: false
+                };
+                
+                settings.reverse();
+                settings.forEach(setting => {
+                    if (setting['setting-name']?.startsWith('feature-')) {
+                        const featureName = setting['setting-name'].replace('feature-', '');
+                        if (featureStates.hasOwnProperty(featureName)) {
+                            featureStates[featureName] = setting['setting-value'] === 'true';
+                        }
+                    }
+                });
+                
+                window.featureStates = featureStates;
+                
+                // Apply saved states to navigation
+                Object.keys(featureStates).forEach(feature => {
+                    const navItems = document.querySelectorAll(`[data-admin-controlled="true"][data-feature="${feature}"]`);
+                    navItems.forEach(item => {
+                        item.classList.toggle('admin-enabled', featureStates[feature]);
+                    });
+                });
+                
+                return featureStates;
+                
+            } catch (error) {
+                console.error('❌ Error loading feature states:', error);
+                
+                const fallbackStates = {
+                    shop: false,
+                    events: false,
+                    members: false,
+                    payments: false,
+                    sponsors: true
+                };
+                
+                window.featureStates = fallbackStates;
+                return fallbackStates;
+            }
+        }
+
+        let allEvents = [];
+        let filteredEvents = [];
+        let currentFilter = 'all';
+        let calendarWidget;
+
+        // Map event types to CSS variable names
+        const eventTypeColors = {
+            'Senior Fixtures': '--senior-red',
+            'Junior Fixtures': '--junior-blue',
+            'Colts Fixtures': '--colts-green',
+            'Social Events': '--social-orange'
+        };
+
+        // Helper function to get CSS variable value
+        function getCSSColor(varName) {
+            return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 Initializing Events Page...');
+            
+            // Check for hash early and show spinner if present
+            const hasVenueHash = window.location.hash === '#venue-enquiry-section';
+            const overlay = document.getElementById('nav-loading-overlay');
+            
+            if (hasVenueHash) {
+                console.log('📍 Hash detected, showing loading overlay...');
+                overlay.classList.add('active');
+            }
+            
+            // Load feature states first
+            await loadFeatureStates();
+            
+            // Create calendar widget
+            const dataFetcher = new CalendarDataFetcher();
+            
+            // Build dynamic filter buttons from calendar config
+            await buildDynamicFilterButtons(dataFetcher);
+            
+            calendarWidget = new CalendarWidget('ols-calendar-widget', dataFetcher);
+            
+            // Load events
+            await loadEvents();
+            
+            // Handle navigation to form via hash (after events are loaded)
+            if (hasVenueHash) {
+                const formSection = document.getElementById('venue-enquiry-section');
+                if (formSection) {
+                    console.log('📍 Navigating to venue enquiry form...');
+                    // Show the section
+                    formSection.style.display = 'block';
+                    
+                    // Scroll to it after a brief delay to ensure rendering is complete
+                    setTimeout(() => {
+                        formSection.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'start' 
+                        });
+                        console.log('✅ Scrolled to venue enquiry form');
+                        
+                        // Hide overlay after scroll completes
+                        setTimeout(() => {
+                            overlay.classList.remove('active');
+                        }, 800);
+                    }, 300);
+                }
+            }
+        });
+        
+        // OLS 124: Build dynamic filter buttons from calendar configuration
+        async function buildDynamicFilterButtons(dataFetcher) {
+            const container = document.getElementById('dynamic-filter-buttons');
+            if (!container) return;
+            
+            // Wait for settings to load
+            await dataFetcher.loadCalendarSettings();
+            
+            // Get available filters
+            const filters = dataFetcher.getAvailableFilters();
+            
+            // Remove loading text
+            const loadingEl = document.getElementById('filter-loading');
+            if (loadingEl) loadingEl.remove();
+            
+            // Build buttons HTML
+            let buttonsHTML = `
+                <button class="filter-btn filter-btn-all active" onclick="filterEvents('all')">
+                    All Events
+                </button>
+            `;
+            
+            filters.forEach(filter => {
+                if (filter.id === 'all') return; // Skip 'all' - already added
+                
+                buttonsHTML += `
+                    <button class="filter-btn" onclick="filterEvents('${filter.type}')" 
+                            style="--filter-color: ${filter.color};">
+                        <span class="color-dot" style="background: ${filter.color};"></span>
+                        ${filter.label.replace(' Fixtures', '').replace(' Events', '')}
+                    </button>
+                `;
+            });
+            
+            container.innerHTML = buttonsHTML;
+            console.log('✅ Dynamic filter buttons built:', filters.length, 'filters');
+        }
+
+        async function loadEvents() {
+            try {
+                const dataFetcher = new CalendarDataFetcher();
+                allEvents = await dataFetcher.getAllEvents();
+                
+                // Sort by date
+                allEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
+                
+                // Filter to only future events
+                const now = new Date();
+                allEvents = allEvents.filter(event => new Date(event.start) >= now);
+                
+                filteredEvents = [...allEvents];
+                
+                displayEvents();
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('events-grid').style.display = 'grid';
+                
+            } catch (error) {
+                console.error('Error loading events:', error);
+                document.getElementById('loading').innerHTML = `
+                    <p style="color: var(--senior-red);">⚠️ Error loading events. Please try again.</p>
+                `;
+            }
+        }
+
+        function filterEvents(type) {
+            currentFilter = type;
+            
+            // Update button states - reset all to inactive
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Set clicked button as active
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+            
+            // Filter events
+            if (type === 'all') {
+                filteredEvents = [...allEvents];
+            } else {
+                filteredEvents = allEvents.filter(e => e.type === type);
+            }
+            
+            // Update calendar filter too
+            if (calendarWidget) {
+                calendarWidget.filterByType(type === 'all' ? 'all' : type);
+            }
+            
+            displayEvents();
+        }
+
+        function displayEvents() {
+            const grid = document.getElementById('events-grid');
+            const emptyState = document.getElementById('empty-state');
+            const countEl = document.getElementById('event-count');
+            
+            countEl.textContent = `(${filteredEvents.length})`;
+            
+            if (filteredEvents.length === 0) {
+                grid.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            grid.style.display = 'grid';
+            emptyState.style.display = 'none';
+            
+            grid.innerHTML = filteredEvents.map(event => createEventCard(event)).join('');
+        }
+
+        function createEventCard(event) {
+            const date = new Date(event.start);
+            const day = date.getDate();
+            const month = date.toLocaleDateString('en-GB', { month: 'short' });
+            
+            // For private/free-busy events, show time range
+            let timeDisplay;
+            if (event.isPrivate && event.end) {
+                const startTime = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                const endTime = new Date(event.end).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                timeDisplay = `${startTime} - ${endTime}`;
+            } else {
+                timeDisplay = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            }
+            
+            const color = getCSSColor(eventTypeColors[event.type] || '--primary-green');
+            
+            const isFixture = event.fixture;
+            const hasScore = isFixture && event.fixture.ourScore && event.fixture.theirScore;
+            
+            return `
+                <div class="event-card" style="border-left-color: ${color};" onclick='showEventModal(${JSON.stringify(event).replace(/'/g, "&#39;")})'>
+                    <div class="event-card-header">
+                        <div class="event-card-left">
+                            <div class="event-type-badge" style="background: ${color};">
+                                ${event.type}
+                            </div>
+                            <h3 class="event-card-title">${event.title}</h3>
+                            ${isFixture ? `
+                                <p class="event-card-subtitle">${event.fixture.competition}</p>
+                            ` : ''}
+                        </div>
+                        <div class="event-card-date">
+                            <div class="event-date-day">${day}</div>
+                            <div class="event-date-month">${month}</div>
+                        </div>
+                    </div>
+                    ${hasScore ? `
+                        <div class="fixture-score">
+                            <span class="fixture-score-team">${event.fixture?.teamName || 'OLS'}</span>
+                            <span class="fixture-score-display">${event.fixture.ourScore} - ${event.fixture.theirScore}</span>
+                            <span class="fixture-score-team">${event.fixture.opponent}</span>
+                        </div>
+                    ` : ''}
+                    <div class="event-card-body">
+                        <div class="event-detail">
+                            <span class="event-detail-icon">⏰</span>
+                            <span class="event-detail-text">${timeDisplay}</span>
+                        </div>
+                        <div class="event-detail">
+                            <span class="event-detail-icon">📍</span>
+                            <span class="event-detail-text">${event.location || 'TBC'}</span>
+                        </div>
+                        ${isFixture ? `
+                            <div class="event-detail">
+                                <span class="event-detail-icon">${event.fixture.venue === 'home' ? '🏠' : '✈️'}</span>
+                                <span class="event-detail-text">${event.fixture.venue === 'home' ? 'Home' : 'Away'}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function showEventModal(event) {
+            const modal = document.getElementById('event-modal');
+            const color = getCSSColor(eventTypeColors[event.type] || '--primary-green');
+            
+            // Header
+            document.getElementById('modal-event-type').textContent = event.type;
+            document.getElementById('modal-event-type').style.background = color;
+            document.getElementById('modal-title').textContent = event.title;
+            
+            const date = new Date(event.start);
+            document.getElementById('modal-subtitle').textContent = formatDate(date);
+            
+            // Details - show time range for private/free-busy events
+            let timeDisplay;
+            if (event.isPrivate && event.end) {
+                timeDisplay = formatTime(date) + ' - ' + formatTime(new Date(event.end));
+            } else {
+                timeDisplay = formatTime(date);
+            }
+            
+            document.getElementById('modal-details').innerHTML = `
+                <div class="event-card-body">
+                    <div class="event-detail">
+                        <span class="event-detail-icon">⏰</span>
+                        <span class="event-detail-text">${timeDisplay}</span>
+                    </div>
+                    <div class="event-detail">
+                        <span class="event-detail-icon">📍</span>
+                        <span class="event-detail-text">${event.location || 'TBC'}</span>
+                    </div>
+                    ${event.fixture ? `
+                        <div class="event-detail">
+                            <span class="event-detail-icon">${event.fixture.venue === 'home' ? '🏠' : '✈️'}</span>
+                            <span class="event-detail-text">${event.fixture.venue === 'home' ? 'Home' : 'Away'}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Fixture details
+            if (event.fixture) {
+                document.getElementById('modal-fixture-section').style.display = 'block';
+                const hasScore = event.fixture.ourScore && event.fixture.theirScore;
+                
+                document.getElementById('modal-fixture-details').innerHTML = `
+                    <div class="fixture-score">
+                        <span class="fixture-score-team">${event.fixture?.teamName || 'Home'}</span>
+                        ${hasScore ? `
+                            <span class="fixture-score-display">${event.fixture.ourScore} - ${event.fixture.theirScore}</span>
+                        ` : `
+                            <span style="font-size: 1.5rem; color: var(--text-light);">VS</span>
+                        `}
+                        <span class="fixture-score-team">${event.fixture.opponent}</span>
+                    </div>
+                    <p style="text-align: center; font-weight: bold; color: var(--primary-maroon); margin-top: 1rem;">
+                        ${event.fixture.competition}
+                    </p>
+                `;
+            } else {
+                document.getElementById('modal-fixture-section').style.display = 'none';
+            }
+            
+            // Description
+            document.getElementById('modal-description').innerHTML = `
+                <p>${event.description || event.fixture?.competition || 'No additional details available.'}</p>
+            `;
+            
+            // Add to calendar link
+            const calendarUrl = createCalendarLink(event);
+            document.getElementById('modal-add-calendar').href = calendarUrl;
+            
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('event-modal').style.display = 'none';
+        }
+
+        function createCalendarLink(event) {
+            const start = new Date(event.start).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+            const end = event.end ? new Date(event.end).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z' : start;
+            
+            return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${start}/${end}&details=${encodeURIComponent(event.description || '')}&location=${encodeURIComponent(event.location || '')}`;
+        }
+
+        function formatDate(date) {
+            return date.toLocaleDateString('en-GB', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('en-GB', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('event-modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+    </script>
+
+    <!-- OLS 107: Venue Enquiry Form Logic -->
+    <script>
+    // Load and display venue enquiry form
+    (async function() {
+        try {
+            // Load enquiry settings
+            const settings = await window.netlifyDataManager.getEventsEnquirySettings();
+            
+            if (!settings || !settings.fields) {
+                console.log('⚠️ No enquiry settings found - form hidden');
+                return;
+            }
+
+            // Show the enquiry section
+            document.getElementById('venue-enquiry-section').style.display = 'block';
+
+            // Update custom messages
+            if (settings.messages) {
+                document.getElementById('enquiry-title').textContent = settings.messages.formTitle || 'Venue Hire Enquiry';
+                document.getElementById('enquiry-description').textContent = settings.messages.formDescription || 'Fill out the form below.';
+                document.getElementById('submit-text').textContent = settings.messages.submitButton || 'Send Enquiry';
+            }
+
+            // Build form fields dynamically
+            const formFieldsContainer = document.getElementById('form-fields');
+            formFieldsContainer.innerHTML = '';
+
+            Object.keys(settings.fields).forEach(fieldKey => {
+                const field = settings.fields[fieldKey];
+                
+                if (!field.enabled) return; // Skip disabled fields
+
+                const formGroup = document.createElement('div');
+                formGroup.className = 'form-group';
+
+                // Label
+                const label = document.createElement('label');
+                label.setAttribute('for', fieldKey);
+                label.innerHTML = `
+                    ${field.label}
+                    ${field.required ? '<span class="required">*</span>' : ''}
+                `;
+                formGroup.appendChild(label);
+
+                // Input field
+                let inputElement;
+
+                if (fieldKey === 'eventType' && field.options) {
+                    // Dropdown select
+                    inputElement = document.createElement('select');
+                    inputElement.innerHTML = '<option value="">-- Please Select --</option>';
+                    field.options.forEach(option => {
+                        const opt = document.createElement('option');
+                        opt.value = option;
+                        opt.textContent = option;
+                        inputElement.appendChild(opt);
+                    });
+                } else if (fieldKey === 'message') {
+                    // Textarea
+                    inputElement = document.createElement('textarea');
+                    inputElement.rows = 4;
+                } else if (fieldKey === 'email') {
+                    // Email input
+                    inputElement = document.createElement('input');
+                    inputElement.type = 'email';
+                } else if (fieldKey === 'phone') {
+                    // Phone input
+                    inputElement = document.createElement('input');
+                    inputElement.type = 'tel';
+                } else if (fieldKey === 'eventDate') {
+                    // Date input
+                    inputElement = document.createElement('input');
+                    inputElement.type = 'date';
+                } else if (fieldKey === 'guests') {
+                    // Number input
+                    inputElement = document.createElement('input');
+                    inputElement.type = 'number';
+                    inputElement.min = '1';
+                } else {
+                    // Text input (default)
+                    inputElement = document.createElement('input');
+                    inputElement.type = 'text';
+                }
+
+                inputElement.id = fieldKey;
+                inputElement.name = fieldKey;
+                inputElement.required = field.required;
+                formGroup.appendChild(inputElement);
+
+                formFieldsContainer.appendChild(formGroup);
+            });
+
+            console.log('✅ Venue enquiry form loaded successfully');
+
+        } catch (error) {
+            console.error('❌ Error loading venue enquiry form:', error);
+        }
+    })();
+
+    // Handle form submission
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('venue-enquiry-form');
+        
+        if (!form) return;
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('enquiry-submit-btn');
+            const submitText = document.getElementById('submit-text');
+            const submitSpinner = document.getElementById('submit-spinner');
+
+            // Show loading state
+            submitBtn.disabled = true;
+            submitText.style.display = 'none';
+            submitSpinner.style.display = 'inline-block';
+
+            try {
+                // Collect form data
+                const formData = {};
+                const formElements = form.querySelectorAll('input, select, textarea');
+                
+                formElements.forEach(element => {
+                    if (element.name && element.name !== 'website') { // Skip honeypot
+                        formData[element.name] = element.value;
+                    }
+                });
+
+                // Include honeypot for spam check
+                formData.website = document.getElementById('website').value;
+
+                // Submit via API
+                const result = await window.netlifyDataManager.submitEventsEnquiry(formData);
+
+                // Show success message
+                form.style.display = 'none';
+                const successDiv = document.getElementById('enquiry-success');
+                const successMessageText = document.getElementById('success-message-text');
+                const referenceId = document.getElementById('reference-id');
+                
+                if (result.message) {
+                    successMessageText.textContent = result.message;
+                }
+                if (result.referenceId) {
+                    referenceId.textContent = result.referenceId;
+                }
+                
+                successDiv.style.display = 'block';
+                
+                // Scroll to success message
+                successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            } catch (error) {
+                console.error('Enquiry submission error:', error);
+                
+                // Show error message
+                form.style.display = 'none';
+                const errorDiv = document.getElementById('enquiry-error');
+                const errorMessageText = document.getElementById('error-message-text');
+                
+                errorMessageText.textContent = error.message || 'Please try again or contact us directly.';
+                errorDiv.style.display = 'block';
+                
+                // Scroll to error message
+                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitText.style.display = 'inline-block';
+                submitSpinner.style.display = 'none';
+            }
+        });
+    });
+
+    // Reset form function
+    function resetEnquiryForm() {
+        document.getElementById('venue-enquiry-form').reset();
+        document.getElementById('venue-enquiry-form').style.display = 'block';
+        document.getElementById('enquiry-success').style.display = 'none';
+        document.getElementById('enquiry-error').style.display = 'none';
+    }
+    </script>
+
+    <!-- CMS Content Loading - NO FLASH APPROACH -->
+    <script>
+    (async function() {
+        try {
+            let settingsToApply = null;
+            let loadedFromCache = false;
+            
+            // 🚀 STEP 1: Check localStorage FIRST (instant, no flash)
+            const cachedSettings = localStorage.getItem('olrfc_site-settings');
+            if (cachedSettings) {
+                try {
+                    settingsToApply = JSON.parse(cachedSettings);
+                    loadedFromCache = true;
+                    console.log('⚡ Using cached settings (instant load, no flash)');
+                    applyContent(settingsToApply);
+                    document.body.classList.add('cms-content-loaded'); // Show content immediately
+                } catch (e) {
+                    console.warn('⚠️ Cache parse error:', e);
+                }
+            }
+            
+            // 🌐 STEP 2: Fetch fresh data from Netlify (background refresh OR first load)
+            const response = await fetch('/.netlify/functions/site-settings', {
+                method: 'GET'
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                const freshSettings = result.data || {};
+                
+                // Update localStorage cache
+                localStorage.setItem('olrfc_site-settings', JSON.stringify(freshSettings));
+                
+                // Only re-apply if content changed OR this is first load
+                if (!loadedFromCache) {
+                    console.log('📡 First load: applying fresh settings from Netlify');
+                    applyContent(freshSettings);
+                    document.body.classList.add('cms-content-loaded'); // Show content with fade-in
+                } else if (JSON.stringify(freshSettings) !== cachedSettings) {
+                    console.log('🔄 Content updated, refreshing page...');
+                    applyContent(freshSettings);
+                }
+            } else if (!loadedFromCache) {
+                // No cache AND Netlify failed - show defaults
+                console.log('⚠️ No cache, Netlify unavailable - using defaults');
+                document.body.classList.add('cms-content-loaded'); // Show defaults
+            }
+            
+            function applyContent(settingsData) {
+                // Build content map (only events fields)
+                const content = {};
+                Object.keys(settingsData).forEach(key => {
+                    if (key.startsWith('events-')) {
+                        content[key] = settingsData[key];
+                    }
+                });
+                
+                // Helper function to get content with fallback
+                const get = (key, fallback) => content[key] || fallback;
+                
+                // 1. Page Title
+                const pageTitle = get('events-page-title', 'Events Calendar');
+                document.title = pageTitle;
+                
+                // 2. Main Heading
+                const mainHeading = document.querySelector('.page-header h1');
+                if (mainHeading) {
+                    const headingText = get('events-main-heading', '🏉 Events Calendar');
+                    mainHeading.textContent = headingText;
+                }
+                
+                // 3. Page Description
+                const pageDescription = document.querySelector('.page-header p');
+                if (pageDescription) {
+                    const descText = get('events-page-description', 'All fixtures, training sessions, and social events in one place');
+                    pageDescription.textContent = descText;
+                }
+                
+                // 4. Filter Title
+                const filterTitle = document.querySelector('.filter-title');
+                if (filterTitle) {
+                    const titleText = get('events-filter-title', 'Filter Events');
+                    filterTitle.textContent = titleText;
+                }
+                
+                // 5-9. Filter Buttons
+                const filterButtons = document.querySelectorAll('.filter-btn');
+                const buttonMap = {
+                    'all': { id: 'events-filter-all', default: 'All Events' },
+                    'Senior': { id: 'events-filter-senior', default: 'Senior' },
+                    'Junior': { id: 'events-filter-junior', default: 'Junior' },
+                    'Colts': { id: 'events-filter-colts', default: 'Colts' },
+                    'Social': { id: 'events-filter-social', default: 'Social' }
+                };
+                
+                filterButtons.forEach(btn => {
+                    const onClick = btn.getAttribute('onclick');
+                    if (onClick) {
+                        // Extract filter value from onclick="filterEvents('value')"
+                        const match = onClick.match(/filterEvents\('([^']+)'\)/);
+                        if (match) {
+                            const filterValue = match[1];
+                            let key = filterValue;
+                            
+                            // Handle special cases
+                            if (filterValue === 'Senior Fixtures') key = 'Senior';
+                            if (filterValue === 'Junior Fixtures') key = 'Junior';
+                            if (filterValue === 'Colts Fixtures') key = 'Colts';
+                            if (filterValue === 'Social Events') key = 'Social';
+                            if (filterValue === 'all') key = 'all';
+                            
+                            if (buttonMap[key]) {
+                                const btnText = get(buttonMap[key].id, buttonMap[key].default);
+                                // Preserve color dot if exists
+                                const colorDot = btn.querySelector('.color-dot');
+                                if (colorDot) {
+                                    btn.innerHTML = '';
+                                    btn.appendChild(colorDot.cloneNode(true));
+                                    btn.appendChild(document.createTextNode(' ' + btnText));
+                                } else {
+                                    btn.textContent = btnText;
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // 10. Events List Title
+                const listTitle = document.querySelector('.events-list-title');
+                if (listTitle) {
+                    // Preserve the span.event-count
+                    const eventCount = listTitle.querySelector('.event-count');
+                    const titleText = get('events-list-title', 'Upcoming Events');
+                    listTitle.innerHTML = titleText;
+                    if (eventCount) {
+                        listTitle.appendChild(document.createTextNode(' '));
+                        listTitle.appendChild(eventCount);
+                    }
+                }
+                
+                // 11. Loading Message
+                const loadingMsg = document.querySelector('#loading p');
+                if (loadingMsg) {
+                    const msgText = get('events-loading-message', 'Loading events...');
+                    loadingMsg.textContent = msgText;
+                }
+                
+                // 12. Empty State Title
+                const emptyTitle = document.querySelector('.empty-state-title');
+                if (emptyTitle) {
+                    const titleText = get('events-empty-title', 'No Events Found');
+                    emptyTitle.textContent = titleText;
+                }
+                
+                // 13. Empty State Message
+                const emptyMsg = document.querySelector('#empty-state p');
+                if (emptyMsg) {
+                    const msgText = get('events-empty-message', 'There are no events matching your filter criteria.');
+                    emptyMsg.textContent = msgText;
+                }
+                
+                console.log('✅ Events page CMS content applied (13 fields)');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error loading CMS content:', error);
+            // Show defaults even if error
+            document.body.classList.add('cms-content-loaded');
+        }
+    })();
+    </script>
+</body>
+</html>

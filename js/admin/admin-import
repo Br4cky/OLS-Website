@@ -1,0 +1,913 @@
+/**
+ * Admin Import Manager - OLS-WEBSITE
+ * Data import functionality with conflict detection and resolution
+ */
+
+class AdminImportManager {
+    constructor(adminSystem) {
+        this.adminSystem = adminSystem;
+    }
+
+    // ============================================
+    // JSON IMPORT FUNCTIONALITY
+    // ============================================
+
+    importData() {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.json';
+        fileInput.style.display = 'none';
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                this.processImportFile(file);
+            }
+        });
+        
+        document.body.appendChild(fileInput);
+        fileInput.click();
+        document.body.removeChild(fileInput);
+    }
+
+    async processImportFile(file) {
+        try {
+            this.showImportProgress('Reading file...');
+            
+            const fileContent = await this.readFileAsText(file);
+            let importData;
+            
+            try {
+                importData = JSON.parse(fileContent);
+            } catch (parseError) {
+                throw new Error('Invalid JSON file format');
+            }
+            
+            this.showImportProgress('Validating file structure...');
+            const structureValidation = this.validateImportStructure(importData);
+            
+            if (!structureValidation.isValid) {
+                throw new Error(`Invalid import file: ${structureValidation.errors.join(', ')}`);
+            }
+            
+            this.showImportProgress('Analyzing data conflicts...');
+            const analysisResult = this.analyzeImportData(importData);
+            
+            this.showImportPreview(importData, analysisResult);
+            
+        } catch (error) {
+            console.error('Import processing failed:', error);
+            this.showImportError(`Import failed: ${error.message}`);
+        }
+    }
+
+    readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(new Error('Failed to read file'));
+            reader.readAsText(file);
+        });
+    }
+
+    validateImportStructure(importData) {
+        const validation = {
+            isValid: true,
+            errors: [],
+            warnings: []
+        };
+        
+        if (!importData || typeof importData !== 'object') {
+            validation.isValid = false;
+            validation.errors.push('File does not contain valid JSON object');
+            return validation;
+        }
+        
+        if (!importData.metadata) {
+            validation.errors.push('Missing metadata section');
+            validation.isValid = false;
+        }
+        
+        if (!importData.data) {
+            validation.errors.push('Missing data section');
+            validation.isValid = false;
+        }
+        
+        if (importData.metadata) {
+            if (!importData.metadata.exportDate) {
+                validation.warnings.push('Missing export date in metadata');
+            }
+            if (!importData.metadata.exportVersion) {
+                validation.warnings.push('Missing export version in metadata');
+            }
+        }
+        
+        if (importData.data) {
+            const expectedDataTypes = ['news', 'fixtures', 'players', 'sponsors', 'gallery', 'shop'];
+            const foundDataTypes = Object.keys(importData.data);
+            
+            expectedDataTypes.forEach(dataType => {
+                if (dataType !== 'settings' && !foundDataTypes.includes(dataType)) {
+                    validation.warnings.push(`Missing data type: ${dataType}`);
+                }
+            });
+        }
+        
+        return validation;
+    }
+
+    analyzeImportData(importData) {
+        const analysis = {
+            summary: {
+                totalRecords: 0,
+                dataTypes: {},
+                conflicts: 0,
+                newRecords: 0,
+                duplicates: 0
+            },
+            conflicts: [],
+            recommendations: []
+        };
+        
+        const dataTypes = ['news', 'fixtures', 'players', 'sponsors', 'gallery', 'shop'];
+        
+        dataTypes.forEach(dataType => {
+            if (importData.data[dataType] && importData.data[dataType].records) {
+                const importRecords = importData.data[dataType].records;
+                const existingRecords = this.adminSystem.getData(dataType);
+                
+                analysis.summary.dataTypes[dataType] = {
+                    importCount: importRecords.length,
+                    existingCount: existingRecords.length,
+                    conflicts: 0,
+                    newRecords: 0
+                };
+                
+                importRecords.forEach((importRecord, index) => {
+                    const conflict = this.findConflict(dataType, importRecord, existingRecords);
+                    
+                    if (conflict) {
+                        analysis.conflicts.push({
+                            dataType: dataType,
+                            importIndex: index,
+                            existingIndex: conflict.index,
+                            importRecord: importRecord,
+                            existingRecord: conflict.record,
+                            conflictType: conflict.type
+                        });
+                        analysis.summary.conflicts++;
+                        analysis.summary.dataTypes[dataType].conflicts++;
+                    } else {
+                        analysis.summary.newRecords++;
+                        analysis.summary.dataTypes[dataType].newRecords++;
+                    }
+                    
+                    analysis.summary.totalRecords++;
+                });
+            }
+        });
+        
+        if (analysis.summary.conflicts > 0) {
+            analysis.recommendations.push('Review conflicts before importing');
+            analysis.recommendations.push('Consider backing up current data first');
+        }
+        
+        if (analysis.summary.totalRecords === 0) {
+            analysis.recommendations.push('No data found to import');
+        }
+        
+        return analysis;
+    }
+
+    findConflict(dataType, importRecord, existingRecords) {
+        for (let i = 0; i < existingRecords.length; i++) {
+            const existing = existingRecords[i];
+            let isConflict = false;
+            let conflictType = 'duplicate';
+            
+            switch (dataType) {
+                case 'news':
+                    if (existing.title === importRecord.title && existing.date === importRecord.date) {
+                        isConflict = true;
+                        conflictType = existing.content === importRecord.content ? 'exact_duplicate' : 'title_date_conflict';
+                    }
+                    break;
+                    
+                case 'fixtures':
+                    if (existing.team === importRecord.team && 
+                        existing.opponent === importRecord.opponent && 
+                        existing.dateTime === importRecord.dateTime) {
+                        isConflict = true;
+                        conflictType = 'fixture_conflict';
+                    }
+                    break;
+                    
+                case 'players':
+                    if (existing.name === importRecord.name && existing.team === importRecord.team) {
+                        isConflict = true;
+                        conflictType = existing.position === importRecord.position ? 'exact_duplicate' : 'name_team_conflict';
+                    }
+                    break;
+                    
+                case 'sponsors':
+                    if (existing.name === importRecord.name) {
+                        isConflict = true;
+                        conflictType = existing.tier === importRecord.tier ? 'exact_duplicate' : 'sponsor_name_conflict';
+                    }
+                    break;
+                    
+                case 'gallery':
+                    if (existing.title === importRecord.title && existing.date === importRecord.date) {
+                        isConflict = true;
+                        conflictType = 'gallery_conflict';
+                    }
+                    break;
+                    
+                case 'shop':
+                    if (existing.name === importRecord.name) {
+                        isConflict = true;
+                        conflictType = existing.price === importRecord.price ? 'exact_duplicate' : 'product_name_conflict';
+                    }
+                    break;
+            }
+            
+            if (isConflict) {
+                return {
+                    index: i,
+                    record: existing,
+                    type: conflictType
+                };
+            }
+        }
+        
+        return null;
+    }
+
+    showImportPreview(importData, analysisResult) {
+        const existingDialog = document.getElementById('importPreviewDialog');
+        if (existingDialog) {
+            existingDialog.remove();
+        }
+        
+        const dialog = document.createElement('div');
+        dialog.id = 'importPreviewDialog';
+        dialog.className = 'modal';
+        dialog.style.display = 'block';
+        
+        const hasConflicts = analysisResult.summary.conflicts > 0;
+        
+        dialog.innerHTML = `
+            <div class="modal-content" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h3>📥 Import Preview</h3>
+                    <button class="close" onclick="closeImportPreview()">&times;</button>
+                </div>
+                
+                <div style="margin-bottom: 2rem;">
+                    <h4>Import Summary</h4>
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                        <strong>File:</strong> ${importData.metadata.exportDate ? new Date(importData.metadata.exportDate).toLocaleString() : 'Unknown date'}<br>
+                        <strong>Total Records:</strong> ${analysisResult.summary.totalRecords}<br>
+                        <strong>New Records:</strong> ${analysisResult.summary.newRecords}<br>
+                        <strong>Conflicts:</strong> <span style="color: ${hasConflicts ? '#dc3545' : '#28a745'}">${analysisResult.summary.conflicts}</span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 2rem;">
+                    <h4>Data Types</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        ${Object.entries(analysisResult.summary.dataTypes).map(([dataType, info]) => `
+                            <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; text-align: center;">
+                                <strong>${dataType.charAt(0).toUpperCase() + dataType.slice(1)}</strong><br>
+                                <small>Import: ${info.importCount} | Existing: ${info.existingCount}</small><br>
+                                <small style="color: ${info.conflicts > 0 ? '#dc3545' : '#28a745'}">
+                                    ${info.conflicts > 0 ? `${info.conflicts} conflicts` : 'No conflicts'}
+                                </small>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                ${hasConflicts ? `
+                    <div style="margin-bottom: 2rem;">
+                        <h4 style="color: #dc3545;">⚠️ Conflicts Found</h4>
+                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 1rem; border-radius: 8px;">
+                            <p>The following conflicts were detected. Choose how to handle them:</p>
+                            <div style="margin: 1rem 0;">
+                                <label style="display: block; margin: 0.5rem 0;">
+                                    <input type="radio" name="conflictStrategy" value="skip" checked> Skip conflicting records (keep existing)
+                                </label>
+                                <label style="display: block; margin: 0.5rem 0;">
+                                    <input type="radio" name="conflictStrategy" value="overwrite"> Overwrite existing with imported data
+                                </label>
+                                <label style="display: block; margin: 0.5rem 0;">
+                                    <input type="radio" name="conflictStrategy" value="rename"> Create duplicates with modified names
+                                </label>
+                            </div>
+                            <details style="margin-top: 1rem;">
+                                <summary>View Conflict Details (${analysisResult.conflicts.length} conflicts)</summary>
+                                <div style="max-height: 200px; overflow-y: auto; margin-top: 0.5rem;">
+                                    ${analysisResult.conflicts.map((conflict, index) => `
+                                        <div style="border-bottom: 1px solid #ddd; padding: 0.5rem 0;">
+                                            <strong>${conflict.dataType}</strong> - ${conflict.conflictType}<br>
+                                            <small>Import: ${this.getConflictDescription(conflict.importRecord, conflict.dataType)}</small><br>
+                                            <small>Existing: ${this.getConflictDescription(conflict.existingRecord, conflict.dataType)}</small>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="createBackup" checked>
+                        Create backup before importing (recommended)
+                    </label>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="closeImportPreview()">Cancel</button>
+                    <button class="btn btn-primary" onclick="executeImport()">
+                        ${hasConflicts ? 'Import with Conflict Resolution' : 'Import Data'}
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        
+        window.pendingImportData = importData;
+        window.pendingImportAnalysis = analysisResult;
+    }
+
+    getConflictDescription(record, dataType) {
+        switch (dataType) {
+            case 'news':
+                return `"${record.title}" (${record.author})`;
+            case 'fixtures':
+                return `${record.team} vs ${record.opponent}`;
+            case 'players':
+                return `${record.name} (${record.team})`;
+            case 'sponsors':
+                return `${record.name} (${record.tier})`;
+            case 'gallery':
+                return `"${record.title}" (${record.photos?.length || 0} photos)`;
+            case 'shop':
+                return `"${record.name}" (£${record.price})`;
+            default:
+                return 'Unknown';
+        }
+    }
+
+    async executeImport() {
+        try {
+            const importData = window.pendingImportData;
+            const analysisResult = window.pendingImportAnalysis;
+            
+            if (!importData || !analysisResult) {
+                throw new Error('Import data not found');
+            }
+            
+            const conflictStrategy = document.querySelector('input[name="conflictStrategy"]:checked')?.value || 'skip';
+            const createBackup = document.getElementById('createBackup')?.checked || false;
+            
+            this.closeImportPreview();
+            
+            if (createBackup) {
+                this.showImportProgress('Creating backup...');
+                await this.createImportBackup();
+            }
+            
+            this.showImportProgress('Importing data...');
+            const importResult = await this.performImport(importData, analysisResult, conflictStrategy);
+            
+            this.showImportComplete(importResult);
+            
+            this.adminSystem.loadAllData();
+            this.adminSystem.updateStats();
+            
+        } catch (error) {
+            console.error('Import execution failed:', error);
+            this.showImportError(`Import failed: ${error.message}`);
+        }
+    }
+
+    async createImportBackup() {
+        const backupData = await this.createBackupData();
+        const filename = `olrfc_backup_before_import_${Date.now()}.json`;
+        const dataStr = JSON.stringify(backupData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const downloadLink = document.createElement('a');
+        downloadLink.href = URL.createObjectURL(dataBlob);
+        downloadLink.download = filename;
+        downloadLink.style.display = 'none';
+        
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+
+    async createBackupData() {
+        const dataTypes = ['news', 'fixtures', 'players', 'sponsors', 'gallery', 'shop'];
+        const backupData = {
+            metadata: {
+                backupDate: new Date().toISOString(),
+                backupType: 'pre-import',
+                backupVersion: '1.0'
+            },
+            data: {}
+        };
+        
+        dataTypes.forEach(dataType => {
+            backupData.data[dataType] = {
+                records: this.adminSystem.getData(dataType),
+                count: this.adminSystem.getData(dataType).length
+            };
+        });
+        
+        return backupData;
+    }
+
+    async performImport(importData, analysisResult, conflictStrategy) {
+        const importResult = {
+            imported: 0,
+            skipped: 0,
+            overwritten: 0,
+            renamed: 0,
+            errors: []
+        };
+        
+        const dataTypes = ['news', 'fixtures', 'players', 'sponsors', 'gallery', 'shop'];
+        
+        dataTypes.forEach(dataType => {
+            if (importData.data[dataType] && importData.data[dataType].records) {
+                const importRecords = importData.data[dataType].records;
+                const existingRecords = this.adminSystem.getData(dataType);
+                const conflicts = analysisResult.conflicts.filter(c => c.dataType === dataType);
+                
+                importRecords.forEach((importRecord, index) => {
+                    const conflict = conflicts.find(c => c.importIndex === index);
+                    
+                    if (conflict) {
+                        switch (conflictStrategy) {
+                            case 'skip':
+                                importResult.skipped++;
+                                break;
+                                
+                            case 'overwrite':
+                                existingRecords[conflict.existingIndex] = importRecord;
+                                importResult.overwritten++;
+                                break;
+                                
+                            case 'rename':
+                                const renamedRecord = this.createRenamedRecord(importRecord, dataType);
+                                existingRecords.push(renamedRecord);
+                                importResult.renamed++;
+                                break;
+                        }
+                    } else {
+                        existingRecords.push(importRecord);
+                        importResult.imported++;
+                    }
+                });
+                
+                this.adminSystem.saveData(dataType, existingRecords);
+            }
+        });
+        
+        return importResult;
+    }
+
+    createRenamedRecord(record, dataType) {
+        const renamedRecord = { ...record };
+        const timestamp = new Date().toLocaleTimeString();
+        
+        switch (dataType) {
+            case 'news':
+                renamedRecord.title += ` (Imported ${timestamp})`;
+                break;
+            case 'players':
+                renamedRecord.name += ` (Imported)`;
+                break;
+            case 'sponsors':
+                renamedRecord.name += ` (Imported)`;
+                break;
+            case 'gallery':
+                renamedRecord.title += ` (Imported ${timestamp})`;
+                break;
+            case 'shop':
+                renamedRecord.name += ` (Imported)`;
+                break;
+            case 'fixtures':
+                renamedRecord.opponent += ` (Imported)`;
+                break;
+        }
+        
+        return renamedRecord;
+    }
+
+    closeImportPreview() {
+        const dialog = document.getElementById('importPreviewDialog');
+        if (dialog) {
+            dialog.remove();
+        }
+        
+        delete window.pendingImportData;
+        delete window.pendingImportAnalysis;
+    }
+
+    // ============================================
+    // CSV IMPORT FUNCTIONALITY
+    // ============================================
+
+    importFromCSV() {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.csv';
+        fileInput.style.display = 'none';
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                this.processCSVImport(file);
+            }
+        });
+        
+        document.body.appendChild(fileInput);
+        fileInput.click();
+        document.body.removeChild(fileInput);
+    }
+
+    async processCSVImport(file) {
+        try {
+            this.showImportProgress('Reading CSV file...');
+            
+            const csvContent = await this.readFileAsText(file);
+            const parsedData = this.parseCSV(csvContent);
+            const dataType = this.detectDataType(parsedData.headers);
+            
+            if (!dataType) {
+                throw new Error('Could not detect data type from CSV headers. Please ensure you are importing a valid exported CSV file.');
+            }
+            
+            this.showImportProgress('Validating CSV data...');
+            const validationResult = this.validateCSVData(parsedData.rows, dataType);
+            
+            if (validationResult.errors.length > 0) {
+                console.warn('CSV validation errors:', validationResult.errors);
+            }
+            
+            await this.executeCSVImport(parsedData.rows, dataType);
+            
+        } catch (error) {
+            console.error('CSV Import failed:', error);
+            this.showImportError(`CSV Import failed: ${error.message}`);
+        }
+    }
+
+    parseCSV(csvContent) {
+        const lines = csvContent.split('\n').filter(line => line.trim());
+        if (lines.length === 0) {
+            throw new Error('CSV file is empty');
+        }
+        
+        const headerLine = lines[0];
+        const headers = this.parseCSVLine(headerLine);
+        
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line && !line.startsWith('"===')) {
+                const values = this.parseCSVLine(line);
+                if (values.length === headers.length) {
+                    const record = {};
+                    headers.forEach((header, index) => {
+                        let value = values[index];
+                        
+                        if (value === 'TRUE') value = true;
+                        else if (value === 'FALSE') value = false;
+                        else if (value && (value.startsWith('[') || value.startsWith('{'))) {
+                            try {
+                                value = JSON.parse(value);
+                            } catch (e) {
+                                // Keep as string if JSON parsing fails
+                            }
+                        }
+                        
+                        record[header] = value;
+                    });
+                    rows.push(record);
+                }
+            }
+        }
+        
+        return { headers, rows };
+    }
+
+    parseCSVLine(line) {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        let i = 0;
+        
+        while (i < line.length) {
+            const char = line[i];
+            
+            if (char === '"') {
+                if (inQuotes && line[i + 1] === '"') {
+                    current += '"';
+                    i += 2;
+                } else {
+                    inQuotes = !inQuotes;
+                    i++;
+                }
+            } else if (char === ',' && !inQuotes) {
+                result.push(current);
+                current = '';
+                i++;
+            } else {
+                current += char;
+                i++;
+            }
+        }
+        
+        result.push(current);
+        return result;
+    }
+
+    detectDataType(headers) {
+        const dataTypeSignatures = {
+            news: ['title', 'content', 'category', 'author'],
+            fixtures: ['team', 'opponent', 'dateTime', 'venue'],
+            players: ['name', 'team', 'position'],
+            sponsors: ['name', 'logo', 'website'],
+            gallery: ['title', 'photos'],
+            shop: ['name', 'price', 'category']
+        };
+        
+        for (const [dataType, signature] of Object.entries(dataTypeSignatures)) {
+            const matchCount = signature.filter(field => headers.includes(field)).length;
+            if (matchCount >= signature.length - 1) {
+                return dataType;
+            }
+        }
+        
+        return null;
+    }
+
+    validateCSVData(rows, dataType) {
+        const validation = {
+            valid: 0,
+            invalid: 0,
+            errors: [],
+            warnings: []
+        };
+        
+        rows.forEach((record, index) => {
+            const recordValidation = this.validateRecord(dataType, record, index);
+            if (recordValidation.isValid) {
+                validation.valid++;
+            } else {
+                validation.invalid++;
+                validation.errors.push(...recordValidation.errors);
+            }
+            validation.warnings.push(...recordValidation.warnings);
+        });
+        
+        return validation;
+    }
+
+    validateRecord(dataType, record, index) {
+        const validation = {
+            isValid: true,
+            errors: [],
+            warnings: []
+        };
+        
+        if (!record || typeof record !== 'object') {
+            validation.isValid = false;
+            validation.errors.push({
+                dataType: dataType,
+                recordIndex: index,
+                error: 'Record is not a valid object',
+                timestamp: new Date().toISOString()
+            });
+            return validation;
+        }
+        
+        const requiredFields = {
+            news: ['title', 'content'],
+            fixtures: ['team', 'opponent', 'dateTime'],
+            players: ['name', 'team'],
+            sponsors: ['name'],
+            gallery: ['title'],
+            shop: ['name', 'price']
+        };
+        
+        const required = requiredFields[dataType] || [];
+        const missing = required.filter(field => !record[field]);
+        
+        if (missing.length > 0) {
+            validation.isValid = false;
+            validation.errors.push({
+                dataType: dataType,
+                recordIndex: index,
+                error: `Missing required fields: ${missing.join(', ')}`,
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        return validation;
+    }
+
+    async executeCSVImport(rows, dataType) {
+        this.showImportProgress(`Importing ${rows.length} ${dataType} records...`);
+        
+        const existingData = this.adminSystem.getData(dataType);
+        let newRecords = 0;
+        let updatedRecords = 0;
+        
+        rows.forEach(record => {
+            if (record.id && record.id !== '') {
+                const existingIndex = existingData.findIndex(existing => existing.id == record.id);
+                if (existingIndex >= 0) {
+                    existingData[existingIndex] = record;
+                    updatedRecords++;
+                } else {
+                    existingData.push(record);
+                    newRecords++;
+                }
+            } else {
+                record.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                existingData.push(record);
+                newRecords++;
+            }
+        });
+        
+        this.adminSystem.saveData(dataType, existingData);
+        this.adminSystem.loadAllData();
+        this.adminSystem.updateStats();
+        
+        this.showCSVImportComplete(dataType, newRecords, updatedRecords);
+    }
+
+    // ============================================
+    // UI FEEDBACK FUNCTIONS
+    // ============================================
+
+    showImportProgress(message) {
+        let alertElement = document.getElementById('importProgress');
+        if (!alertElement) {
+            alertElement = document.createElement('div');
+            alertElement.id = 'importProgress';
+            alertElement.className = 'alert alert-info';
+            alertElement.style.position = 'fixed';
+            alertElement.style.top = '100px';
+            alertElement.style.right = '20px';
+            alertElement.style.zIndex = '10000';
+            alertElement.style.minWidth = '300px';
+            document.body.appendChild(alertElement);
+        }
+        
+        alertElement.innerHTML = `
+            <strong>Importing Data...</strong><br>
+            ${message}
+            <div style="margin-top: 10px;">
+                <div style="background: #ddd; height: 6px; border-radius: 3px;">
+                    <div style="background: var(--primary-green); height: 100%; width: 70%; border-radius: 3px; animation: pulse 1s infinite;"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    showImportComplete(result) {
+        const progressElement = document.getElementById('importProgress');
+        if (progressElement) {
+            progressElement.remove();
+        }
+        
+        const alertElement = document.createElement('div');
+        alertElement.className = 'alert alert-success';
+        alertElement.style.position = 'fixed';
+        alertElement.style.top = '100px';
+        alertElement.style.right = '20px';
+        alertElement.style.zIndex = '10000';
+        alertElement.style.minWidth = '350px';
+        
+        alertElement.innerHTML = `
+            <strong>Import Complete!</strong><br>
+            <div style="margin-top: 10px;">
+                <strong>Results:</strong><br>
+                • Imported: ${result.imported} new records<br>
+                • Skipped: ${result.skipped} conflicts<br>
+                • Overwritten: ${result.overwritten} records<br>
+                • Renamed: ${result.renamed} duplicates<br>
+                ${result.errors.length > 0 ? `• Errors: ${result.errors.length}<br>` : ''}
+            </div>
+            <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px; border: none; background: var(--primary-green); color: white; border-radius: 4px; cursor: pointer;">Close</button>
+        `;
+        
+        document.body.appendChild(alertElement);
+        
+        setTimeout(() => {
+            if (alertElement.parentElement) {
+                alertElement.remove();
+            }
+        }, 15000);
+    }
+
+    showCSVImportComplete(dataType, newRecords, updatedRecords) {
+        const progressElement = document.getElementById('importProgress');
+        if (progressElement) {
+            progressElement.remove();
+        }
+        
+        const alertElement = document.createElement('div');
+        alertElement.className = 'alert alert-success';
+        alertElement.style.position = 'fixed';
+        alertElement.style.top = '100px';
+        alertElement.style.right = '20px';
+        alertElement.style.zIndex = '10000';
+        
+        alertElement.innerHTML = `
+            <strong>CSV Import Complete!</strong><br>
+            Data Type: ${dataType}<br>
+            New Records: ${newRecords}<br>
+            Updated Records: ${updatedRecords}<br>
+            <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px; border: none; background: var(--primary-green); color: white; border-radius: 4px; cursor: pointer;">Close</button>
+        `;
+        
+        document.body.appendChild(alertElement);
+        
+        setTimeout(() => {
+            if (alertElement.parentElement) {
+                alertElement.remove();
+            }
+        }, 15000);
+    }
+
+    showImportError(message) {
+        const progressElement = document.getElementById('importProgress');
+        if (progressElement) {
+            progressElement.remove();
+        }
+        
+        const alertElement = document.createElement('div');
+        alertElement.className = 'alert alert-danger';
+        alertElement.style.position = 'fixed';
+        alertElement.style.top = '100px';
+        alertElement.style.right = '20px';
+        alertElement.style.zIndex = '10000';
+        alertElement.innerHTML = `
+            <strong>Import Failed!</strong><br>
+            ${message}<br>
+            <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px; border: none; background: #dc3545; color: white; border-radius: 4px; cursor: pointer;">Close</button>
+        `;
+        
+        document.body.appendChild(alertElement);
+        
+        setTimeout(() => {
+            if (alertElement.parentElement) {
+                alertElement.remove();
+            }
+        }, 10000);
+    }
+}
+
+// Global import management functions
+let adminImportManager;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.adminSystem) {
+        adminImportManager = new AdminImportManager(window.adminSystem);
+        console.log('Admin Import Manager initialized');
+    }
+});
+
+// Global functions for backward compatibility
+function importData() {
+    if (adminImportManager) {
+        adminImportManager.importData();
+    }
+}
+
+function importFromCSV() {
+    if (adminImportManager) {
+        adminImportManager.importFromCSV();
+    }
+}
+
+function closeImportPreview() {
+    if (adminImportManager) {
+        adminImportManager.closeImportPreview();
+    }
+}
+
+function executeImport() {
+    if (adminImportManager) {
+        adminImportManager.executeImport();
+    }
+}

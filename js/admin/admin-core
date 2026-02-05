@@ -1,0 +1,1049 @@
+/**
+ * Admin Core System - OLS-WEBSITE
+ * Core administrative functionality and data management
+ */
+
+class AdminSystem {
+    constructor() {
+        this.currentEditIndex = null;
+        this.currentSection = null;
+        this.initializeData();
+        this.loadAllData();
+        this.updateStats();
+        this.loadUserInfo();
+        this.loadWebsiteFeatureStates();
+    }
+
+    // ============================================
+    // CORE DATA MANAGEMENT
+    // ============================================
+
+    initializeData() {
+    // ⚠️ DISABLED for production - no auto-creation of empty arrays
+    console.log('initializeData disabled - using existing data only');
+    return;
+    
+    /* ORIGINAL CODE - DISABLED
+    const dataTypes = ['news', 'fixtures', 'gallery', 'players', 'shop', 'sponsors'];
+    dataTypes.forEach(dataType => {
+        if (!this.getData(dataType)) {
+            this.saveData(dataType, []);
+        }
+    });
+    */
+}
+
+    getData(key) {
+        try {
+            return JSON.parse(localStorage.getItem(`olrfc_${key}`)) || [];
+        } catch (e) {
+            console.error(`Error loading ${key} data:`, e);
+            return [];
+        }
+    }
+
+    saveData(key, data) {
+        try {
+            localStorage.setItem(`olrfc_${key}`, JSON.stringify(data));
+            this.updateStats();
+            this.showAlert(key, 'Data saved successfully!', 'success');
+        } catch (e) {
+            console.error(`Error saving ${key} data:`, e);
+            this.showAlert(key, 'Error saving data. Storage might be full.', 'danger');
+        }
+    }
+
+    // ============================================
+    // USER INTERFACE MANAGEMENT
+    // ============================================
+
+    loadUserInfo() {
+        const session = JSON.parse(localStorage.getItem('olrfc_admin_session') || '{}');
+        if (session.username) {
+            const userElement = document.getElementById('currentUser');
+            if (userElement) {
+                userElement.textContent = session.username;
+            }
+        }
+    }
+
+    showAlert(section, message, type = 'success') {
+        const alertId = section + 'Alert';
+        const alertElement = document.getElementById(alertId);
+        if (alertElement) {
+            alertElement.className = `alert alert-${type}`;
+            alertElement.textContent = message;
+            alertElement.style.display = 'block';
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+            }, 5000);
+        }
+    }
+
+    updateStats() {
+        // Main dashboard stats
+        const statElements = {
+            'newsCount': this.getData('news').length,
+            'fixturesCount': this.getData('fixtures').length,
+            'galleryCount': this.getData('gallery').length,
+            'playersCount': this.getData('players').length,
+            'shopCount': this.getData('shop').length,
+            'sponsorsCount': this.getData('sponsors').length
+        };
+
+        Object.entries(statElements).forEach(([elementId, count]) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = count;
+            }
+        });
+
+        // Update specialized stats
+        this.updateShopStats();
+        this.updateSponsorStats();
+    }
+
+    updateShopStats() {
+        const shop = this.getData('shop');
+        
+        const shopStats = {
+            'totalProducts': shop.length,
+            'totalValue': shop.reduce((sum, product) => {
+                return sum + (parseFloat(product.price || 0) * parseInt(product.stock || 0));
+            }, 0),
+            'categoriesCount': new Set(shop.map(product => product.category)).size,
+            'lowStockCount': shop.filter(product => parseInt(product.stock || 0) < 5).length
+        };
+
+        Object.entries(shopStats).forEach(([elementId, value]) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                if (elementId === 'totalValue') {
+                    element.textContent = `£${value.toFixed(2)}`;
+                } else {
+                    element.textContent = value;
+                }
+            }
+        });
+    }
+
+    updateSponsorStats() {
+        const sponsors = this.getData('sponsors');
+        
+        const sponsorStats = {
+            'totalSponsors': sponsors.length,
+            'activeSponsors': sponsors.filter(sponsor => sponsor.active).length,
+            'platinumCount': sponsors.filter(sponsor => sponsor.tier === 'platinum').length,
+            'goldCount': sponsors.filter(sponsor => sponsor.tier === 'gold').length
+        };
+
+        Object.entries(sponsorStats).forEach(([elementId, count]) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = count;
+            }
+        });
+    }
+
+    // ============================================
+    // DATA LOADING AND DISPLAY
+    // ============================================
+
+    loadAllData() {
+        this.loadNews();
+        this.loadFixtures();
+        this.loadGallery();
+        this.loadPlayers();
+        this.loadShop();
+        this.loadSponsors();
+    }
+
+    loadNews() {
+        const news = this.getData('news');
+        const newsList = document.getElementById('newsList');
+        if (!newsList) return;
+
+        newsList.innerHTML = '';
+
+        if (news.length === 0) {
+            newsList.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 2rem;">No news articles yet. Click "Add News Article" to get started!</p>';
+            return;
+        }
+
+        news.forEach((article, index) => {
+            const item = document.createElement('div');
+            item.className = 'content-item';
+            item.innerHTML = `
+                <div class="content-info">
+                    <h4>${article.title}</h4>
+                    <p><strong>Category:</strong> ${this.formatCategory(article.category)} | <strong>Author:</strong> ${article.author}</p>
+                    <small>Created: ${new Date(article.date).toLocaleDateString()}</small>
+                    <p style="margin-top: 0.5rem; color: var(--text-light);">${(article.content || '').substring(0, 100)}...</p>
+                </div>
+                <div class="content-actions">
+                    <button class="btn btn-small btn-edit" onclick="editNews(${index})">✏️ Edit</button>
+                    <button class="btn btn-small btn-delete" onclick="deleteNews(${index})">🗑️ Delete</button>
+                </div>
+            `;
+            newsList.appendChild(item);
+        });
+    }
+
+    loadFixtures() {
+        const fixtures = this.getData('fixtures');
+        const fixturesList = document.getElementById('fixturesList');
+        if (!fixturesList) return;
+
+        fixturesList.innerHTML = '';
+
+        if (fixtures.length === 0) {
+            fixturesList.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 2rem;">No fixtures yet. Click "Add Fixture" to get started!</p>';
+            return;
+        }
+
+        fixtures.forEach((fixture, index) => {
+            const item = document.createElement('div');
+            item.className = 'content-item';
+            const isPlayed = fixture.ourScore !== null && fixture.theirScore !== null;
+            const result = isPlayed ? `${fixture.ourScore} - ${fixture.theirScore}` : 'Upcoming';
+            const resultIcon = isPlayed ? '🏆' : '📅';
+            
+            item.innerHTML = `
+                <div class="content-info">
+                    <h4>${resultIcon} ${this.formatTeam(fixture.team)} vs ${fixture.opponent}</h4>
+                    <p><strong>Date:</strong> ${new Date(fixture.dateTime).toLocaleDateString()} at ${new Date(fixture.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                    <p><strong>Venue:</strong> ${fixture.venue} | <strong>Result:</strong> ${result}</p>
+                    <small>Competition: ${fixture.competition || 'Not specified'}</small>
+                </div>
+                <div class="content-actions">
+                    <button class="btn btn-small btn-edit" onclick="editFixture(${index})">✏️ Edit</button>
+                    <button class="btn btn-small btn-delete" onclick="deleteFixture(${index})">🗑️ Delete</button>
+                </div>
+            `;
+            fixturesList.appendChild(item);
+        });
+    }
+
+    loadGallery() {
+        const gallery = this.getData('gallery');
+        const galleryList = document.getElementById('galleryList');
+        if (!galleryList) return;
+
+        galleryList.innerHTML = '';
+
+        if (gallery.length === 0) {
+            galleryList.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 2rem;">No photo albums yet. Click "Upload Photos" to get started!</p>';
+            return;
+        }
+
+        gallery.forEach((album, index) => {
+            const item = document.createElement('div');
+            item.className = 'content-item';
+            item.innerHTML = `
+                <div class="content-info">
+                    <h4>📸 ${album.title}</h4>
+                    <p><strong>Category:</strong> ${this.formatCategory(album.category)} | <strong>Photos:</strong> ${album.photos?.length || 0}</p>
+                    <small>Created: ${new Date(album.date).toLocaleDateString()}</small>
+                    <p style="margin-top: 0.5rem; color: var(--text-light);">${album.description || 'No description'}</p>
+                </div>
+                <div class="content-actions">
+                    <button class="btn btn-small btn-edit" onclick="viewAlbum(${index})">👁️ View</button>
+                    <button class="btn btn-small btn-delete" onclick="deleteAlbum(${index})">🗑️ Delete</button>
+                </div>
+            `;
+            galleryList.appendChild(item);
+        });
+    }
+
+    loadPlayers() {
+        const players = this.getData('players');
+        const playersList = document.getElementById('playersList');
+        if (!playersList) return;
+
+        playersList.innerHTML = '';
+
+        if (players.length === 0) {
+            playersList.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 2rem;">No players yet. Click "Add Player" to get started!</p>';
+            return;
+        }
+
+        players.forEach((player, index) => {
+            const item = document.createElement('div');
+            item.className = 'content-item';
+            item.innerHTML = `
+                <div class="content-info">
+                    <h4>👤 ${player.name}</h4>
+                    <p><strong>Team:</strong> ${this.formatTeam(player.team)} | <strong>Position:</strong> ${player.position || 'Not specified'}</p>
+                    <small>Appearances: ${player.appearances || 0}</small>
+                </div>
+                <div class="content-actions">
+                    <button class="btn btn-small btn-edit" onclick="editPlayer(${index})">✏️ Edit</button>
+                    <button class="btn btn-small btn-delete" onclick="deletePlayer(${index})">🗑️ Delete</button>
+                </div>
+            `;
+            playersList.appendChild(item);
+        });
+    }
+
+    loadShop() {
+        const shop = this.getData('shop');
+        const shopList = document.getElementById('shopList');
+        if (!shopList) return;
+
+        shopList.innerHTML = '';
+
+        if (shop.length === 0) {
+            shopList.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 2rem;">No products yet. Click "Add Product" to get started!</p>';
+            return;
+        }
+
+        shop.forEach((product, index) => {
+            const item = document.createElement('div');
+            item.className = 'content-item shop-item';
+            item.dataset.category = product.category;
+            
+            const stockStatus = parseInt(product.stock || 0) === 0 ? 'Out of Stock' : 
+                              parseInt(product.stock || 0) < 5 ? `Low Stock (${product.stock})` : 
+                              `In Stock (${product.stock})`;
+            
+            const stockClass = parseInt(product.stock || 0) === 0 ? 'color: #dc3545;' : 
+                              parseInt(product.stock || 0) < 5 ? 'color: #ffc107;' : 
+                              'color: #28a745;';
+
+            const imageDisplay = product.images && product.images.length > 0 
+                ? `<img src="${product.images[0].url}" alt="${product.name}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin-right: 1rem;">`
+                : `<div style="width: 80px; height: 80px; background: linear-gradient(45deg, var(--primary-green), var(--primary-maroon)); border-radius: 8px; margin-right: 1rem; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem;">No Image</div>`;
+
+            item.innerHTML = `
+                <div style="display: flex; align-items: center;">
+                    ${imageDisplay}
+                    <div class="content-info">
+                        <h4>🛒 ${product.name}</h4>
+                        <p><strong>Price:</strong> £${product.price || 0} | <strong>Category:</strong> ${this.formatShopCategory(product.category)}</p>
+                        <p><strong>Status:</strong> <span style="${stockClass}">${stockStatus}</span> | <strong>SKU:</strong> ${product.sku || 'N/A'}</p>
+                        <small>${product.description ? product.description.substring(0, 100) + '...' : 'No description'}</small>
+                    </div>
+                </div>
+                <div class="content-actions">
+                    <button class="btn btn-small btn-edit" onclick="editShopProduct(${index})">✏️ Edit</button>
+                    <button class="btn btn-small" onclick="duplicateShopProduct(${index})" style="background: #17a2b8; color: white;">📋 Duplicate</button>
+                    <button class="btn btn-small btn-delete" onclick="deleteShopProduct(${index})">🗑️ Delete</button>
+                </div>
+            `;
+            shopList.appendChild(item);
+        });
+
+        this.updateShopStats();
+    }
+
+    loadSponsors() {
+        const sponsors = this.getData('sponsors');
+        const sponsorsList = document.getElementById('sponsorsList');
+        if (!sponsorsList) return;
+
+        sponsorsList.innerHTML = '';
+
+        if (sponsors.length === 0) {
+            sponsorsList.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 2rem;">No sponsors yet. Click "Add Sponsor" to get started!</p>';
+            return;
+        }
+
+        sponsors.forEach((sponsor, index) => {
+            const item = document.createElement('div');
+            item.className = 'content-item sponsor-item';
+            item.dataset.tier = sponsor.tier;
+            
+            const logoDisplay = sponsor.logo 
+                ? `<img src="${sponsor.logo}" alt="${sponsor.name}" style="width: 80px; height: 40px; object-fit: contain; border-radius: 6px; margin-right: 1rem; border: 1px solid #ddd;">`
+                : `<div style="width: 80px; height: 40px; background: linear-gradient(45deg, var(--primary-green), var(--primary-maroon)); border-radius: 6px; margin-right: 1rem; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem; text-align: center;">${sponsor.name}</div>`;
+
+            item.innerHTML = `
+                <div style="display: flex; align-items: center;">
+                    ${logoDisplay}
+                    <div class="content-info">
+                        <h4>🤝 ${sponsor.name}</h4>
+                        <p><strong>Tier:</strong> <span class="sponsor-tier-badge tier-${sponsor.tier}">${this.formatSponsorTier(sponsor.tier)}</span></p>
+                        <p><strong>Contact:</strong> ${sponsor.phone || 'N/A'} | ${sponsor.email || 'N/A'}</p>
+                        <small><strong>Status:</strong> ${sponsor.active ? '✅ Active' : '❌ Inactive'} | <strong>Website:</strong> ${sponsor.website || 'Not provided'}</small>
+                    </div>
+                </div>
+                <div class="content-actions">
+                    <button class="btn btn-small btn-edit" onclick="editSponsor(${index})">✏️ Edit</button>
+                    <button class="btn btn-small" onclick="duplicateSponsor(${index})" style="background: #17a2b8; color: white;">📋 Duplicate</button>
+                    <button class="btn btn-small btn-delete" onclick="deleteSponsor(${index})">🗑️ Delete</button>
+                </div>
+            `;
+            sponsorsList.appendChild(item);
+        });
+
+        this.updateSponsorStats();
+        this.loadSponsorPreview();
+    }
+
+    loadSponsorPreview() {
+        const sponsors = this.getData('sponsors').filter(sponsor => sponsor.active);
+        const previewTicker = document.getElementById('sponsorPreviewTicker');
+        
+        if (!previewTicker) return;
+        
+        previewTicker.innerHTML = '';
+        
+        if (sponsors.length === 0) {
+            previewTicker.innerHTML = '<div style="color: var(--text-light); font-style: italic;">No active sponsors to preview</div>';
+            return;
+        }
+        
+        // Show sponsors twice for preview effect
+        const sponsorLogos = [...sponsors, ...sponsors];
+        
+        sponsorLogos.forEach(sponsor => {
+            const logoDiv = document.createElement('div');
+            logoDiv.className = 'sponsor-preview-logo';
+            
+            if (sponsor.logo) {
+                logoDiv.innerHTML = `<img src="${sponsor.logo}" alt="${sponsor.name}">`;
+            } else {
+                logoDiv.textContent = sponsor.name;
+            }
+            
+            previewTicker.appendChild(logoDiv);
+        });
+    }
+
+    // ============================================
+    // WEBSITE FEATURE MANAGEMENT
+    // ============================================
+
+    loadWebsiteFeatureStates() {
+        const saved = localStorage.getItem('olrfc_admin_features');
+        const websiteFeatureStates = {
+            shop: false,
+            events: false,
+            members: false,
+            payments: false,
+            sponsors: false
+        };
+
+        if (saved) {
+            Object.assign(websiteFeatureStates, JSON.parse(saved));
+        }
+        
+        Object.keys(websiteFeatureStates).forEach(feature => {
+            const toggle = document.querySelector(`[data-feature="${feature}"]`);
+            if (toggle) {
+                toggle.classList.toggle('active', websiteFeatureStates[feature]);
+            }
+        });
+
+        this.websiteFeatureStates = websiteFeatureStates;
+    }
+
+    // ============================================
+    // UTILITY FORMATTING FUNCTIONS
+    // ============================================
+
+    formatCategory(category) {
+        const categories = {
+            'match': 'Match Report',
+            'training': 'Training',
+            'social': 'Social Event',
+            'club': 'Club Update',
+            'matches': 'Match Day',
+            'team': 'Team Photos'
+        };
+        return categories[category] || category;
+    }
+
+    formatTeam(team) {
+        const teams = {
+            'mens-1st': 'Mens 1st XV',
+            'mens-2nd': 'Mens 2nd XV',
+            'ladies': 'Phoenix Ladies',
+            'colts': 'Colts',
+            'u16s': 'U16s',
+            'u14s': 'U14s'
+        };
+        return teams[team] || team;
+    }
+
+    formatShopCategory(category) {
+        const categories = {
+            'jerseys': 'Jerseys',
+            'training': 'Training Kit',
+            'accessories': 'Accessories',
+            'supporters': 'Supporters Gear'
+        };
+        return categories[category] || category;
+    }
+
+    formatSponsorTier(tier) {
+        const tiers = {
+            'platinum': '💎 Platinum',
+            'gold': '🥇 Gold',
+            'silver': '🥈 Silver',
+            'bronze': '🥉 Bronze'
+        };
+        return tiers[tier] || tier;
+    }
+}
+// Universal modal opener with automatic form handler setup
+window.openAdminModal = function(modalId, section = null) {
+    console.log(`Opening modal: ${modalId} for section: ${section}`);
+    
+    // Function to proceed once adminSystem is ready
+    function proceedWithModal() {
+        // Reset edit state for new items
+        if (window.adminSystem) {
+            window.adminSystem.currentEditIndex = null;
+            if (section) {
+                window.adminSystem.currentSection = section;
+            }
+        }
+        
+        // Ensure form handlers are attached for all managers
+        setTimeout(() => {
+            const managerMap = {
+                'newsModal': 'adminNewsManager',
+                'fixtureModal': 'adminFixturesManager', 
+                'playerModal': 'adminPlayersManager',
+                'shopModal': 'adminShopManager',
+                'sponsorModal': 'adminSponsorsManager',
+                'galleryModal': 'adminGalleryManager'
+            };
+            
+            const managerName = managerMap[modalId];
+            if (managerName && window[managerName] && window[managerName].ensureFormHandler) {
+                window[managerName].ensureFormHandler();
+                console.log(`Form handler ensured for ${managerName}`);
+            } else {
+                console.log(`Manager ${managerName} not ready yet`);
+            }
+        }, 100);
+        
+        openModal(modalId);
+    }
+    
+    // Wait for adminSystem if not ready
+    if (window.adminSystem) {
+        proceedWithModal();
+    } else {
+        console.log('Waiting for adminSystem to be ready...');
+        let attempts = 0;
+        const checkInterval = setInterval(() => {
+            attempts++;
+            if (window.adminSystem) {
+                clearInterval(checkInterval);
+                console.log('adminSystem ready, proceeding with modal...');
+                proceedWithModal();
+            } else if (attempts > 20) { // 2 second timeout
+                clearInterval(checkInterval);
+                console.error('adminSystem not ready after 2 seconds, opening modal anyway');
+                openModal(modalId);
+            }
+        }, 100);
+    }
+};
+
+// ============================================
+// GLOBAL ADMIN FUNCTIONS
+// ============================================
+
+// Website Feature Control
+function toggleWebsiteFeature(feature) {
+    const toggle = document.querySelector(`[data-feature="${feature}"]`);
+    const isActive = toggle.classList.contains('active');
+    
+    toggle.classList.toggle('active', !isActive);
+    
+    // Update stored state
+    if (window.adminSystem && window.adminSystem.websiteFeatureStates) {
+        window.adminSystem.websiteFeatureStates[feature] = !isActive;
+        localStorage.setItem('olrfc_admin_features', JSON.stringify(window.adminSystem.websiteFeatureStates));
+    }
+    
+    const featureName = feature.charAt(0).toUpperCase() + feature.slice(1);
+    const status = !isActive ? 'enabled' : 'disabled';
+    
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed; top: 100px; right: 20px; background: var(--accent-gold);
+        color: var(--primary-green); padding: 1rem; border-radius: 10px;
+        font-weight: bold; z-index: 10000; animation: slideInRight 0.3s ease;
+    `;
+    notification.textContent = `${featureName} ${status} on main website`;
+    
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
+// Navigation functions
+function showSection(sectionId) {
+    document.querySelectorAll('.admin-section').forEach(section => {
+        section.classList.remove('active');
+    });
+    
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+        targetSection.classList.add('active');
+    }
+    
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    const activeNav = document.querySelector(`[onclick="showSection('${sectionId}')"]`);
+    if (activeNav) {
+        activeNav.classList.add('active');
+    }
+
+    document.title = `${sectionId.charAt(0).toUpperCase() + sectionId.slice(1)} - Admin Dashboard`;
+}
+
+// Session Management
+function checkAdminSession() {
+    const session = localStorage.getItem('olrfc_admin_session');
+    if (!session) {
+        // For demo purposes, create a session
+        const demoSession = {
+            username: 'Admin User',
+            timestamp: new Date().getTime()
+        };
+        localStorage.setItem('olrfc_admin_session', JSON.stringify(demoSession));
+        return demoSession;
+    }
+    
+    const sessionData = JSON.parse(session);
+    const now = new Date().getTime();
+    
+    if (now - sessionData.timestamp > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem('olrfc_admin_session');
+        return checkAdminSession(); // Recreate session for demo
+    }
+    
+    return sessionData;
+}
+
+function adminLogout() {
+    if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('olrfc_admin_session');
+        alert('Logged out successfully!');
+        // In a real implementation, redirect to login page
+        // window.location.href = '../login.html';
+    }
+}
+
+// Initialize sample data for demo
+function initializeSampleData() {
+    if (!window.adminSystem) return;
+
+    // Sample shop data
+    if (window.adminSystem.getData('shop').length === 0) {
+        const sampleProducts = [
+            {
+                id: '1',
+                name: "Home Jersey 2025",
+                category: "jerseys",
+                description: "Official Old Laurentian RFC home jersey for the 2025 season.",
+                price: "65.00",
+                stock: 25,
+                sku: "OLS-HJ-2025",
+                sizes: ["S", "M", "L", "XL", "XXL"],
+                status: "active",
+                images: [],
+                weight: 0.3,
+                shipping: 4.99,
+                dateAdded: new Date().toISOString()
+            }
+        ];
+        window.adminSystem.saveData('shop', sampleProducts);
+    }
+
+    // Sample sponsor data
+    if (window.adminSystem.getData('sponsors').length === 0) {
+        const sampleSponsors = [
+            {
+                id: 1,
+                name: "Local Sports Equipment",
+                tier: "gold",
+                phone: "01234 567890",
+                email: "info@localsports.com",
+                website: "https://www.localsports.com",
+                logo: null,
+                active: true,
+                showInBanner: true,
+                dateAdded: new Date().toISOString()
+            },
+            {
+                id: 2,
+                name: "Community Bank",
+                tier: "silver",
+                phone: "01234 567891",
+                email: "community@bank.com",
+                website: "https://www.communitybank.com",
+                logo: null,
+                active: true,
+                showInBanner: true,
+                dateAdded: new Date().toISOString()
+            }
+        ];
+        window.adminSystem.saveData('sponsors', sampleSponsors);
+    }
+
+    window.adminSystem.loadAllData();
+}
+
+// Session initialization
+document.addEventListener('DOMContentLoaded', function() {
+    const session = checkAdminSession();
+    if (session) {
+        console.log(`Welcome back, ${session.username}!`);
+    }
+    
+    // Initialize sample data after a short delay
+    setTimeout(initializeSampleData, 500);
+});
+
+// Export AdminSystem for use in other modules
+window.AdminSystem = AdminSystem;
+
+// ============================================
+// MISSING GLOBAL FUNCTIONS FOR HTML ONCLICK HANDLERS
+// ============================================
+
+// Filter functions (missing from global scope)
+window.filterShopItems = function(category) {
+    const shopItems = document.querySelectorAll('.shop-item');
+    const filterButtons = document.querySelectorAll('#shopCategoryFilters .btn');
+    
+    // Update active button
+    filterButtons.forEach(btn => btn.classList.remove('active'));
+    const activeButton = document.querySelector(`[data-category="${category}"]`);
+    if (activeButton) {
+        activeButton.classList.add('active');
+    }
+    
+    // Filter items
+    shopItems.forEach(item => {
+        if (category === 'all' || item.dataset.category === category) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+};
+
+window.filterSponsors = function(tier) {
+    const sponsorItems = document.querySelectorAll('.sponsor-item');
+    const filterButtons = document.querySelectorAll('#sponsorTierFilters .btn');
+    
+    // Update active button
+    filterButtons.forEach(btn => btn.classList.remove('active'));
+    const activeButton = document.querySelector(`[data-tier="${tier}"]`);
+    if (activeButton) {
+        activeButton.classList.add('active');
+    }
+    
+    // Filter items
+    sponsorItems.forEach(item => {
+        if (tier === 'all' || item.dataset.tier === tier) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+};
+
+// Modal functions (these should already exist but making sure)
+window.openModal = function(modalId) {
+    // Check if modal exists, if not create it
+    let modal = document.getElementById(modalId);
+    if (!modal) {
+        modal = createModalIfMissing(modalId);
+    }
+    
+    if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+};
+
+window.closeModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+        
+        const form = modal.querySelector('form');
+        if (form) {
+            form.reset();
+        }
+        
+        if (window.adminSystem) {
+            window.adminSystem.currentEditIndex = null;
+        }
+    }
+};
+
+// ============================================
+// MODAL CREATION FALLBACK
+// ============================================
+
+function createModalIfMissing(modalId) {
+    // Define modal templates that match your existing structure
+    const modalTemplates = {
+        newsModal: `
+            <div id="newsModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>📰 Add/Edit News Article</h3>
+                        <button class="close" onclick="closeModal('newsModal')">&times;</button>
+                    </div>
+                    <form id="newsForm">
+                        <div class="form-group">
+                            <label>Title:</label>
+                            <input type="text" id="newsTitle" required placeholder="Enter article title">
+                        </div>
+                        <div class="form-group">
+                            <label>Category:</label>
+                            <select id="newsCategory">
+                                <option value="match">Match Report</option>
+                                <option value="training">Training</option>
+                                <option value="social">Social Event</option>
+                                <option value="club">Club Update</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Content:</label>
+                            <textarea id="newsContent" required placeholder="Write your article content here..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Author:</label>
+                            <input type="text" id="newsAuthor" value="Club Admin" placeholder="Author name">
+                        </div>
+                        <button type="submit" class="btn">💾 Save Article</button>
+                    </form>
+                </div>
+            </div>
+        `,
+        // Add other modals as needed...
+        fixtureModal: `
+            <div id="fixtureModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>🏉 Add/Edit Fixture</h3>
+                        <button class="close" onclick="closeModal('fixtureModal')">&times;</button>
+                    </div>
+                    <form id="fixtureForm">
+                        <div class="form-group">
+                            <label>Team:</label>
+                            <select id="fixtureTeam">
+                                <option value="mens-1st">Mens 1st XV</option>
+                                <option value="mens-2nd">Mens 2nd XV</option>
+                                <option value="ladies">Phoenix Ladies</option>
+                                <option value="colts">Colts</option>
+                                <option value="u16s">U16s</option>
+                                <option value="u14s">U14s</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Opponent:</label>
+                            <input type="text" id="fixtureOpponent" required placeholder="e.g., Birmingham RFC">
+                        </div>
+                        <div class="form-group">
+                            <label>Date & Time:</label>
+                            <input type="datetime-local" id="fixtureDateTime" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Venue:</label>
+                            <select id="fixtureVenue">
+                                <option value="home">Home</option>
+                                <option value="away">Away</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Competition:</label>
+                            <input type="text" id="fixtureCompetition" placeholder="e.g., Regional Championship">
+                        </div>
+                        <div class="form-group">
+                            <label>Our Score (if played):</label>
+                            <input type="number" id="fixtureOurScore" min="0" placeholder="Leave empty if not played">
+                        </div>
+                        <div class="form-group">
+                            <label>Their Score (if played):</label>
+                            <input type="number" id="fixtureTheirScore" min="0" placeholder="Leave empty if not played">
+                        </div>
+                        <button type="submit" class="btn">💾 Save Fixture</button>
+                    </form>
+                </div>
+            </div>
+        `
+        // Add other modal templates as needed
+    };
+    
+    if (modalTemplates[modalId]) {
+        document.body.insertAdjacentHTML('beforeend', modalTemplates[modalId]);
+        return document.getElementById(modalId);
+    }
+    
+    return null;
+}
+
+// ============================================
+// FORM HANDLER SETUP - DELAYED INITIALIZATION
+// ============================================
+
+// Replace the immediate DOMContentLoaded setup with a delayed approach
+function setupFormHandlers() {
+    // Wait for modals to be created before setting up handlers
+    setTimeout(() => {
+        // News form handler
+        const newsForm = document.getElementById('newsForm');
+        if (newsForm && !newsForm.hasAttribute('data-handler-attached')) {
+            newsForm.addEventListener('submit', handleNewsSubmission);
+            newsForm.setAttribute('data-handler-attached', 'true');
+        }
+        
+        // Fixture form handler
+        const fixtureForm = document.getElementById('fixtureForm');
+        if (fixtureForm && !fixtureForm.hasAttribute('data-handler-attached')) {
+            fixtureForm.addEventListener('submit', handleFixtureSubmission);
+            fixtureForm.setAttribute('data-handler-attached', 'true');
+        }
+        
+        // Add other form handlers...
+        
+    }, 100); // Small delay to ensure modals exist
+}
+
+// Enhanced modal opening that ensures form handlers are attached
+const originalOpenModal = window.openModal;
+window.openModal = function(modalId) {
+    originalOpenModal(modalId);
+    setupFormHandlers(); // Ensure handlers are attached after opening
+};
+
+// ============================================
+// SIMPLIFIED FORM HANDLERS (inline)
+// ============================================
+
+async function handleNewsSubmission(e) {
+    e.preventDefault();
+    
+    const newsData = {
+        id: window.adminSystem.currentEditIndex !== null ? 
+            window.adminSystem.getData('news')[window.adminSystem.currentEditIndex].id : 
+            Date.now().toString(),
+        title: document.getElementById('newsTitle').value.trim(),
+        content: document.getElementById('newsContent').value.trim(),
+        category: document.getElementById('newsCategory').value,
+        author: document.getElementById('newsAuthor').value.trim() || 'Club Admin',
+        date: new Date().toISOString().split('T')[0],
+        featured: false
+    };
+
+    if (!newsData.title || !newsData.content) {
+        alert('Please fill in both title and content fields');
+        return;
+    }
+
+    try {
+        let existingNews = window.adminSystem.getData('news');
+        
+        if (window.adminSystem.currentEditIndex !== null) {
+            existingNews[window.adminSystem.currentEditIndex] = newsData;
+        } else {
+            existingNews.unshift(newsData);
+        }
+        
+        window.adminSystem.saveData('news', existingNews);
+        window.adminSystem.loadNews();
+        window.adminSystem.updateStats();
+        
+        const action = window.adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+        window.adminSystem.showAlert('news', `News article ${action} successfully!`, 'success');
+        
+        // Background cloud storage
+        if (window.netlifyDataManager) {
+            try {
+                const result = await window.netlifyDataManager.createNews(newsData);
+                if (result.success) {
+                    console.log('News synced to cloud');
+                }
+            } catch (cloudError) {
+                console.warn('Cloud sync failed:', cloudError);
+            }
+        }
+        
+        closeModal('newsModal');
+        
+    } catch (error) {
+        console.error('Error saving news:', error);
+        window.adminSystem.showAlert('news', 'Error saving news: ' + error.message, 'danger');
+    }
+}
+
+async function handleFixtureSubmission(e) {
+    e.preventDefault();
+    
+    const fixtureData = {
+        id: window.adminSystem.currentEditIndex !== null ? 
+            window.adminSystem.getData('fixtures')[window.adminSystem.currentEditIndex].id : 
+            Date.now().toString(),
+        team: document.getElementById('fixtureTeam').value,
+        opponent: document.getElementById('fixtureOpponent').value.trim(),
+        dateTime: document.getElementById('fixtureDateTime').value,
+        venue: document.getElementById('fixtureVenue').value,
+        competition: document.getElementById('fixtureCompetition').value.trim(),
+        ourScore: document.getElementById('fixtureOurScore').value || null,
+        theirScore: document.getElementById('fixtureTheirScore').value || null
+    };
+
+    if (!fixtureData.opponent || !fixtureData.dateTime) {
+        alert('Please fill in opponent and date/time fields');
+        return;
+    }
+
+    try {
+        let existingFixtures = window.adminSystem.getData('fixtures');
+        
+        if (window.adminSystem.currentEditIndex !== null) {
+            existingFixtures[window.adminSystem.currentEditIndex] = fixtureData;
+        } else {
+            existingFixtures.unshift(fixtureData);
+        }
+        
+        window.adminSystem.saveData('fixtures', existingFixtures);
+        window.adminSystem.loadFixtures();
+        window.adminSystem.updateStats();
+        
+        const action = window.adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+        window.adminSystem.showAlert('fixtures', `Fixture ${action} successfully!`, 'success');
+        
+        // Background cloud storage
+        if (window.netlifyDataManager) {
+            try {
+                const result = await window.netlifyDataManager.createFixture(fixtureData);
+                if (result.success) {
+                    console.log('Fixture synced to cloud');
+                }
+            } catch (cloudError) {
+                console.warn('Cloud sync failed:', cloudError);
+            }
+        }
+        
+        closeModal('fixtureModal');
+        
+    } catch (error) {
+        console.error('Error saving fixture:', error);
+        window.adminSystem.showAlert('fixtures', 'Error saving fixture: ' + error.message, 'danger');
+    }
+}
+
+// Initialize form handlers when system is ready
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.adminSystem) {
+        setupFormHandlers();
+    }
+});
+
+console.log('Admin integration fix loaded');

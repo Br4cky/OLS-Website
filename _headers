@@ -1,0 +1,11 @@
+/js/admin/*
+  Content-Type: application/javascript
+  X-Content-Type-Options: nosniff
+
+/js/*.js
+  Content-Type: application/javascript
+  X-Content-Type-Options: nosniff
+
+/css/*.css
+  Content-Type: text/css
+  X-Content-Type-Options: nosniff

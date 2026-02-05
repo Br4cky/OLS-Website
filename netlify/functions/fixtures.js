@@ -1,16 +1,16 @@
 // netlify/functions/fixtures.js
 // OLS-Website Fixtures Management Function
-// Handles CRUD operations for rugby fixtures data
+// OLS 83 - Netlify Blobs with CommonJS format
+
+const { getStore } = require('@netlify/blobs');
 
 exports.handler = async (event, context) => {
-    // Enable CORS for frontend communication
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
     };
 
-    // Handle preflight requests
     if (event.httpMethod === 'OPTIONS') {
         return {
             statusCode: 200,
@@ -25,16 +25,12 @@ exports.handler = async (event, context) => {
         switch (method) {
             case 'GET':
                 return await getFixtures(headers);
-            
             case 'POST':
                 return await createFixture(event, headers);
-            
             case 'PUT':
                 return await updateFixture(event, headers);
-            
             case 'DELETE':
                 return await deleteFixture(event, headers);
-            
             default:
                 return {
                     statusCode: 405,
@@ -47,58 +43,47 @@ exports.handler = async (event, context) => {
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ error: 'Internal server error' })
+            body: JSON.stringify({ error: 'Internal server error', message: error.message })
         };
     }
 };
 
-// Get all fixtures
 async function getFixtures(headers) {
-    // For now, return mock data matching your olrfc_fixtures structure
-    // Later we'll integrate with Netlify Forms for persistence
-    const mockFixtures = [
-        {
-            id: '1',
-            team: 'mens-1st',
-            opponent: 'Richmond RFC',
-            dateTime: '2025-09-13T15:00:00Z',
-            venue: 'Old Deer Park',
-            competition: 'London League',
-            ourScore: null,
-            theirScore: null,
-            status: 'upcoming'
-        },
-        {
-            id: '2', 
-            team: 'mens-2nd',
-            opponent: 'Ealing RFC',
-            dateTime: '2025-09-20T14:30:00Z',
-            venue: 'Home',
-            competition: 'League',
-            ourScore: 24,
-            theirScore: 18,
-            status: 'completed'
-        }
-    ];
+    try {
+        const store = getStore({
+            name: 'ols-fixtures',
+            siteID: process.env.SITE_ID,
+            token: process.env.NETLIFY_ACCESS_TOKEN
+        });
+        const fixtures = await store.get('all-fixtures', { type: 'json' });
 
-    return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-            success: true,
-            data: mockFixtures,
-            count: mockFixtures.length
-        })
-    };
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+                success: true,
+                data: fixtures || []
+            })
+        };
+    } catch (error) {
+        console.error('Error getting fixtures:', error);
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+                success: false,
+                error: 'Failed to retrieve fixtures',
+                message: error.message
+            })
+        };
+    }
 }
 
-// Create new fixture
 async function createFixture(event, headers) {
     try {
         const fixtureData = JSON.parse(event.body);
         
-        // Validate required fields
-        const required = ['team', 'opponent', 'dateTime', 'venue', 'competition'];
+        const required = ['team', 'opponent', 'dateTime', 'venue'];
         for (const field of required) {
             if (!fixtureData[field]) {
                 return {
@@ -112,16 +97,28 @@ async function createFixture(event, headers) {
             }
         }
 
-        // Add ID and timestamp
+        const store = getStore({
+            name: 'ols-fixtures',
+            siteID: process.env.SITE_ID,
+            token: process.env.NETLIFY_ACCESS_TOKEN
+        });
+        const fixtures = await store.get('all-fixtures', { type: 'json' }) || [];
+
         const newFixture = {
             ...fixtureData,
-            id: Date.now().toString(),
-            createdAt: new Date().toISOString(),
-            status: 'upcoming'
+            id: fixtureData.id || Date.now().toString(),
+            createdAt: fixtureData.createdAt || new Date().toISOString(),
+            status: fixtureData.status || 'upcoming'
         };
 
-        // TODO: Save to Netlify Forms
-        console.log('Creating fixture:', newFixture);
+        const existingIndex = fixtures.findIndex(f => f.id === newFixture.id);
+        if (existingIndex !== -1) {
+            fixtures[existingIndex] = newFixture;
+        } else {
+            fixtures.push(newFixture);
+        }
+
+        await store.set('all-fixtures', JSON.stringify(fixtures));
 
         return {
             statusCode: 201,
@@ -133,18 +130,19 @@ async function createFixture(event, headers) {
             })
         };
     } catch (error) {
+        console.error('Error creating fixture:', error);
         return {
             statusCode: 400,
             headers,
             body: JSON.stringify({
                 success: false,
-                error: 'Invalid JSON data'
+                error: 'Failed to create fixture',
+                message: error.message
             })
         };
     }
 }
 
-// Update existing fixture
 async function updateFixture(event, headers) {
     try {
         const fixtureData = JSON.parse(event.body);
@@ -161,15 +159,35 @@ async function updateFixture(event, headers) {
             };
         }
 
-        // Add update timestamp
+        const store = getStore({
+            name: 'ols-fixtures',
+            siteID: process.env.SITE_ID,
+            token: process.env.NETLIFY_ACCESS_TOKEN
+        });
+        let fixtures = await store.get('all-fixtures', { type: 'json' }) || [];
+
+        const fixtureIndex = fixtures.findIndex(f => f.id === fixtureId);
+
+        if (fixtureIndex === -1) {
+            return {
+                statusCode: 404,
+                headers,
+                body: JSON.stringify({
+                    success: false,
+                    error: 'Fixture not found'
+                })
+            };
+        }
+
         const updatedFixture = {
+            ...fixtures[fixtureIndex],
             ...fixtureData,
             id: fixtureId,
             updatedAt: new Date().toISOString()
         };
 
-        // TODO: Update in Netlify Forms
-        console.log('Updating fixture:', updatedFixture);
+        fixtures[fixtureIndex] = updatedFixture;
+        await store.set('all-fixtures', JSON.stringify(fixtures));
 
         return {
             statusCode: 200,
@@ -181,41 +199,78 @@ async function updateFixture(event, headers) {
             })
         };
     } catch (error) {
+        console.error('Error updating fixture:', error);
         return {
             statusCode: 400,
             headers,
             body: JSON.stringify({
                 success: false,
-                error: 'Invalid JSON data'
+                error: 'Failed to update fixture',
+                message: error.message
             })
         };
     }
 }
 
-// Delete fixture
 async function deleteFixture(event, headers) {
-    const fixtureId = event.queryStringParameters?.id;
+    try {
+        const fixtureId = event.queryStringParameters?.id;
 
-    if (!fixtureId) {
+        if (!fixtureId) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({
+                    success: false,
+                    error: 'Fixture ID required'
+                })
+            };
+        }
+
+        const store = getStore({
+            name: 'ols-fixtures',
+            siteID: process.env.SITE_ID,
+            token: process.env.NETLIFY_ACCESS_TOKEN
+        });
+        let fixtures = await store.get('all-fixtures', { type: 'json' }) || [];
+
+        const fixtureIndex = fixtures.findIndex(f => f.id === fixtureId);
+
+        if (fixtureIndex === -1) {
+            return {
+                statusCode: 404,
+                headers,
+                body: JSON.stringify({
+                    success: false,
+                    error: 'Fixture not found'
+                })
+            };
+        }
+
+        fixtures.splice(fixtureIndex, 1);
+        await store.set('all-fixtures', JSON.stringify(fixtures));
+
+        console.log('Deleted fixture:', fixtureId);
+
         return {
-            statusCode: 400,
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+                success: true,
+                message: 'Fixture deleted successfully',
+                deletedId: fixtureId
+            })
+        };
+    } catch (error) {
+        console.error('Error deleting fixture:', error);
+        return {
+            statusCode: 500,
             headers,
             body: JSON.stringify({
                 success: false,
-                error: 'Fixture ID required'
+                error: 'Failed to delete fixture',
+                message: error.message
             })
         };
     }
-
-    // TODO: Delete from Netlify Forms
-    console.log('Deleting fixture:', fixtureId);
-
-    return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-            success: true,
-            message: 'Fixture deleted successfully'
-        })
-    };
 }

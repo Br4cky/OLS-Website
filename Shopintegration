@@ -1,0 +1,149 @@
+// SHOP FORM SUBMISSION - Add this after the gallery form handler
+document.getElementById('shopForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Collect selected sizes
+    const sizes = [];
+    ['XS', 'S', 'M', 'L', 'XL', 'XXL'].forEach(size => {
+        if (document.getElementById(`size${size}`).checked) {
+            sizes.push(size);
+        }
+    });
+    
+    const shopData = {
+        id: adminSystem.currentEditIndex !== null ? 
+            adminSystem.getData('shop')[adminSystem.currentEditIndex].id : 
+            Date.now().toString(),
+        name: document.getElementById('shopProductName').value.trim(),
+        category: document.getElementById('shopCategory').value,
+        description: document.getElementById('shopDescription').value.trim(),
+        price: parseFloat(document.getElementById('shopPrice').value) || 0,
+        stock: parseInt(document.getElementById('shopStock').value) || 0,
+        sku: document.getElementById('shopSku').value.trim(),
+        sizes: sizes,
+        status: document.getElementById('shopStatus').value,
+        images: [], // Handle image upload separately - for now store empty array
+        weight: parseFloat(document.getElementById('shopWeight').value) || 0,
+        shipping: parseFloat(document.getElementById('shopShipping').value) || 0,
+        dateAdded: new Date().toISOString()
+    };
+
+    // Validate required fields
+    if (!shopData.name || shopData.price <= 0) {
+        alert('Please enter product name and a valid price');
+        return;
+    }
+
+    try {
+        // 1. IMMEDIATE localStorage update
+        let existingShop = adminSystem.getData('shop');
+        
+        if (adminSystem.currentEditIndex !== null) {
+            existingShop[adminSystem.currentEditIndex] = shopData;
+        } else {
+            existingShop.unshift(shopData);
+        }
+        
+        adminSystem.saveData('shop', existingShop);
+        adminSystem.loadShop();
+        adminSystem.updateStats();
+        
+        const action = adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+        adminSystem.showAlert('shop', `Product ${action} successfully!`, 'success');
+        
+        // 2. BACKGROUND cloud storage
+        if (window.netlifyDataManager) {
+            try {
+                const result = await window.netlifyDataManager.createShopItem(shopData);
+                
+                if (result.success) {
+                    console.log('Product successfully synced to cloud storage');
+                    setTimeout(() => {
+                        adminSystem.showAlert('shop', 'Product synced to cloud storage ✓', 'success');
+                    }, 1000);
+                } else {
+                    throw new Error(result.error);
+                }
+                
+            } catch (cloudError) {
+                console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
+                adminSystem.showAlert('shop', 'Product saved locally (cloud sync failed)', 'warning');
+            }
+        }
+        
+        closeModal('shopModal');
+        document.getElementById('shopForm').reset();
+        // Reset size checkboxes
+        ['XS', 'S', 'M', 'L', 'XL', 'XXL'].forEach(size => {
+            document.getElementById(`size${size}`).checked = false;
+        });
+        adminSystem.currentEditIndex = null;
+        
+    } catch (error) {
+        console.error('Error saving product:', error);
+        adminSystem.showAlert('shop', 'Error saving product: ' + error.message, 'danger');
+    }
+});
+
+// Replace the placeholder shop functions with these enhanced versions:
+function editShopProduct(index) {
+    const shop = adminSystem.getData('shop');
+    const product = shop[index];
+    
+    adminSystem.currentEditIndex = index;
+    adminSystem.currentSection = 'shop';
+    
+    // Populate form fields
+    document.getElementById('shopProductName').value = product.name;
+    document.getElementById('shopCategory').value = product.category;
+    document.getElementById('shopDescription').value = product.description || '';
+    document.getElementById('shopPrice').value = product.price;
+    document.getElementById('shopStock').value = product.stock;
+    document.getElementById('shopSku').value = product.sku || '';
+    document.getElementById('shopStatus').value = product.status;
+    document.getElementById('shopWeight').value = product.weight || '';
+    document.getElementById('shopShipping').value = product.shipping || '';
+    
+    // Set size checkboxes
+    ['XS', 'S', 'M', 'L', 'XL', 'XXL'].forEach(size => {
+        document.getElementById(`size${size}`).checked = product.sizes && product.sizes.includes(size);
+    });
+    
+    openModal('shopModal');
+}
+
+function deleteShopProduct(index) {
+    const shop = adminSystem.getData('shop');
+    const product = shop[index];
+    
+    if (confirm(`Are you sure you want to delete "${product.name}"?`)) {
+        try {
+            shop.splice(index, 1);
+            adminSystem.saveData('shop', shop);
+            adminSystem.loadShop();
+            adminSystem.updateStats();
+            adminSystem.showAlert('shop', 'Product deleted successfully', 'success');
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            adminSystem.showAlert('shop', 'Error deleting product: ' + error.message, 'danger');
+        }
+    }
+}
+
+function duplicateShopProduct(index) {
+    const shop = adminSystem.getData('shop');
+    const product = {...shop[index]};
+    
+    // Modify for duplicate
+    product.name = product.name + ' (Copy)';
+    product.id = Date.now().toString();
+    product.sku = product.sku ? product.sku + '-COPY' : '';
+    product.dateAdded = new Date().toISOString();
+    
+    // Add to shop array
+    shop.unshift(product);
+    adminSystem.saveData('shop', shop);
+    adminSystem.loadShop();
+    adminSystem.updateStats();
+    adminSystem.showAlert('shop', 'Product duplicated successfully', 'success');
+}

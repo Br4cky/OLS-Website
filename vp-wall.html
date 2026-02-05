@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">Vice Presidents Wall</title>
+    
+    <!-- Site Stylesheets -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    
+    <!-- OLS 114: Color Manager Integration -->
+    <script src="js/color-manager.js"></script>
+    
+    <style>
+        :root {
+            --primary-green: #006633;
+            --primary-maroon: #800020;
+            --accent-gold: #c9a227;
+            --text-dark: #2c3e50;
+            --text-light: #7f8c8d;
+            --bg-light: #f8f9fa;
+            --white: #ffffff;
+            
+            /* Brick dimensions */
+            --brick-width: 180px;
+            --brick-height: 50px;
+            --mortar: 5px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            line-height: 1.6;
+            color: var(--text-dark);
+            background: #1a1a1a;
+            min-height: 100vh;
+            /* 🎯 OLS 129: Prevent mobile scroll fighting */
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            padding: 3rem 0 2rem;
+            text-align: center;
+            margin-top: 100px;
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .page-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 1rem;
+        }
+        
+        /* Even wider on large screens */
+        @media (min-width: 1200px) {
+            .container {
+                max-width: 1600px;
+                padding: 3rem 2rem;
+            }
+        }
+
+        .intro-text {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 3rem;
+            color: #ccc;
+            font-size: 1.1rem;
+            font-style: italic;
+        }
+
+        .wall-container {
+            text-align: center;
+            overflow: hidden; /* Prevent any horizontal scroll */
+        }
+        
+        /* Make the wall use full container width */
+        .brick-wall {
+            background: #3d3d3d; /* Mortar color */
+            padding: var(--mortar);
+            border-radius: 6px;
+            box-shadow: 
+                inset 0 0 60px rgba(0,0,0,0.6),
+                0 10px 40px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+            width: 100%; /* Fill container */
+        }
+
+        .wall-plaque {
+            background: linear-gradient(145deg, #b8860b, #8b6914, #b8860b);
+            color: #1a1a1a;
+            padding: 1rem 3rem;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 2rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            box-shadow: 
+                inset 0 2px 0 rgba(255,255,255,0.3),
+                inset 0 -2px 0 rgba(0,0,0,0.3),
+                0 4px 15px rgba(0,0,0,0.4);
+            text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        /* ================================ */
+        /* BRICK WALL - Authentic Pattern */
+        /* ================================ */
+
+        /* Mortar texture */
+        .brick-wall::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.12;
+            pointer-events: none;
+        }
+
+        .brick-row {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: var(--mortar);
+            margin-bottom: var(--mortar);
+            position: relative;
+            width: 100%; /* Fill wall width so trailing brick can flex-grow */
+        }
+        
+        .brick-row:last-child {
+            margin-bottom: 0;
+        }
+
+        /* ================================ */
+        /* BRICK STYLING */
+        /* ================================ */
+        
+        .brick {
+            background: linear-gradient(170deg, 
+                #b85751 0%, 
+                #a34440 15%,
+                #923b38 35%,
+                #833432 55%,
+                #722b29 75%,
+                #612321 100%
+            );
+            border-radius: 2px;
+            width: var(--brick-width);
+            min-width: var(--brick-width);
+            height: var(--brick-height);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            flex-shrink: 0;
+            /* 3D brick effect */
+            box-shadow: 
+                inset 0 2px 0 rgba(255,255,255,0.2),
+                inset 2px 0 0 rgba(255,255,255,0.12),
+                inset 0 -2px 0 rgba(0,0,0,0.4),
+                inset -2px 0 0 rgba(0,0,0,0.25);
+        }
+
+        /* Brick texture */
+        .brick::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.18;
+            border-radius: 2px;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+        }
+
+        /* Half brick for authentic wall edges */
+        .brick.half-brick {
+            width: calc(var(--brick-width) / 2 - var(--mortar) / 2);
+            min-width: calc(var(--brick-width) / 2 - var(--mortar) / 2) !important;
+        }
+        
+        /* Only trailing half-brick stretches to fill gap */
+        .brick-row .brick.half-brick:last-child {
+            flex-grow: 1;
+            max-width: var(--brick-width); /* Cap at full brick width */
+        }
+        
+        /* Hover effect - golden glow and scale (desktop only) */
+        @media (hover: hover) and (pointer: fine) {
+            .brick {
+                transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0s;
+            }
+            
+            .brick:not(.half-brick):hover {
+                transform: scale(1.08);
+                z-index: 10;
+                box-shadow: 
+                    0 0 20px rgba(201, 162, 39, 0.6),
+                    0 0 40px rgba(201, 162, 39, 0.3),
+                    inset 0 2px 0 rgba(255,255,255,0.25),
+                    inset 2px 0 0 rgba(255,255,255,0.15),
+                    inset 0 -2px 0 rgba(0,0,0,0.4),
+                    inset -2px 0 0 rgba(0,0,0,0.25);
+                cursor: default;
+            }
+        }
+
+        /* ================================ */
+        /* ENGRAVED NAME */
+        /* ================================ */
+        
+        .brick-name {
+            font-size: 0.7rem;
+            font-weight: 700;
+            font-family: 'Georgia', 'Times New Roman', serif;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+            padding: 0 6px;
+            line-height: 1.15;
+            max-width: 100%;
+            word-break: break-word;
+            hyphens: auto;
+            overflow-wrap: break-word;
+            /* Engraved effect */
+            color: #b8962e;
+            text-shadow: 
+                0 1px 0 rgba(255,255,255,0.15),
+                0 -1px 1px rgba(0,0,0,0.5);
+        }
+
+        /* ================================ */
+        /* EMPTY & LOADING */
+        /* ================================ */
+        
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #888;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .empty-state h2 {
+            color: #aaa;
+            margin-bottom: 0.5rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #888;
+            font-size: 1.2rem;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        /* ================================ */
+        /* RESPONSIVE */
+        /* ================================ */
+        
+        @media (max-width: 1000px) {
+            :root {
+                --brick-width: 150px;
+                --brick-height: 45px;
+                --mortar: 4px;
+            }
+            .brick-name { font-size: 0.62rem; }
+        }
+        
+        @media (max-width: 800px) {
+            :root {
+                --brick-width: 130px;
+                --brick-height: 42px;
+                --mortar: 4px;
+            }
+            .brick-name { font-size: 0.58rem; letter-spacing: 0.3px; }
+        }
+
+        @media (max-width: 768px) {
+            .page-header { margin-top: 80px; }
+            .page-header h1 { font-size: 1.8rem; }
+            .container { padding: 2rem 0.5rem; }
+            .intro-text { font-size: 0.95rem; padding: 0 1rem; }
+            .wall-plaque { font-size: 1.1rem; padding: 0.7rem 2rem; }
+        }
+        
+        @media (max-width: 650px) {
+            :root {
+                --brick-width: 110px;
+                --brick-height: 38px;
+                --mortar: 3px;
+            }
+            .brick-name { font-size: 0.52rem; letter-spacing: 0.2px; padding: 0 4px; }
+            .wall-plaque { font-size: 0.95rem; padding: 0.6rem 1.5rem; letter-spacing: 2px; }
+        }
+        
+        @media (max-width: 500px) {
+            .page-header h1 { font-size: 1.5rem; }
+            :root {
+                --brick-width: 95px;
+                --brick-height: 35px;
+                --mortar: 3px;
+            }
+            .brick-name { font-size: 0.48rem; }
+            .intro-text { font-size: 0.85rem; margin-bottom: 2rem; }
+            .wall-plaque { font-size: 0.85rem; padding: 0.5rem 1.2rem; letter-spacing: 1.5px; }
+        }
+        
+        @media (max-width: 400px) {
+            :root {
+                --brick-width: 85px;
+                --brick-height: 34px;
+                --mortar: 2px;
+            }
+            .brick-name { font-size: 0.46rem; letter-spacing: 0; }
+            .intro-text { display: none; } /* Hide intro on tiny screens */
+            .wall-plaque { font-size: 0.8rem; padding: 0.4rem 1rem; margin-bottom: 1rem; }
+        }
+        
+        /* Very small screens - prioritize readability with 2 larger bricks per row */
+        @media (max-width: 340px) {
+            :root {
+                --brick-width: 110px;
+                --brick-height: 38px;
+                --mortar: 3px;
+            }
+            .brick-name { font-size: 0.52rem; letter-spacing: 0.1px; }
+            .page-header h1 { font-size: 1.3rem; }
+            .wall-plaque { font-size: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div id="header-placeholder" data-page="vp-wall"></div>
+
+    <div class="page-header">
+        <h1 id="mainHeading">🧱 Vice Presidents Wall</h1>
+        <p id="pageSubtitle">Honoring those who have served our club with distinction</p>
+    </div>
+
+    <div class="container">
+        <div class="intro-text">
+            <p id="introText">Each brick represents a Vice President who has dedicated their time and passion to our club. Their names are forever etched in our club's history.</p>
+        </div>
+
+        <div class="wall-container">
+            <div class="wall-plaque" id="wallPlaque">Vice Presidents</div>
+
+            <div id="loading" class="loading">Loading Vice Presidents</div>
+
+            <div id="vpWall" class="brick-wall" style="display: none;"></div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                <h2 id="emptyHeading">No Vice Presidents Yet</h2>
+                <p id="emptyText">The wall awaits its first brick.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div id="footer-placeholder" data-page="vp-wall"></div>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script src="js/header.js"></script>
+    <script src="js/footer.js"></script>
+    <script>
+        // VP Wall Manager - Authentic Running Bond Pattern (OLS 114)
+        class VPWallManager {
+            constructor() {
+                this.vps = [];
+                this.settings = {};
+                this.init();
+            }
+
+            async init() {
+                await this.loadPageContent();
+                await this.loadVPs();
+                this.renderWall();
+            }
+
+            async loadPageContent() {
+                try {
+                    const response = await fetch('/.netlify/functions/site-settings');
+                    if (response.ok) {
+                        const result = await response.json();
+                        this.settings = result.data || {};
+                        this.applyPageContent();
+                    }
+                } catch (error) {
+                    console.log('📦 Using default page content');
+                }
+            }
+
+            applyPageContent() {
+                const s = this.settings;
+                if (s['vpwall-page-title']) document.getElementById('pageTitle').textContent = s['vpwall-page-title'];
+                if (s['vpwall-main-heading']) document.getElementById('mainHeading').textContent = s['vpwall-main-heading'];
+                if (s['vpwall-page-subtitle']) document.getElementById('pageSubtitle').textContent = s['vpwall-page-subtitle'];
+                if (s['vpwall-intro-text']) document.getElementById('introText').textContent = s['vpwall-intro-text'];
+                if (s['vpwall-plaque-text']) document.getElementById('wallPlaque').textContent = s['vpwall-plaque-text'];
+                if (s['vpwall-empty-heading']) document.getElementById('emptyHeading').textContent = s['vpwall-empty-heading'];
+                if (s['vpwall-empty-text']) document.getElementById('emptyText').textContent = s['vpwall-empty-text'];
+            }
+
+            async loadVPs() {
+                try {
+                    const response = await fetch('/.netlify/functions/vp-wall');
+                    if (response.ok) {
+                        const result = await response.json();
+                        this.vps = result.data || [];
+                        console.log('✅ Loaded VPs:', this.vps.length);
+                    } else {
+                        this.vps = JSON.parse(localStorage.getItem('olrfc_vps') || '[]');
+                    }
+                } catch (error) {
+                    console.error('Error loading VPs:', error);
+                    this.vps = JSON.parse(localStorage.getItem('olrfc_vps') || '[]');
+                }
+            }
+
+            renderWall() {
+                const loading = document.getElementById('loading');
+                const wall = document.getElementById('vpWall');
+                const emptyState = document.getElementById('emptyState');
+
+                loading.style.display = 'none';
+
+                if (this.vps.length === 0) {
+                    emptyState.style.display = 'block';
+                    return;
+                }
+
+                // 🎯 OLS 129: Shuffle VPs randomly each page load
+                const shuffledVPs = this.shuffleArray([...this.vps]);
+
+                wall.style.display = 'block';
+                wall.innerHTML = '';
+
+                // Get brick dimensions from CSS
+                const styles = getComputedStyle(document.documentElement);
+                const brickWidth = parseInt(styles.getPropertyValue('--brick-width'));
+                const mortar = parseInt(styles.getPropertyValue('--mortar'));
+                
+                // Calculate based on container width
+                const container = wall.parentElement;
+                const containerWidth = container.offsetWidth - 20;
+                const fullBrickSpace = brickWidth + mortar;
+                
+                // Calculate bricks per row - aim for full bricks that fit
+                const bricksPerRow = Math.floor((containerWidth + mortar) / fullBrickSpace);
+                const actualBricksPerRow = Math.max(3, bricksPerRow);
+
+                let vpIndex = 0;
+                let rowNum = 0;
+
+                while (vpIndex < shuffledVPs.length) {
+                    const row = document.createElement('div');
+                    const isOffset = rowNum % 2 === 1;
+                    row.className = 'brick-row' + (isOffset ? ' offset' : '');
+
+                    // Running bond pattern:
+                    // Non-offset: [F][F][F][F][F][F][H] - starts flush, ends with half
+                    // Offset: [H][F][F][F][F][F][H] - starts with half, ends with half
+                    
+                    if (isOffset) {
+                        // Leading half-brick for offset rows only
+                        const leadingHalf = document.createElement('div');
+                        leadingHalf.className = 'brick half-brick';
+                        row.appendChild(leadingHalf);
+                    }
+
+                    // Full bricks - offset rows have one less because of the leading half
+                    const fullBricksThisRow = isOffset ? actualBricksPerRow - 1 : actualBricksPerRow;
+                    
+                    // Add VP bricks
+                    let bricksAdded = 0;
+                    for (let i = 0; i < fullBricksThisRow && vpIndex < shuffledVPs.length; i++) {
+                        const vp = shuffledVPs[vpIndex];
+                        const brick = document.createElement('div');
+                        brick.className = 'brick';
+                        brick.innerHTML = `<div class="brick-name">${this.escapeHtml(vp.name)}</div>`;
+                        row.appendChild(brick);
+                        vpIndex++;
+                        bricksAdded++;
+                    }
+
+                    // Fill remaining slots with blank bricks
+                    const remainingBricks = fullBricksThisRow - bricksAdded;
+                    for (let i = 0; i < remainingBricks; i++) {
+                        const blankBrick = document.createElement('div');
+                        blankBrick.className = 'brick';
+                        row.appendChild(blankBrick);
+                    }
+
+                    // Trailing half-brick for ALL rows (fills to right edge)
+                    const trailingHalf = document.createElement('div');
+                    trailingHalf.className = 'brick half-brick';
+                    row.appendChild(trailingHalf);
+
+                    wall.appendChild(row);
+                    rowNum++;
+                }
+            }
+
+            // 🎯 OLS 129: Fisher-Yates shuffle for random order
+            shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+
+        // 🎯 OLS 129: Only re-render on actual width change (not mobile scroll)
+        let lastWidth = window.innerWidth;
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                // Only re-render if width actually changed (ignore height-only changes from mobile scroll)
+                if (window.innerWidth !== lastWidth) {
+                    lastWidth = window.innerWidth;
+                    if (window.vpWallManager && window.vpWallManager.vps.length > 0) {
+                        window.vpWallManager.renderWall();
+                    }
+                }
+            }, 250);
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            window.vpWallManager = new VPWallManager();
+        });
+    </script>
+
+</body>
+</html>

@@ -1,9 +1,17 @@
 /* Old Laurentian RFC - Main Stylesheet */
 
 :root {
-    --primary-green: #2e5016;
-    --primary-maroon: #8b1538;
-    --accent-gold: #f4c430;
+    /* Neutral gray hex colors (white-label defaults) */
+    --primary-green: #6b7280;
+    --primary-maroon: #374151;
+    --accent-gold: #9ca3af;
+    
+    /* RGB values for rgba() transparency (neutral grays) */
+    --primary-green-rgb: 107, 114, 128;
+    --primary-maroon-rgb: 55, 65, 81;
+    --accent-gold-rgb: 156, 163, 175;
+    
+    /* Standard colors */
     --text-dark: #333;
     --text-light: #666;
     --bg-light: #f8f9fa;
@@ -66,15 +74,80 @@ body {
 
 /* Header */
 .header {
-    background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
     color: var(--white);
-    padding: 1rem 0;
+    padding: 0.75rem 0;
     position: fixed;
     top: 0;
     width: 100%;
     z-index: 1000;
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
     transition: var(--transition);
+    height: 80px;
+    min-height: 80px;
+    max-height: 80px;
+    /* Default to gradient if no style class applied */
+    background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+}
+
+/* ==========================================
+   OLS 129: HEADER STYLE VARIANTS
+   ========================================== */
+
+/* Style 1: Gradient (default) - Classic blend between primary colors */
+.header.header-style-gradient {
+    background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+}
+
+/* Style 2: Solid - Clean single primary color */
+.header.header-style-solid {
+    background: var(--primary-green);
+}
+
+/* Style 3: Angular - Sporty slanted edges with center gradient */
+.header.header-style-angular {
+    background: linear-gradient(90deg, var(--primary-maroon) 0%, var(--primary-green) 50%, var(--primary-maroon) 100%);
+}
+
+.header.header-style-angular .header-content {
+    position: relative;
+    z-index: 2;
+}
+
+.header.header-style-angular::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 120px;
+    height: 100%;
+    background: var(--primary-maroon);
+    clip-path: polygon(0 0, 100% 0, 40% 100%, 0 100%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.header.header-style-angular::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 120px;
+    height: 100%;
+    background: var(--primary-maroon);
+    clip-path: polygon(60% 0, 100% 0, 100% 100%, 0 100%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* END OLS 129 Header Styles */
+
+/* Taller header on desktop */
+@media (min-width: 769px) {
+    .header {
+        height: 90px;
+        min-height: 90px;
+        max-height: 90px;
+    }
 }
 
 .header-content {
@@ -84,6 +157,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 0 2rem;
+    height: 100%;
 }
 
 .logo-section {
@@ -92,15 +166,44 @@ body {
     gap: 1rem;
 }
 
+/* Logo link styling */
+.logo-link {
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.logo-link:hover {
+    opacity: 0.8;
+    transform: scale(1.02);
+}
+
+/* Logo as clickable link */
+.logo-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+}
+
+.logo-link:hover {
+    opacity: 0.85;
+}
+
 .logo {
-    width: 60px;
-    height: 60px;
-    background: var(--white);
+    width: 50px;
+    height: 50px;
+    background: transparent;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 5px;
+    padding: 3px;
+    flex-shrink: 0;
 }
 
 .logo img {
@@ -110,18 +213,21 @@ body {
 }
 
 .club-name {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: bold;
+    white-space: nowrap;
 }
 
 .tagline {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     opacity: 0.9;
 }
 
 .nav {
     display: flex;
-    gap: 2rem;
+    gap: 0.4rem;
+    flex-wrap: nowrap;
+    align-items: center;
 }
 
 .nav a {
@@ -129,7 +235,30 @@ body {
     text-decoration: none;
     font-weight: 500;
     transition: var(--transition);
-    padding: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+/* Responsive nav scaling for different screen widths */
+@media (min-width: 1200px) {
+    .nav {
+        gap: 0.6rem;
+    }
+    .nav a {
+        font-size: 0.9rem;
+        padding: 0.5rem 0.7rem;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1199px) {
+    .nav {
+        gap: 0.2rem;
+    }
+    .nav a {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.4rem;
+    }
 }
 
 .nav a:hover, 
@@ -146,9 +275,21 @@ body {
     cursor: pointer;
 }
 
+/* Mobile-only navigation items */
+.nav-link.mobile-only {
+    display: none;
+}
+
+/* Show mobile-only links when mobile menu is active */
+@media (max-width: 768px) {
+    .nav-link.mobile-only {
+        display: block;
+    }
+}
+
 /* Hero */
 .hero {
-    background: linear-gradient(rgba(46, 80, 22, 0.8), rgba(139, 21, 56, 0.8)), 
+    background: linear-gradient(135deg, rgba(var(--primary-green-rgb), 0.8), rgba(var(--primary-maroon-rgb), 0.8)), 
                 url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600"><rect fill="%232e5016" width="600" height="600"/><rect fill="%238b1538" x="600" width="600" height="600"/></svg>');
     background-size: cover;
     background-position: center;
@@ -442,7 +583,7 @@ body {
 .logo {
     width: 60px;
     height: 60px;
-    background: var(--white);
+    background: transparent;
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -1263,4 +1404,67 @@ body {
     .team-filter-btn {
         width: 200px;
     }
+}
+/* Heritage Image - Force Visibility */
+.about-image,
+.about-image img,
+#heritage-image-container,
+#heritage-image {
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+    transform: none !important;
+}
+
+/* News Cards - Prevent Disappearing */
+.news-grid,
+.news-card {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.news-grid {
+    display: grid !important;
+}
+
+/* Match Cards - Stay Visible */
+.match-card,
+.latest-result,
+.next-fixture {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Emergency Fallback - Force visibility after 2 seconds */
+@keyframes forceVisible {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+.news-card,
+.about-image img {
+    animation: forceVisible 0.5s ease-in 2s forwards;
+}
+
+/* Disable fade-in on critical elements */
+.about-image.fade-in,
+#heritage-image-container.fade-in {
+    animation: none !important;
+    opacity: 1 !important;
+}
+/* News card animations - CRITICAL FIX */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.news-card {
+    opacity: 1 !important;
+    visibility: visible !important;
 }

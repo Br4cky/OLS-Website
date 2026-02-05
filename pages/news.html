@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Archive - Old Laurentian RFC</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <script src="../js/color-manager.js"></script>
+    <style>
+        /* Admin controlled elements */
+        .nav-item[data-admin-controlled="true"] {
+            display: none;
+        }
+
+        .nav-item[data-admin-controlled="true"].admin-enabled {
+            display: block;
+        }
+
+        .news-archive-hero {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            padding: 6rem 0 3rem;
+            text-align: center;
+        }
+
+        .news-archive-hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .news-archive-hero p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .news-filters-section {
+            background: white;
+            padding: 2rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 80px;
+            z-index: 50;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .filter-btn {
+            background: white;
+            color: var(--primary-green);
+            border: 2px solid var(--primary-green);
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover {
+            background: var(--bg-light);
+            transform: translateY(-2px);
+        }
+
+        .filter-btn.active {
+            background: var(--primary-green);
+            color: white;
+            box-shadow: 0 5px 15px rgba(var(--primary-green-rgb), 0.3);
+        }
+
+        /* OLS 130: Section filter buttons */
+        .section-btn {
+            background: white;
+            color: var(--primary-maroon);
+            border: 2px solid var(--primary-maroon);
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .section-btn:hover {
+            background: var(--bg-light);
+            transform: translateY(-2px);
+        }
+
+        .section-btn.active {
+            background: var(--primary-maroon);
+            color: white;
+            box-shadow: 0 5px 15px rgba(var(--primary-maroon-rgb), 0.3);
+        }
+
+        /* Mobile/Desktop visibility helpers */
+        .mobile-only {
+            display: none;
+        }
+
+        .desktop-only {
+            display: flex;
+        }
+
+        /* Mobile Filter Dropdown */
+        .filter-dropdown-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+
+        .filter-dropdown-wrapper label {
+            font-weight: bold;
+            color: var(--primary-green);
+            font-size: 1rem;
+        }
+
+        .filter-select {
+            padding: 0.8rem 1.5rem;
+            border: 2px solid var(--primary-green);
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            background: white;
+            color: var(--primary-green);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 180px;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(var(--primary-green-rgb), 0.2);
+        }
+
+        .news-archive-section {
+            padding: 3rem 0;
+            min-height: 60vh;
+        }
+
+        .news-archive-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .load-more-container {
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        .btn-load-more {
+            padding: 1rem 3rem;
+            background: var(--primary-green);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-load-more:hover {
+            background: var(--primary-maroon);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
+        .btn-load-more:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .no-more-articles {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+            font-style: italic;
+        }
+
+        .articles-count {
+            text-align: center;
+            color: var(--text-light);
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        /* 🎯 PREVENT FLASH OF DEFAULT CONTENT */
+        .news-archive-hero {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .cms-content-loaded .news-archive-hero {
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            .news-archive-hero {
+                padding: 5rem 1rem 2rem;
+            }
+
+            .news-archive-hero h1 {
+                font-size: 2rem;
+            }
+
+            .news-filters-section {
+                top: 70px;
+                padding: 1rem 0;
+            }
+
+            /* Mobile: Show dropdown, hide buttons */
+            .mobile-only {
+                display: flex;
+            }
+
+            .desktop-only {
+                display: none !important;
+            }
+
+            .filter-dropdown-wrapper {
+                width: 100%;
+                padding: 0 1rem;
+            }
+
+            .filter-select {
+                flex: 1;
+                min-width: unset;
+            }
+
+            .filter-buttons {
+                gap: 0.5rem;
+            }
+
+            .filter-btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .news-archive-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div id="header-placeholder" data-page="news"></div>
+
+    <!-- Hero Section -->
+    <section class="news-archive-hero">
+        <div class="container">
+            <h1>📰 News Archive</h1>
+            <p>Stay updated with all the latest news, match reports, and club updates</p>
+        </div>
+    </section>
+
+    <!-- Filter Buttons -->
+    <section class="news-filters-section">
+        <div class="container">
+            <!-- OLS 130: Mobile Dropdowns -->
+            <div class="filter-dropdown-wrapper mobile-only" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 140px;">
+                    <label for="news-section-dropdown" style="font-size: 0.85rem; color: var(--text-light);">Section:</label>
+                    <select id="news-section-dropdown" class="filter-select" style="width: 100%;">
+                        <option value="all" selected>🏢 All Sections</option>
+                        <!-- Sections loaded dynamically -->
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 140px;">
+                    <label for="news-filter-dropdown" style="font-size: 0.85rem; color: var(--text-light);">Type:</label>
+                    <select id="news-filter-dropdown" class="filter-select" style="width: 100%;">
+                        <option value="all" selected>All News</option>
+                        <!-- Categories loaded dynamically -->
+                    </select>
+                </div>
+            </div>
+            
+            <!-- OLS 130: Desktop Buttons - Two rows -->
+            <div class="desktop-only" style="display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+                <!-- Section Buttons -->
+                <div class="filter-buttons" id="section-buttons-container" style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+                    <span style="font-weight: bold; color: var(--text-light); margin-right: 0.5rem; display: flex; align-items: center;">Section:</span>
+                    <button class="section-btn active" data-section="all">🏢 All Sections</button>
+                    <!-- Sections loaded dynamically -->
+                </div>
+                
+                <!-- Category Buttons -->
+                <div class="filter-buttons" id="filter-buttons-container" style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+                    <span style="font-weight: bold; color: var(--text-light); margin-right: 0.5rem; display: flex; align-items: center;">Type:</span>
+                    <button class="filter-btn active" data-category="all">All News</button>
+                    <!-- Categories loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- News Grid -->
+    <section class="news-archive-section">
+        <div class="container">
+            <div class="articles-count" id="articlesCount">
+                Loading articles...
+            </div>
+            
+            <div class="news-archive-grid" id="newsArchiveGrid">
+                <!-- Articles will be loaded here by JavaScript -->
+            </div>
+
+            <div class="load-more-container" id="loadMoreContainer" style="display: none;">
+                <button class="btn-load-more" id="loadMoreBtn">
+                    Load More Articles
+                </button>
+            </div>
+
+            <div class="no-more-articles" id="noMoreArticles" style="display: none;">
+                📰 You've reached the end of the news archive
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <div id="footer-placeholder" data-page="news"></div>
+
+    <!-- Scripts -->
+    <script src="../js/main.js"></script>
+    <script src="../js/header.js"></script>
+    <script src="../js/footer.js"></script>
+    <script>
+        // Load feature states from admin settings
+        async function loadFeatureStates() {
+            try {
+                const response = await fetch('/.netlify/functions/site-settings', {
+                    method: 'GET'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch settings');
+                }
+                
+                const result = await response.json();
+                const settings = result.data || {};
+                
+                const featureStates = {
+                    shop: false,
+                    events: false,
+                    members: false,
+                    payments: false,
+                    sponsors: false
+                };
+                
+                // Extract feature states from settings object
+                Object.keys(settings).forEach(key => {
+                    if (key.startsWith('feature-')) {
+                        const featureName = key.replace('feature-', '');
+                        if (featureStates.hasOwnProperty(featureName)) {
+                            featureStates[featureName] = settings[key] === 'true';
+                        }
+                    }
+                });
+                
+                window.featureStates = featureStates;
+                
+                // Apply saved states to navigation
+                Object.keys(featureStates).forEach(feature => {
+                    const navItems = document.querySelectorAll(`[data-admin-controlled="true"][data-feature="${feature}"]`);
+                    navItems.forEach(item => {
+                        item.classList.toggle('admin-enabled', featureStates[feature]);
+                    });
+                });
+                
+                return featureStates;
+                
+            } catch (error) {
+                console.error('❌ Error loading feature states:', error);
+                
+                const fallbackStates = {
+                    shop: false,
+                    events: false,
+                    members: false,
+                    payments: false,
+                    sponsors: true
+                };
+                
+                window.featureStates = fallbackStates;
+                return fallbackStates;
+            }
+        }
+
+        // News Archive Page Logic
+        // OLS 128: Updated to use CMS-configurable categories and default images
+        class NewsArchivePage {
+            constructor() {
+                this.allArticles = [];
+                this.filteredArticles = [];
+                this.displayedCount = 0;
+                this.articlesPerPage = 12;
+                this.currentCategory = 'all';
+                this.currentClubSection = 'all'; // OLS 130: Club section filter
+                this.categories = []; // OLS 128: CMS categories
+                this.clubSections = []; // OLS 130: CMS club sections
+                // OLS 128: Default match images from CMS (null = no image configured)
+                this.defaultWinImage = null;
+                this.defaultLossImage = null;
+                this.init();
+            }
+
+            async init() {
+                // OLS 128: Load categories and default images first, then articles
+                await this.loadSettings();
+                this.generateFilterButtons();
+                this.loadArticles();
+                this.setupFilterButtons();
+                this.setupLoadMoreButton();
+            }
+
+            // OLS 128: Fetch categories and default match images from CMS
+            // OLS 130: Also fetch club sections
+            async loadSettings() {
+                // Default categories (fallback)
+                const defaultCategories = [
+                    { id: 'match', name: 'Match Report', icon: '🏉', showFilter: true },
+                    { id: 'training', name: 'Training', icon: '💪', showFilter: true },
+                    { id: 'social', name: 'Social Event', icon: '🎉', showFilter: true },
+                    { id: 'club', name: 'Club Update', icon: '📢', showFilter: true }
+                ];
+                
+                // OLS 130: Default club sections
+                const defaultSections = [
+                    { id: 'senior', name: 'Senior', icon: '🏉', showFilter: true },
+                    { id: 'ladies', name: 'Ladies', icon: '👩', showFilter: true },
+                    { id: 'minis', name: 'Minis & Juniors', icon: '👶', showFilter: true }
+                ];
+                
+                try {
+                    let settings = null;
+                    
+                    // Try localStorage first for instant load
+                    const cachedSettings = localStorage.getItem('olrfc_site-settings');
+                    if (cachedSettings) {
+                        settings = JSON.parse(cachedSettings);
+                        console.log('⚡ Loaded settings from cache');
+                    } else {
+                        // Fetch fresh from API
+                        const response = await fetch('/.netlify/functions/site-settings');
+                        if (response.ok) {
+                            const result = await response.json();
+                            settings = result.data || {};
+                            console.log('📡 Loaded settings from API');
+                        }
+                    }
+                    
+                    if (settings) {
+                        // Load categories
+                        if (settings['news-categories']) {
+                            this.categories = JSON.parse(settings['news-categories']);
+                            console.log('✅ Loaded categories:', this.categories.length);
+                        } else {
+                            this.categories = defaultCategories;
+                        }
+                        
+                        // OLS 130: Load club sections
+                        if (settings['club-sections']) {
+                            this.clubSections = JSON.parse(settings['club-sections']);
+                            console.log('✅ Loaded club sections:', this.clubSections.length);
+                        } else {
+                            this.clubSections = defaultSections;
+                        }
+                        
+                        // OLS 128: Load default match images from CMS (no hardcoded fallbacks)
+                        if (settings['default-match-win-image']) {
+                            this.defaultWinImage = settings['default-match-win-image'];
+                            console.log('✅ Loaded custom win image from CMS');
+                        }
+                        if (settings['default-match-loss-image']) {
+                            this.defaultLossImage = settings['default-match-loss-image'];
+                            console.log('✅ Loaded custom loss image from CMS');
+                        }
+                    } else {
+                        this.categories = defaultCategories;
+                        this.clubSections = defaultSections;
+                    }
+                    
+                } catch (error) {
+                    console.warn('Could not load settings from CMS:', error);
+                    this.categories = defaultCategories;
+                    this.clubSections = defaultSections;
+                }
+            }
+
+            // OLS 128: Dynamically generate filter buttons from CMS categories
+            // OLS 130: Also generate club section filters
+            generateFilterButtons() {
+                const filterContainer = document.getElementById('filter-buttons-container');
+                const filterDropdown = document.getElementById('news-filter-dropdown');
+                const sectionContainer = document.getElementById('section-buttons-container');
+                const sectionDropdown = document.getElementById('news-section-dropdown');
+                
+                // Get categories that should show as filters
+                const filterCategories = this.categories.filter(c => c.showFilter !== false);
+                const filterSections = this.clubSections.filter(s => s.showFilter !== false);
+                
+                // Desktop category buttons
+                if (filterContainer) {
+                    let buttonsHTML = '<button class="filter-btn active" data-category="all">All News</button>';
+                    
+                    filterCategories.forEach(cat => {
+                        buttonsHTML += `<button class="filter-btn" data-category="${cat.id}">${cat.icon} ${cat.name}</button>`;
+                    });
+                    
+                    filterContainer.innerHTML = buttonsHTML;
+                }
+                
+                // Mobile category dropdown
+                if (filterDropdown) {
+                    let optionsHTML = '<option value="all" selected>All News</option>';
+                    
+                    filterCategories.forEach(cat => {
+                        optionsHTML += `<option value="${cat.id}">${cat.icon} ${cat.name}</option>`;
+                    });
+                    
+                    filterDropdown.innerHTML = optionsHTML;
+                }
+                
+                // OLS 130: Desktop section buttons
+                if (sectionContainer) {
+                    let buttonsHTML = '<button class="section-btn active" data-section="all">🏢 All Sections</button>';
+                    
+                    filterSections.forEach(section => {
+                        buttonsHTML += `<button class="section-btn" data-section="${section.id}">${section.icon} ${section.name}</button>`;
+                    });
+                    
+                    sectionContainer.innerHTML = buttonsHTML;
+                }
+                
+                // OLS 130: Mobile section dropdown
+                if (sectionDropdown) {
+                    let optionsHTML = '<option value="all" selected>🏢 All Sections</option>';
+                    
+                    filterSections.forEach(section => {
+                        optionsHTML += `<option value="${section.id}">${section.icon} ${section.name}</option>`;
+                    });
+                    
+                    sectionDropdown.innerHTML = optionsHTML;
+                }
+                
+                console.log('✅ Filter buttons generated:', filterCategories.length, 'categories,', filterSections.length, 'sections');
+            }
+
+            loadArticles() {
+                // Get articles from localStorage
+                try {
+                    this.allArticles = JSON.parse(localStorage.getItem('olrfc_news') || '[]');
+                    
+                    // Sort by date (newest first)
+                    this.allArticles.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    
+                    console.log('📰 Loaded', this.allArticles.length, 'articles');
+                    
+                    // Initial render (uses currentCategory and currentClubSection which default to 'all')
+                    this.filterArticles();
+                    
+                } catch (error) {
+                    console.error('Error loading articles:', error);
+                    this.showError();
+                }
+            }
+
+            setupFilterButtons() {
+                const filterButtons = document.querySelectorAll('.filter-btn');
+                const filterDropdown = document.getElementById('news-filter-dropdown');
+                const sectionButtons = document.querySelectorAll('.section-btn');
+                const sectionDropdown = document.getElementById('news-section-dropdown');
+                
+                // Desktop: Category button listeners
+                filterButtons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        // Update active state
+                        filterButtons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        
+                        // Sync mobile dropdown
+                        const category = btn.getAttribute('data-category');
+                        if (filterDropdown) filterDropdown.value = category;
+                        
+                        // Filter articles
+                        this.currentCategory = category;
+                        this.filterArticles();
+                    });
+                });
+                
+                // Mobile: Category dropdown listener
+                if (filterDropdown) {
+                    filterDropdown.addEventListener('change', (e) => {
+                        const category = e.target.value;
+                        
+                        // Sync desktop buttons
+                        filterButtons.forEach(btn => {
+                            btn.classList.toggle('active', btn.getAttribute('data-category') === category);
+                        });
+                        
+                        // Filter articles
+                        this.currentCategory = category;
+                        this.filterArticles();
+                    });
+                }
+                
+                // OLS 130: Desktop section button listeners
+                sectionButtons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        // Update active state
+                        sectionButtons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        
+                        // Sync mobile dropdown
+                        const section = btn.getAttribute('data-section');
+                        if (sectionDropdown) sectionDropdown.value = section;
+                        
+                        // Filter articles
+                        this.currentClubSection = section;
+                        this.filterArticles();
+                    });
+                });
+                
+                // OLS 130: Mobile section dropdown listener
+                if (sectionDropdown) {
+                    sectionDropdown.addEventListener('change', (e) => {
+                        const section = e.target.value;
+                        
+                        // Sync desktop buttons
+                        sectionButtons.forEach(btn => {
+                            btn.classList.toggle('active', btn.getAttribute('data-section') === section);
+                        });
+                        
+                        // Filter articles
+                        this.currentClubSection = section;
+                        this.filterArticles();
+                    });
+                }
+            }
+
+            setupLoadMoreButton() {
+                const loadMoreBtn = document.getElementById('loadMoreBtn');
+                loadMoreBtn.addEventListener('click', () => {
+                    this.loadMoreArticles();
+                });
+            }
+
+            // OLS 128: Updated filtering - now uses actual article categories
+            // OLS 130: Two-level filtering with club sections
+            filterArticles() {
+                // Start with all articles
+                let filtered = [...this.allArticles];
+                
+                // OLS 130: Filter by club section first
+                // Articles with 'all' or no section always show
+                if (this.currentClubSection !== 'all') {
+                    filtered = filtered.filter(article => 
+                        article.clubSection === 'all' || 
+                        article.clubSection === this.currentClubSection ||
+                        !article.clubSection // Legacy articles without section
+                    );
+                }
+                
+                // Filter by category
+                if (this.currentCategory !== 'all') {
+                    filtered = filtered.filter(article => 
+                        article.category === this.currentCategory
+                    );
+                }
+                
+                this.filteredArticles = filtered;
+                
+                // Reset display count
+                this.displayedCount = 0;
+                
+                // Clear grid
+                const grid = document.getElementById('newsArchiveGrid');
+                grid.innerHTML = '';
+                
+                // Load first batch
+                this.loadMoreArticles();
+            }
+
+            loadMoreArticles() {
+                const startIndex = this.displayedCount;
+                const endIndex = Math.min(startIndex + this.articlesPerPage, this.filteredArticles.length);
+                
+                // Get articles to display
+                const articlesToShow = this.filteredArticles.slice(startIndex, endIndex);
+                
+                // Render articles
+                articlesToShow.forEach(article => {
+                    this.renderArticleCard(article);
+                });
+                
+                // Update displayed count
+                this.displayedCount = endIndex;
+                
+                // Update UI
+                this.updateArticlesCount();
+                this.updateLoadMoreButton();
+            }
+
+            // OLS 128: Determine default match image - returns CMS image URL or null
+            getDefaultMatchImage(article) {
+                // Check if article has matchResult field
+                if (article.matchResult) {
+                    return article.matchResult === 'win' ? this.defaultWinImage : this.defaultLossImage;
+                }
+                
+                // Try to extract result from article content or title
+                const content = (article.title + ' ' + article.content).toLowerCase();
+                
+                // Look for win indicators
+                if (content.includes('win') || 
+                    content.includes('victory') || 
+                    content.includes('triumph') ||
+                    content.includes('beat')) {
+                    return this.defaultWinImage; // May be null if not configured
+                }
+                
+                // Look for loss indicators
+                if (content.includes('loss') || 
+                    content.includes('lost') || 
+                    content.includes('defeat') ||
+                    content.includes('fell to')) {
+                    return this.defaultLossImage; // May be null if not configured
+                }
+                
+                // Default to loss image if can't determine
+                return this.defaultLossImage; // May be null if not configured
+            }
+
+            // OLS 128: Get category info from CMS categories
+            getCategoryInfo(categoryId) {
+                const category = this.categories.find(c => c.id === categoryId);
+                return {
+                    name: category ? category.name : 'News',
+                    icon: category ? category.icon : '📰'
+                };
+            }
+
+            renderArticleCard(article) {
+                const grid = document.getElementById('newsArchiveGrid');
+                
+                // OLS 128: Get category info from CMS
+                const categoryInfo = this.getCategoryInfo(article.category);
+                
+                const formattedDate = new Date(article.date).toLocaleDateString('en-GB', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                
+                // Check for custom image first
+                const hasCustomImage = article.image && article.image.trim() !== '';
+                
+                // Check if it's a match report
+                const isMatchReport = article.category === 'match' || 
+                                     article.title.toLowerCase().includes('win') || 
+                                     article.title.toLowerCase().includes('loss') || 
+                                     article.title.toLowerCase().includes('vs');
+                
+                // OLS 128: Get CMS default image (may be null if not configured)
+                const defaultMatchImg = isMatchReport ? this.getDefaultMatchImage(article) : null;
+                
+                // Determine which image to show
+                let imageHTML;
+                if (hasCustomImage) {
+                    // Priority 1: Custom uploaded image
+                    imageHTML = `<img src="${article.image}" alt="${article.title}" style="width: 100%; height: 200px; object-fit: cover; object-position: center top;">`;
+                } else if (isMatchReport && defaultMatchImg) {
+                    // Priority 2: CMS default match image (only if configured)
+                    imageHTML = `<img src="${defaultMatchImg}" alt="Match Report" style="width: 100%; height: 200px; object-fit: cover; object-position: center top;">`;
+                } else {
+                    // Priority 3: Gradient placeholder with emoji (no hardcoded fallbacks)
+                    imageHTML = `<div class="placeholder-image" style="background: linear-gradient(45deg, var(--primary-green), var(--primary-maroon)); height: 200px; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem;">${categoryInfo.icon}</div>`;
+                }
+                
+                const card = document.createElement('article');
+                card.className = 'news-card';
+                card.style.cursor = 'pointer';
+                
+                card.innerHTML = `
+                    <div class="news-image">
+                        ${imageHTML}
+                    </div>
+                    <div class="news-content">
+                        <div class="news-date" style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            📅 Published On ${formattedDate}
+                        </div>
+                        <div style="background: var(--accent-gold); color: var(--primary-green); display: inline-block; padding: 0.3rem 0.8rem; border-radius: 15px; font-size: 0.8rem; font-weight: bold; margin-bottom: 0.75rem;">
+                            ${categoryInfo.icon} ${categoryInfo.name}
+                        </div>
+                        <h3 class="news-title" style="color: var(--primary-green); margin-bottom: 1rem; font-size: 1.3rem; line-height: 1.4;">
+                            ${article.title}
+                        </h3>
+                        <p class="news-excerpt" style="color: var(--text-dark); line-height: 1.6; margin-bottom: 1rem;">
+                            ${article.content.substring(0, 150)}${article.content.length > 150 ? '...' : ''}
+                        </p>
+                        <div style="color: var(--primary-maroon); font-weight: bold; font-size: 0.9rem;">
+                            Read Full Article →
+                        </div>
+                    </div>
+                `;
+                
+                // Click handler - navigate to article page
+                card.addEventListener('click', () => {
+                    sessionStorage.setItem('currentArticle', JSON.stringify(article));
+                    window.location.href = 'news-article.html';
+                });
+                
+                grid.appendChild(card);
+            }
+
+            updateArticlesCount() {
+                const countElement = document.getElementById('articlesCount');
+                const totalCount = this.filteredArticles.length;
+                const displayedCount = this.displayedCount;
+                
+                if (totalCount === 0) {
+                    countElement.textContent = 'No articles found in this category';
+                } else {
+                    countElement.textContent = `Showing ${displayedCount} of ${totalCount} articles`;
+                }
+            }
+
+            updateLoadMoreButton() {
+                const loadMoreContainer = document.getElementById('loadMoreContainer');
+                const noMoreArticles = document.getElementById('noMoreArticles');
+                const hasMore = this.displayedCount < this.filteredArticles.length;
+                
+                if (this.filteredArticles.length === 0) {
+                    loadMoreContainer.style.display = 'none';
+                    noMoreArticles.style.display = 'none';
+                } else if (hasMore) {
+                    loadMoreContainer.style.display = 'block';
+                    noMoreArticles.style.display = 'none';
+                } else {
+                    loadMoreContainer.style.display = 'none';
+                    noMoreArticles.style.display = this.displayedCount > 0 ? 'block' : 'none';
+                }
+            }
+
+            showError() {
+                const grid = document.getElementById('newsArchiveGrid');
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+                        <h3 style="color: var(--primary-maroon); margin-bottom: 1rem;">Unable to Load Articles</h3>
+                        <p style="color: var(--text-light);">Please try refreshing the page</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Load feature states first
+            await loadFeatureStates();
+            
+            // Then initialize page
+            new NewsArchivePage();
+        });
+    </script>
+
+    <!-- CMS Content Loading - NO FLASH APPROACH -->
+    <script>
+    (async function() {
+        try {
+            let settingsToApply = null;
+            let loadedFromCache = false;
+            
+            // 🚀 STEP 1: Check localStorage FIRST (instant, no flash)
+            const cachedSettings = localStorage.getItem('olrfc_site-settings');
+            if (cachedSettings) {
+                try {
+                    settingsToApply = JSON.parse(cachedSettings);
+                    loadedFromCache = true;
+                    console.log('⚡ Using cached settings (instant load, no flash)');
+                    applyContent(settingsToApply);
+                    document.body.classList.add('cms-content-loaded'); // Show content immediately
+                } catch (e) {
+                    console.warn('⚠️ Cache parse error:', e);
+                }
+            }
+            
+            // 🌐 STEP 2: Fetch fresh data from Netlify (background refresh OR first load)
+            const response = await fetch('/.netlify/functions/site-settings', {
+                method: 'GET'
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                const freshSettings = result.data || {};
+                
+                // Update localStorage cache
+                localStorage.setItem('olrfc_site-settings', JSON.stringify(freshSettings));
+                
+                // Only re-apply if content changed OR this is first load
+                if (!loadedFromCache) {
+                    console.log('📡 First load: applying fresh settings from Netlify');
+                    applyContent(freshSettings);
+                    document.body.classList.add('cms-content-loaded'); // Show content with fade-in
+                } else if (JSON.stringify(freshSettings) !== cachedSettings) {
+                    console.log('🔄 Content updated, refreshing page...');
+                    applyContent(freshSettings);
+                }
+            } else if (!loadedFromCache) {
+                // No cache AND Netlify failed - show defaults
+                console.log('⚠️ No cache, Netlify unavailable - using defaults');
+                document.body.classList.add('cms-content-loaded'); // Show defaults
+            }
+            
+            function applyContent(settingsData) {
+                // Build content map (only news fields)
+                const content = {};
+                Object.keys(settingsData).forEach(key => {
+                    if (key.startsWith('news-')) {
+                        content[key] = settingsData[key];
+                    }
+                });
+                
+                // Helper function to get content with fallback
+                const get = (key, fallback) => content[key] || fallback;
+                
+                // 1. Page Title
+                const pageTitle = get('news-page-title', 'News Archive - Old Laurentian RFC');
+                document.title = pageTitle;
+                
+                // 2. Main Heading
+                const mainHeading = document.querySelector('.news-archive-hero h1');
+                if (mainHeading) {
+                    const headingText = get('news-main-heading', '📰 News Archive');
+                    mainHeading.textContent = headingText;
+                }
+                
+                // 3. Page Description
+                const pageDescription = document.querySelector('.news-archive-hero p');
+                if (pageDescription) {
+                    const descText = get('news-page-description', 'Stay updated with all the latest news, match reports, and club updates');
+                    pageDescription.textContent = descText;
+                }
+                
+                // OLS 128: Filter buttons are now dynamically generated by NewsArchivePage
+                // from the 'news-categories' setting in site-settings
+                
+                // 10. Load More Button
+                const loadMoreBtn = document.getElementById('loadMoreBtn');
+                if (loadMoreBtn) {
+                    const btnText = get('news-loadmore-text', 'Load More Articles');
+                    loadMoreBtn.textContent = btnText;
+                }
+                
+                console.log('✅ News page CMS content applied');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error loading CMS content:', error);
+            // Show defaults even if error
+            document.body.classList.add('cms-content-loaded');
+        }
+    })();
+    </script>
+</body>
+</html>

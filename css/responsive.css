@@ -1,6 +1,18 @@
-/* Responsive Styles */
+/* ========================================
+   RESPONSIVE STYLES - OLD LAURENTIAN RFC
+   Mobile-First Optimization - Launch Oct 12, 2025
+   ======================================== */
+
+/* ========================================
+   TABLET & MOBILE - 768px and below
+   ======================================== */
 
 @media (max-width: 768px) {
+    
+    /* ========================================
+       NAVIGATION & HEADER
+       ======================================== */
+    
     .menu-toggle {
         display: block;
     }
@@ -11,10 +23,11 @@
         top: 100%;
         left: 0;
         width: 100%;
-        background: rgba(46, 80, 22, 0.95);
+        background: rgba(var(--primary-green-rgb), 0.95);
         flex-direction: column;
         padding: 1rem;
         gap: 0;
+        z-index: 1000;
     }
 
     .nav.active {
@@ -30,51 +43,1031 @@
         flex-wrap: wrap;
         position: relative;
     }
+    
+    .header {
+        padding: 0.75rem 0;
+    }
+    
+    .logo-section {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .logo {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .logo img {
+        width: 100%;
+        height: 100%;
+    }
+    
+    .club-name {
+        font-size: 1.1rem;
+    }
+    
+    .tagline {
+        font-size: 0.75rem;
+    }
+
+    /* Dropdown menus on mobile */
+    .dropdown-menu {
+        position: static;
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        box-shadow: none;
+        background: rgba(255,255,255,0.1);
+        border: none;
+        border-radius: 0;
+        margin-top: 0.5rem;
+        display: none;
+    }
+    
+    .nav-dropdown:hover .dropdown-menu,
+    .nav-dropdown.active .dropdown-menu {
+        display: block;
+    }
+    
+    .dropdown-item {
+        color: var(--white) !important;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-left: 2rem;
+    }
+    
+    .dropdown-item:hover {
+        background-color: rgba(255,255,255,0.1);
+        color: var(--accent-gold) !important;
+    }
+
+    /* ========================================
+       HERO SECTION
+       ======================================== */
+    
+    .hero {
+        height: auto;
+        min-height: 70vh;
+        margin-top: 70px;
+        padding: 3rem 0;
+    }
+    
+    .hero-content {
+        padding: 0 1rem;
+    }
 
     .hero h1 {
         font-size: 2.5rem;
+        line-height: 1.2;
+        margin-bottom: 1rem;
     }
 
     .hero p {
         font-size: 1rem;
+        line-height: 1.5;
+        margin-bottom: 1.5rem;
     }
 
-    .about-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .cta-buttons {
-        flex-direction: column;
-        align-items: center;
+    /* ========================================
+       MATCH CARDS (Latest Result & Next Fixture)
+       ======================================== */
+    
+    .match-results-section {
+        margin-bottom: 2rem;
     }
     
+    .match-cards-container {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1.5rem;
+        grid-template-columns: 1fr !important;
+    }
+    
+    .match-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 1.5rem;
+    }
+    
+    .match-card-title {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .match-teams {
+        font-size: 1.1rem;
+        line-height: 1.3;
+        margin-bottom: 1rem;
+    }
+    
+    .match-score {
+        font-size: 2.5rem;
+        margin: 1rem 0;
+    }
+    
+    .match-datetime {
+        font-size: 1.2rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .match-details {
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+    
+    .match-competition {
+        font-size: 0.85rem;
+    }
+    
+    .match-time-large {
+        font-size: 1.2rem;
+        margin-bottom: 0.75rem;
+    }
+
+    /* ========================================
+       NEWS FILTER BUTTONS
+       ======================================== */
+    
+    .news-filters,
+    .filter-buttons-container,
+    .filter-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .filter-btn {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        flex: 0 1 auto;
+    }
+    
+    .filter-btn:not(:last-child) {
+        margin-right: 0;
+    }
+
+    /* ========================================
+       TEAM FILTER BUTTONS (Fixtures Page)
+       ======================================== */
+    
+    .fixtures-team-filter {
+        padding: 1.5rem;
+    }
+    
+    .team-filter-buttons {
+        gap: 0.5rem;
+    }
+    
+    .team-filter-btn {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.6rem 1rem;
+        font-size: 0.8rem;
+    }
+
+    /* ========================================
+       NEWS & MATCH GRIDS
+       ======================================== */
+    
     .news-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem;
+        padding: 0;
+        margin-top: 1.5rem;
     }
     
     .match-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem;
+    }
+    
+    .news-card,
+    .match-card-grid {
+        width: 100%;
+        margin: 0;
+    }
+    
+    .news-card img,
+    .news-image {
+        height: 200px;
+        object-fit: cover;
+    }
+    
+    .news-content {
+        padding: 1.5rem;
+    }
+    
+    .news-title {
+        font-size: 1.2rem;
+        line-height: 1.3;
+        margin-bottom: 0.75rem;
+    }
+    
+    .news-excerpt {
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin-bottom: 1rem;
+    }
+    
+    .news-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .news-footer {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+        padding-top: 1rem;
     }
 
+    /* ========================================
+       SOCIAL MEDIA SECTIONS
+       ======================================== */
+    
+    .social-preview-section {
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .social-preview-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+    }
+    
+    .social-preview-header h3 {
+        font-size: 1.3rem;
+    }
+    
+    .social-page-info {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .social-page-info-mini {
+        gap: 0.75rem;
+    }
+    
+    .social-posts-preview,
+    .social-posts-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem;
+    }
+    
+    .social-post,
+    .social-post-mini {
+        padding: 1.25rem;
+    }
+    
+    .post-engagement {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .engagement-stats {
+        justify-content: space-around;
+        width: 100%;
+    }
+    
+    .post-header {
+        margin-bottom: 1rem;
+    }
+    
+    .post-avatar {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .post-message {
+        font-size: 0.95rem;
+        line-height: 1.5;
+    }
+
+    /* ========================================
+       ABOUT SECTION & GENERAL GRIDS
+       ======================================== */
+    
+    .about-grid {
+        grid-template-columns: 1fr !important;
+        gap: 2rem;
+    }
+    
+    .about-text {
+        font-size: 1rem;
+        line-height: 1.7;
+    }
+    
+    .about-image {
+        height: 300px;
+    }
+
+    /* ========================================
+       CTA BUTTONS
+       ======================================== */
+    
+    .cta-buttons {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        width: 100%;
+    }
+    
+    .cta-buttons .btn {
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .btn,
+    .cta-button,
+    button {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.75rem 1.5rem;
+        font-size: 0.95rem;
+    }
+
+    /* ========================================
+       STATS SECTION
+       ======================================== */
+    
+    .stats-section {
+        padding: 2.5rem 0;
+    }
+    
     .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1.5rem;
+    }
+    
+    .stat-item {
+        padding: 1rem;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
     }
 
+    /* ========================================
+       TYPOGRAPHY
+       ======================================== */
+    
     .section-title {
         font-size: 2rem;
+        padding: 0 1rem;
+        margin-bottom: 2rem;
     }
-}
+    
+    h1 {
+        font-size: 2rem;
+        line-height: 1.2;
+    }
+    
+    h2 {
+        font-size: 1.75rem;
+        line-height: 1.3;
+    }
+    
+    h3 {
+        font-size: 1.35rem;
+        line-height: 1.3;
+    }
+    
+    h4 {
+        font-size: 1.1rem;
+        line-height: 1.4;
+    }
+    
+    p, li {
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
 
-@media (max-width: 480px) {
+    /* ========================================
+       SPACING & CONTAINERS
+       ======================================== */
+    
     .container {
         padding: 0 1rem;
     }
     
-    .stats-grid {
-        grid-template-columns: 1fr;
+    section {
+        padding: 3rem 0;
+    }
+    
+    .news-section,
+    .social-media-section {
+        padding: 3rem 0;
+    }
+    
+    .match-info {
+        padding: 3rem 0;
+    }
+
+    /* ========================================
+       FOOTER
+       ======================================== */
+    
+    .footer {
+        padding: 2.5rem 0 1.5rem;
+    }
+    
+    .footer-content {
+        grid-template-columns: 1fr !important;
+        gap: 2rem;
+        text-align: center;
+    }
+    
+    .footer-section {
+        width: 100%;
+    }
+    
+    .footer-section h3 {
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+    }
+    
+    .social-icons {
+        justify-content: center;
+    }
+    
+    .footer-bottom {
+        padding-top: 1.5rem;
+        font-size: 0.9rem;
+    }
+
+    /* Hide table view completely on mobile */
+.fixtures-table-view {
+    display: none !important;
+}
+
+/* Always show card view on mobile */
+.fixtures-card-view {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem;
+}
+
+/* Optimize fixture cards for mobile */
+.fixture-card-large {
+    padding: 1.5rem;
+    margin-bottom: 0;
+}
+
+.card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.card-type {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+}
+
+.card-date {
+    font-size: 0.85rem;
+}
+
+.team-matchup {
+    font-size: 1.1rem;
+    line-height: 1.3;
+}
+
+.card-score {
+    font-size: 2rem;
+    margin: 0.75rem 0;
+}
+
+.fixture-card-large.upcoming .card-score {
+    font-size: 1.3rem;
+}
+
+.card-details {
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.card-venue {
+    justify-content: center;
+}
+
+.card-competition {
+    font-size: 0.85rem;
+    padding: 0.4rem;
+    margin-bottom: 0.75rem;
+}
+
+.card-actions {
+    flex-direction: row;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.card-actions .btn {
+    flex: 1;
+    padding: 0.65rem 1rem;
+    font-size: 0.9rem;
+}
+
+/* Summary cards - mobile optimization */
+.fixtures-summary {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.summary-card {
+    padding: 1.5rem 1rem;
+}
+
+.summary-number {
+    font-size: 2.5rem;
+}
+
+.summary-label {
+    font-size: 0.85rem;
+}
+
+.summary-detail {
+    font-size: 0.75rem;
+}
+
+/* Section headers */
+.section-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.section-title-small {
+    font-size: 1.5rem;
+}
+
+.section-count {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
+}
+
+/* View toggle buttons - hide table view option on mobile */
+.toggle-btn[data-view="table"] {
+    display: none;
+}
+
+.view-toggle {
+    justify-content: center;
+}
+
+.toggle-btn[data-view="cards"] {
+    flex: 1;
+    max-width: 200px;
+}
+}
+
+/* ========================================
+   SMALL MOBILE - 480px and below
+   ======================================== */
+
+@media (max-width: 480px) {
+    
+    /* Containers */
+    .container {
+        padding: 0 1rem;
+    }
+    
+    /* Hero */
+    .hero {
+        min-height: 60vh;
+        padding: 2rem 0;
     }
     
     .hero h1 {
         font-size: 2rem;
+    }
+    
+    .hero p {
+        font-size: 0.95rem;
+    }
+    
+    /* Typography */
+    h1 {
+        font-size: 1.75rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Stats Grid - Single Column */
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem;
+    }
+    
+    .stat-number {
+        font-size: 2.25rem;
+    }
+    
+    /* Match Cards */
+    .match-card {
+        padding: 1.25rem;
+    }
+    
+    .match-score {
+        font-size: 2.25rem;
+    }
+    
+    .match-teams {
+        font-size: 1rem;
+    }
+    
+    /* Filter Buttons */
+    .filter-btn {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.85rem;
+        min-width: 40px;
+        min-height: 40px;
+    }
+    
+    .team-filter-btn {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.85rem;
+    }
+    
+    /* News Cards */
+    .news-card img,
+    .news-image {
+        height: 180px;
+    }
+    
+    .news-content {
+        padding: 1.25rem;
+    }
+    
+    .news-title {
+        font-size: 1.1rem;
+    }
+    
+    /* Social Sections */
+    .social-preview-section {
+        padding: 1.25rem;
+    }
+    
+    .social-page-info-mini {
+        gap: 0.5rem;
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .social-post,
+    .social-post-mini {
+        padding: 1rem;
+    }
+    
+    /* About Section */
+    .about-image {
+        height: 250px;
+    }
+    
+    .about-text {
+        font-size: 0.95rem;
+    }
+    
+    /* Sections */
+    section {
+        padding: 2.5rem 0;
+    }
+    
+    .news-section,
+    .social-media-section {
+        padding: 2.5rem 0;
+    }
+    
+    /* Footer */
+    .footer {
+        padding: 2rem 0 1rem;
+    }
+    
+    .footer-section h3 {
+        font-size: 1.1rem;
+    }
+    
+    .social-icons a {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+    }
+    
+    /* Buttons */
+    .btn {
+        font-size: 0.9rem;
+        padding: 0.65rem 1.25rem;
+    }
+    
+    .cta-buttons .btn {
+        max-width: 280px;
+    }
+    
+    /* Team Filter - Full Width Buttons */
+    .team-filter-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .team-filter-btn {
+        width: 100%;
+        max-width: 280px;
+        margin: 0 auto;
+    }
+}
+
+/* ========================================
+   TABLET LANDSCAPE - 769px to 1024px
+   ======================================== */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    
+    /* Match Cards - 2 column */
+    .match-cards-container {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1.5rem;
+    }
+    
+    /* News Grid - 2 column */
+    .news-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1.75rem;
+    }
+    
+    /* Match Grid - 2 column */
+    .match-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1.75rem;
+    }
+    
+    /* Social Posts - 2 column */
+    .social-posts-preview,
+    .social-posts-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1.5rem;
+    }
+    
+    /* Stats - 3 or 4 columns */
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 1.5rem;
+    }
+    
+    /* Responsive container */
+    .container {
+        padding: 0 2rem;
+    }
+}
+
+/* ========================================
+   LANDSCAPE ORIENTATION - Mobile
+   ======================================== */
+
+@media (max-width: 768px) and (orientation: landscape) {
+    
+    /* Reduce hero height in landscape */
+    .hero {
+        min-height: 50vh;
+        padding: 2rem 0;
+    }
+    
+    .hero h1 {
+        font-size: 2.25rem;
+    }
+    
+    /* Match cards side-by-side in landscape */
+    .match-cards-container {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1rem;
+    }
+    
+    /* Stats grid - 2 columns */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    /* Adjust spacing */
+    section {
+        padding: 2rem 0;
+    }
+}
+
+/* ========================================
+   VERY SMALL SCREENS - 360px and below
+   ======================================== */
+
+@media (max-width: 360px) {
+    
+    .hero h1 {
+        font-size: 1.75rem;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+    }
+    
+    .match-score {
+        font-size: 2rem;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+    
+    .filter-btn {
+        font-size: 0.8rem;
+        padding: 0.45rem 0.75rem;
+    }
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+
+@media print {
+    .nav,
+    .menu-toggle,
+    .social-icons,
+    .filter-buttons,
+    .team-filter-buttons,
+    .btn {
+        display: none;
+    }
+    
+    .header {
+        position: static;
+        box-shadow: none;
+    }
+    
+    .hero {
+        margin-top: 0;
+        height: auto;
+        min-height: 0;
+        page-break-after: always;
+    }
+    
+    .container {
+        max-width: 100%;
+        padding: 0;
+    }
+    
+    .match-card,
+    .news-card,
+    .social-post {
+        page-break-inside: avoid;
+    }
+}
+/* ========================================
+   FIXTURES PAGE - MOBILE DROPDOWN FILTER
+   Add this to the END of your responsive.css file
+   ======================================== */
+
+@media (max-width: 768px) {
+    
+    /* ========================================
+       FIXTURES PAGE SPECIFIC
+       ======================================== */
+    
+    /* Hide button-based team selector on mobile */
+    .fixtures-controls .team-selector {
+        display: none !important;
+    }
+    
+    /* Show mobile dropdown instead */
+    .team-selector-mobile {
+        display: block !important;
+        width: 100%;
+    }
+    
+    .team-selector-mobile select {
+        width: 100%;
+        padding: 0.85rem 1rem;
+        font-size: 1rem;
+        border: 2px solid var(--primary-green);
+        border-radius: 8px;
+        background: white;
+        color: var(--primary-green);
+        font-weight: bold;
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%232e5016' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        padding-right: 2.5rem;
+    }
+    
+    .team-selector-mobile select:focus {
+        outline: none;
+        border-color: var(--primary-maroon);
+        box-shadow: 0 0 0 3px rgba(var(--primary-green-rgb), 0.1);
+    }
+    
+    .team-selector-mobile label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--primary-green);
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    
+    /* Adjust fixtures controls layout for mobile */
+    .fixtures-controls {
+        padding: 1.25rem;
+    }
+    
+    .controls-row {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    /* View toggle - full width on mobile */
+    .view-toggle {
+        width: 100%;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .toggle-btn {
+        flex: 1;
+        text-align: center;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Search filters */
+    .search-filter {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .search-input,
+    .date-filter {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+    }
+}
+
+/* Desktop - hide mobile dropdown */
+@media (min-width: 769px) {
+    .team-selector-mobile {
+        display: none !important;
+    }
+    
+    .team-selector {
+        display: flex !important;
+    }
+}
+
+/* Small mobile adjustments */
+@media (max-width: 480px) {
+    .fixtures-controls {
+        padding: 1rem;
+    }
+    
+    .team-selector-mobile select {
+        font-size: 0.95rem;
+        padding: 0.75rem 1rem;
+    }
+    
+    .toggle-btn {
+        font-size: 0.85rem;
+        padding: 0.65rem 0.75rem;
     }
 }

@@ -1,0 +1,161 @@
+// netlify/functions/migrate-players.js
+// OLS 85 - One-time migration of players from Netlify Forms to Netlify Blobs
+// DELETE THIS FILE AFTER RUNNING ONCE
+
+const { getStore } = require('@netlify/blobs');
+
+exports.handler = async (event, context) => {
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type'
+    };
+
+    try {
+        // Your existing 12 players from localStorage
+        const existingPlayers = [
+            {
+                "id": "1762353251020",
+                "name": "Harry Drake",
+                "team": "mens-1st",
+                "position": "Fullback / Wing",
+                "appearances": "0",
+                "photo": "https://res.cloudinary.com/dep5rhteb/image/upload/b_transparent/e_background_removal/v1762353359/olrfc/players/nz5dnzkatfwponrw848w.png",
+                "createdAt": "2025-11-05T14:36:00.260Z"
+            },
+            {
+                "id": "1762353106617",
+                "name": "Wilf Samsun",
+                "team": "mens-1st",
+                "position": "Second Row",
+                "appearances": "0",
+                "photo": "https://res.cloudinary.com/dep5rhteb/image/upload/b_transparent/e_background_removal/v1762353107/olrfc/players/ps2ngkrfzfrgvhdkvnmj.png",
+                "createdAt": "2025-11-05T14:31:48.249Z"
+            },
+            {
+                "id": "1762350875788",
+                "name": "Dan O'Brien",
+                "team": "mens-1st",
+                "position": "Fly-Half",
+                "appearances": "0",
+                "photo": "https://res.cloudinary.com/dep5rhteb/image/upload/b_transparent/e_background_removal/v1762350877/olrfc/players/moso3ew7if5izicgev02.png",
+                "createdAt": "2025-11-05T13:54:39.195Z"
+            },
+            {
+                "id": "1762350597352",
+                "name": "Charlie Reed",
+                "team": "mens-1st",
+                "position": "Scrum Half",
+                "appearances": "0",
+                "photo": "https://res.cloudinary.com/dep5rhteb/image/upload/b_transparent/e_background_removal/v1762350598/olrfc/players/xexjmpkhnbmub5ghmhoo.png",
+                "createdAt": "2025-11-05T13:49:59.133Z"
+            },
+            {
+                "id": "1762337001434",
+                "name": "Oscar Blunsom-Washbrook",
+                "team": "mens-1st",
+                "position": "Back Row / Hooker",
+                "appearances": "0",
+                "photo": "https://res.cloudinary.com/dep5rhteb/image/upload/b_transparent/e_background_removal/v1762350182/olrfc/players/t1r1v9r9ozm4sefcoccx.png",
+                "createdAt": "2025-11-05T13:43:03.533Z"
+            },
+            {
+                "id": "1762350002617",
+                "name": "Toby Rigg",
+                "team": "mens-1st",
+                "position": "Fullback / Wing",
+                "appearances": "0",
+                "photo": "https://res.cloudinary.com/dep5rhteb/image/upload/b_transparent/e_background_removal/v1762350003/olrfc/players/ugjpmgn7rqiubdi8mmnq.png",
+                "createdAt": "2025-11-05T13:40:04.505Z"
+            },
+            {
+                "id": "1762349758528",
+                "name": "Tristan Childs",
+                "team": "mens-1st",
+                "position": "Prop",
+                "appearances": "0",
+                "photo": "https://res.cloudinary.com/dep5rhteb/image/upload/b_transparent/e_background_removal/v1762349759/olrfc/players/g9fk9p7qoocqzdkt6cea.png",
+                "createdAt": "2025-11-05T13:36:00.342Z"
+            },
+            {
+                "id": "1762349629860",
+                "name": "Alfie Dunn",
+                "team": "mens-1st",
+                "position": "Back Row",
+                "appearances": "0",
+                "photo": "https://res.cloudinary.com/dep5rhteb/image/upload/b_transparent/e_background_removal/v1762349630/olrfc/players/gbeq1iua7ya8g8dy7dka.png",
+                "createdAt": "2025-11-05T13:33:52.035Z"
+            },
+            {
+                "id": "1760459121968",
+                "name": "Henry Fox",
+                "team": "mens-1st",
+                "position": "Hooker",
+                "appearances": "3",
+                "photo": "https://res.cloudinary.com/dep5rhteb/image/upload/b_transparent/e_background_removal/v1762349442/olrfc/players/kyjlyijqkpkhdh6qeq73.png",
+                "createdAt": "2025-11-05T13:30:43.166Z"
+            },
+            {
+                "id": "1762336577558",
+                "name": "Billy Nobes",
+                "team": "mens-1st",
+                "position": "Hooker",
+                "appearances": "0",
+                "photo": "https://res.cloudinary.com/dep5rhteb/image/upload/b_transparent/e_background_removal/v1762336578/olrfc/players/jcbflzrmoen5vbtbyfk7.png",
+                "createdAt": "2025-11-05T09:56:19.460Z"
+            },
+            {
+                "id": "1760453636178",
+                "name": "Dan Russell",
+                "team": "mens-1st",
+                "position": "Back Row / Center",
+                "appearances": "5",
+                "photo": "https://res.cloudinary.com/dep5rhteb/image/upload/b_transparent/e_background_removal/v1762335057/olrfc/players/ee9d51uok7nvbtqqmf4n.png",
+                "createdAt": "2025-11-05T09:30:58.088Z"
+            },
+            {
+                "id": "1760453699860",
+                "name": "Max Wootton",
+                "team": "mens-2nd",
+                "position": "Scrum Half",
+                "appearances": "2",
+                "photo": "",
+                "createdAt": "2025-10-14T14:54:59.869Z"
+            }
+        ];
+
+        console.log(`🏉 Migrating ${existingPlayers.length} players to Netlify Blobs...`);
+
+        const store = getStore({
+            name: 'ols-players',
+            siteID: process.env.SITE_ID,
+            token: process.env.NETLIFY_ACCESS_TOKEN
+        });
+        
+        await store.set('all-players', JSON.stringify(existingPlayers));
+
+        console.log(`✅ Successfully migrated ${existingPlayers.length} players to Netlify Blobs`);
+
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+                success: true,
+                message: `Successfully migrated ${existingPlayers.length} players`,
+                migratedCount: existingPlayers.length,
+                players: existingPlayers.map(p => ({ id: p.id, name: p.name, team: p.team }))
+            })
+        };
+
+    } catch (error) {
+        console.error('Migration error:', error);
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+                success: false,
+                error: 'Migration failed',
+                message: error.message
+            })
+        };
+    }
+};

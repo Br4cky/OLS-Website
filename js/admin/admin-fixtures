@@ -1,0 +1,409 @@
+/**
+ * Admin Fixtures Manager - OLS-WEBSITE
+ * Fixtures and results CRUD operations with cloud integration
+ */
+
+class AdminFixturesManager {
+    constructor(adminSystem) {
+        this.adminSystem = adminSystem;
+        this.formHandlerAttached = false; // ADD THIS FLAG
+        // REMOVE setupFormHandler() call from constructor
+    }
+
+    // ADD THIS METHOD - Lazy form handler initialization
+    ensureFormHandler() {
+        if (this.formHandlerAttached) return;
+        
+        const form = document.getElementById('fixtureForm');
+        if (form) {
+            form.addEventListener('submit', (e) => this.handleFixtureSubmission(e));
+            this.formHandlerAttached = true;
+            console.log('AdminFixturesManager form handler attached');
+        }
+    }
+
+    async handleFixtureSubmission(e) {
+        e.preventDefault();
+        
+        const fixtureData = {
+            id: this.adminSystem.currentEditIndex !== null ? 
+                this.adminSystem.getData('fixtures')[this.adminSystem.currentEditIndex].id : 
+                Date.now().toString(),
+            team: document.getElementById('fixtureTeam').value,
+            opponent: document.getElementById('fixtureOpponent').value.trim(),
+            dateTime: document.getElementById('fixtureDateTime').value,
+            venue: document.getElementById('fixtureVenue').value,
+            competition: document.getElementById('fixtureCompetition').value.trim(),
+            ourScore: document.getElementById('fixtureOurScore').value || null,
+            theirScore: document.getElementById('fixtureTheirScore').value || null
+        };
+
+        // Validate required fields
+        if (!fixtureData.opponent || !fixtureData.dateTime) {
+            alert('Please fill in opponent and date/time fields');
+            return;
+        }
+
+        try {
+            // 1. IMMEDIATE localStorage update
+            let existingFixtures = this.adminSystem.getData('fixtures');
+            
+            if (this.adminSystem.currentEditIndex !== null) {
+                existingFixtures[this.adminSystem.currentEditIndex] = fixtureData;
+            } else {
+                existingFixtures.unshift(fixtureData);
+            }
+            
+            this.adminSystem.saveData('fixtures', existingFixtures);
+            this.adminSystem.loadFixtures();
+            this.adminSystem.updateStats();
+            
+            const action = this.adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+            this.adminSystem.showAlert('fixtures', `Fixture ${action} successfully!`, 'success');
+            
+            // 2. BACKGROUND cloud storage
+            if (window.netlifyDataManager) {
+                try {
+                    const result = await window.netlifyDataManager.createFixture(fixtureData);
+                    
+                    if (result.success) {
+                        console.log('Fixture successfully synced to cloud storage');
+                        setTimeout(() => {
+                            this.adminSystem.showAlert('fixtures', 'Fixture synced to cloud storage ✓', 'success');
+                        }, 1000);
+                    } else {
+                        throw new Error(result.error);
+                    }
+                    
+                } catch (cloudError) {
+                    console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
+                    this.adminSystem.showAlert('fixtures', 'Fixture saved locally (cloud sync failed)', 'warning');
+                }
+            }
+            
+            closeModal('fixtureModal');
+            document.getElementById('fixtureForm').reset();
+            this.adminSystem.currentEditIndex = null;
+            
+        } catch (error) {
+            console.error('Error saving fixture:', error);
+            this.adminSystem.showAlert('fixtures', 'Error saving fixture: ' + error.message, 'danger');
+        }
+    }
+
+    editFixture(index) {
+        const fixtures = this.adminSystem.getData('fixtures');
+        const fixture = fixtures[index];
+        
+        if (!fixture) {
+            console.error('Fixture not found at index:', index);
+            return;
+        }
+        
+        this.adminSystem.currentEditIndex = index;
+        this.adminSystem.currentSection = 'fixtures';
+        
+        // CRITICAL: Ensure form handler before opening modal
+        setTimeout(() => {
+            this.ensureFormHandler();
+            
+            // Populate form with existing data
+            document.getElementById('fixtureTeam').value = fixture.team || 'mens-1st';
+            document.getElementById('fixtureOpponent').value = fixture.opponent || '';
+            document.getElementById('fixtureDateTime').value = fixture.dateTime || '';
+            document.getElementById('fixtureVenue').value = fixture.venue || 'home';
+            document.getElementById('fixtureCompetition').value = fixture.competition || '';
+            document.getElementById('fixtureOurScore').value = fixture.ourScore || '';
+            document.getElementById('fixtureTheirScore').value = fixture.theirScore || '';
+        }, 50);
+        
+        openModal('fixtureModal');
+    }
+
+    async deleteFixture(index) {
+        const fixtures = this.adminSystem.getData('fixtures');
+        const fixture = fixtures[index];
+        
+        if (!fixture) {
+            console.error('Fixture not found at index:', index);
+            return;
+        }
+        
+        if (!confirm(`Are you sure you want to delete the fixture against ${fixture.opponent}?`)) {
+            return;
+        }
+        
+        try {
+            // 1. IMMEDIATE localStorage deletion for instant UI feedback
+            fixtures.splice(index, 1);
+            this.adminSystem.saveData('fixtures', fixtures);
+            this.adminSystem.loadFixtures();
+            this.adminSystem.updateStats();
+            this.adminSystem.showAlert('fixtures', 'Fixture deleted successfully', 'success');
+            
+            // 2. BACKGROUND cloud deletion via Netlify Blobs
+            try {
+                const response = await fetch(`/.netlify/functions/fixtures?id=${fixture.id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    console.log('Fixture deleted from cloud storage:', fixture.id);
+                    setTimeout(() => {
+                        this.adminSystem.showAlert('fixtures', 'Fixture deleted from cloud storage ✓', 'success');
+                    }, 1000);
+                } else {
+                    throw new Error(result.error || 'Cloud deletion failed');
+                }
+                
+            } catch (cloudError) {
+                console.warn('Cloud deletion failed, but localStorage deletion succeeded:', cloudError);
+                this.adminSystem.showAlert('fixtures', 'Fixture deleted locally (cloud sync failed)', 'warning');
+            }
+            
+        } catch (error) {
+            console.error('Error deleting fixture:', error);
+            this.adminSystem.showAlert('fixtures', 'Error deleting fixture: ' + error.message, 'danger');
+        }
+    }
+
+    duplicateFixture(index) {
+        const fixtures = this.adminSystem.getData('fixtures');
+        const fixture = fixtures[index];
+        
+        if (!fixture) {
+            console.error('Fixture not found at index:', index);
+            return;
+        }
+        
+        // Create duplicate with modified details
+        const duplicatedFixture = {
+            ...fixture,
+            id: Date.now().toString(),
+            opponent: fixture.opponent + ' (Copy)',
+            ourScore: null,
+            theirScore: null,
+            dateTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16) // Next week
+        };
+        
+        fixtures.unshift(duplicatedFixture);
+        this.adminSystem.saveData('fixtures', fixtures);
+        this.adminSystem.loadFixtures();
+        this.adminSystem.updateStats();
+        
+        this.adminSystem.showAlert('fixtures', 'Fixture duplicated successfully', 'success');
+    }
+
+    // Fixture analysis and filtering methods
+    getFixturesByTeam(team) {
+        const fixtures = this.adminSystem.getData('fixtures');
+        if (team === 'all') {
+            return fixtures;
+        }
+        return fixtures.filter(fixture => fixture.team === team);
+    }
+
+    getUpcomingFixtures() {
+        const fixtures = this.adminSystem.getData('fixtures');
+        const now = new Date();
+        
+        return fixtures.filter(fixture => {
+            const fixtureDate = new Date(fixture.dateTime);
+            return fixtureDate > now && (fixture.ourScore === null || fixture.theirScore === null);
+        }).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+    }
+
+    getRecentResults(limit = 10) {
+        const fixtures = this.adminSystem.getData('fixtures');
+        const now = new Date();
+        
+        return fixtures.filter(fixture => {
+            const fixtureDate = new Date(fixture.dateTime);
+            return fixtureDate <= now && fixture.ourScore !== null && fixture.theirScore !== null;
+        })
+        .sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime))
+        .slice(0, limit);
+    }
+
+    getTeamRecord(team) {
+        const fixtures = this.getFixturesByTeam(team);
+        const playedFixtures = fixtures.filter(f => f.ourScore !== null && f.theirScore !== null);
+        
+        let wins = 0, losses = 0, draws = 0;
+        
+        playedFixtures.forEach(fixture => {
+            const ourScore = parseInt(fixture.ourScore);
+            const theirScore = parseInt(fixture.theirScore);
+            
+            if (ourScore > theirScore) {
+                wins++;
+            } else if (ourScore < theirScore) {
+                losses++;
+            } else {
+                draws++;
+            }
+        });
+        
+        return {
+            played: playedFixtures.length,
+            wins,
+            losses,
+            draws,
+            winPercentage: playedFixtures.length > 0 ? Math.round((wins / playedFixtures.length) * 100) : 0
+        };
+    }
+
+    addResult(index, ourScore, theirScore) {
+        const fixtures = this.adminSystem.getData('fixtures');
+        const fixture = fixtures[index];
+        
+        if (!fixture) {
+            console.error('Fixture not found at index:', index);
+            return;
+        }
+        
+        fixture.ourScore = parseInt(ourScore);
+        fixture.theirScore = parseInt(theirScore);
+        
+        this.adminSystem.saveData('fixtures', fixtures);
+        this.adminSystem.loadFixtures();
+        
+        const result = ourScore > theirScore ? 'Win' : ourScore < theirScore ? 'Loss' : 'Draw';
+        this.adminSystem.showAlert('fixtures', `Result added: ${result} (${ourScore}-${theirScore})`, 'success');
+    }
+
+    removeResult(index) {
+        const fixtures = this.adminSystem.getData('fixtures');
+        const fixture = fixtures[index];
+        
+        if (!fixture) {
+            console.error('Fixture not found at index:', index);
+            return;
+        }
+        
+        if (confirm(`Remove result for ${fixture.opponent}?`)) {
+            fixture.ourScore = null;
+            fixture.theirScore = null;
+            
+            this.adminSystem.saveData('fixtures', fixtures);
+            this.adminSystem.loadFixtures();
+            
+            this.adminSystem.showAlert('fixtures', 'Result removed successfully', 'success');
+        }
+    }
+
+    // Export fixtures for specific team or date range
+    exportFixtures(options = {}) {
+        let fixtures = this.adminSystem.getData('fixtures');
+        
+        if (options.team && options.team !== 'all') {
+            fixtures = fixtures.filter(f => f.team === options.team);
+        }
+        
+        if (options.dateFrom) {
+            fixtures = fixtures.filter(f => new Date(f.dateTime) >= new Date(options.dateFrom));
+        }
+        
+        if (options.dateTo) {
+            fixtures = fixtures.filter(f => new Date(f.dateTime) <= new Date(options.dateTo));
+        }
+        
+        const csvData = this.convertFixturesToCSV(fixtures);
+        const filename = `olrfc_fixtures_${options.team || 'all'}_${new Date().toISOString().split('T')[0]}.csv`;
+        
+        this.downloadCSV(csvData, filename);
+    }
+
+    convertFixturesToCSV(fixtures) {
+        const headers = ['Team', 'Opponent', 'Date', 'Time', 'Venue', 'Competition', 'Our Score', 'Their Score', 'Result'];
+        let csv = headers.join(',') + '\n';
+        
+        fixtures.forEach(fixture => {
+            const date = new Date(fixture.dateTime);
+            const result = fixture.ourScore !== null && fixture.theirScore !== null
+                ? fixture.ourScore > fixture.theirScore ? 'Win' 
+                  : fixture.ourScore < fixture.theirScore ? 'Loss' : 'Draw'
+                : 'Not Played';
+                
+            const row = [
+                this.adminSystem.formatTeam(fixture.team),
+                fixture.opponent,
+                date.toDateString(),
+                date.toTimeString().substr(0, 5),
+                fixture.venue,
+                fixture.competition || '',
+                fixture.ourScore || '',
+                fixture.theirScore || '',
+                result
+            ];
+            
+            csv += row.map(field => `"${field}"`).join(',') + '\n';
+        });
+        
+        return csv;
+    }
+
+    downloadCSV(csvContent, filename) {
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+    }
+}
+
+// ============================================
+// INITIALIZE AND GLOBAL EXPORTS
+// ============================================
+
+let adminFixturesManager;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.adminSystem) {
+        adminFixturesManager = new AdminFixturesManager(window.adminSystem);
+        console.log('Admin Fixtures Manager initialized');
+    }
+});
+
+// Export all CRUD functions to global scope for HTML onclick compatibility
+window.editFixture = function(index) {
+    if (adminFixturesManager) {
+        adminFixturesManager.editFixture(index);
+    } else {
+        console.error('AdminFixturesManager not initialized');
+    }
+};
+
+window.deleteFixture = function(index) {
+    if (adminFixturesManager) {
+        adminFixturesManager.deleteFixture(index);
+    } else {
+        console.error('AdminFixturesManager not initialized');
+    }
+};
+
+window.duplicateFixture = function(index) {
+    if (adminFixturesManager) {
+        adminFixturesManager.duplicateFixture(index);
+    } else {
+        console.error('AdminFixturesManager not initialized');
+    }
+};
+
+window.addFixtureResult = function(index, ourScore, theirScore) {
+    if (adminFixturesManager) {
+        adminFixturesManager.addResult(index, ourScore, theirScore);
+    } else {
+        console.error('AdminFixturesManager not initialized');
+    }
+};
+
+window.removeFixtureResult = function(index) {
+    if (adminFixturesManager) {
+        adminFixturesManager.removeResult(index);
+    } else {
+        console.error('AdminFixturesManager not initialized');
+    }
+};

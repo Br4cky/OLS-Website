@@ -3,1077 +3,789 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sponsors - Old Laurentian RFC</title>
+    <title>Our Sponsors</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/responsive.css">
     <style>
-        :root {
-            --primary-green: #2e5016;
-            --primary-maroon: #8b1538;
-            --accent-gold: #f4c430;
-            --text-dark: #333;
-            --text-light: #666;
-            --bg-light: #f8f9fa;
-            --white: #ffffff;
-            --shadow: 0 5px 15px rgba(0,0,0,0.1);
-            --transition: all 0.3s ease;
+        /* Admin controlled elements */
+        .nav-item[data-admin-controlled="true"] {
+            display: none;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        .nav-item[data-admin-controlled="true"].admin-enabled {
+            display: block;
         }
 
         body {
-            font-family: 'Arial', sans-serif;
-            line-height: 1.6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(180deg, var(--bg-light) 0%, rgba(var(--primary-green-rgb), 0.12) 50%, rgba(var(--primary-maroon-rgb), 0.12) 100%);
             color: var(--text-dark);
-            background: var(--bg-light);
+            min-height: 100vh;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem;
-        }
-
-        /* Header Styles */
-        .header {
-            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
-            color: var(--white);
-            padding: 1rem 0;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
-
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 2rem;
-        }
-
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .logo {
-            width: 50px;
-            height: 50px;
-            background: var(--white);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 5px;
-        }
-
-        .nav {
-            display: flex;
-            gap: 2rem;
-        }
-
-        .nav a {
-            color: var(--white);
-            text-decoration: none;
-            font-weight: 500;
-            transition: var(--transition);
-            padding: 0.5rem;
-        }
-
-        .nav a:hover {
-            color: var(--accent-gold);
-        }
-
-        /* Sponsor Tickertape Banner */
-        .sponsor-ticker {
-            background: var(--white);
-            padding: 1rem 0;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            position: relative;
-            border-top: 3px solid var(--accent-gold);
-            border-bottom: 3px solid var(--accent-gold);
-        }
-
-        .ticker-wrapper {
-            display: flex;
-            animation: scroll 30s linear infinite;
-            gap: 3rem;
-            align-items: center;
-        }
-
-        .ticker-wrapper:hover {
-            animation-play-state: paused;
-        }
-
-        .sponsor-logo {
-            flex: 0 0 auto;
-            height: 60px;
-            min-width: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.5rem;
-            background: var(--white);
-            border-radius: 8px;
-            transition: transform 0.3s ease;
-            cursor: pointer;
-            filter: grayscale(20%) opacity(0.8);
-        }
-
-        .sponsor-logo:hover {
-            transform: scale(1.1);
-            filter: grayscale(0%) opacity(1);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .sponsor-logo img {
-            max-height: 50px;
-            max-width: 100px;
-            object-fit: contain;
-        }
-
-        .sponsor-logo.placeholder {
-            background: linear-gradient(45deg, var(--primary-green), var(--primary-maroon));
-            color: white;
-            font-weight: bold;
-            font-size: 0.8rem;
-            text-align: center;
-        }
-
-        @keyframes scroll {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
-
-        /* Main Page Styles */
+        /* Page Header */
         .page-header {
             background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
             color: white;
-            padding: 4rem 0;
+            padding: 6rem 0 3rem;
             text-align: center;
+            margin-top: 80px;
         }
 
-        .page-title {
+        .page-header h1 {
+            margin: 0;
             font-size: 3rem;
-            margin-bottom: 1rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-weight: bold;
         }
 
-        .page-subtitle {
+        .page-header p {
+            margin: 1rem 0 0;
             font-size: 1.2rem;
             opacity: 0.9;
         }
 
-        .sponsors-section {
-            padding: 4rem 0;
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
         }
 
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 3rem;
-            color: var(--primary-green);
+        /* Sponsors List Section */
+        .sponsors-list-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
         }
 
-        .tier-section {
-            margin-bottom: 4rem;
-        }
-
-        .tier-header {
-            text-align: center;
+        .sponsors-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 2rem;
-            padding: 1rem;
-            border-radius: 15px;
-            color: white;
-            font-size: 1.5rem;
+            border-bottom: 3px solid var(--primary-maroon);
+            padding-bottom: 1rem;
+        }
+
+        .sponsors-list-title {
+            font-size: 2rem;
+            color: var(--primary-green);
             font-weight: bold;
         }
 
-        .tier-platinum { background: linear-gradient(45deg, #e5e4e2, #c0c0c0); color: #333; }
-        .tier-gold { background: linear-gradient(45deg, #ffd700, #ffed4e); color: #333; }
-        .tier-silver { background: linear-gradient(45deg, #c0c0c0, #a8a8a8); color: #333; }
-        .tier-bronze { background: linear-gradient(45deg, #cd7f32, #b8860b); color: white; }
-
-        .sponsors-grid {
-            display: grid;
-            gap: 2rem;
-            margin-bottom: 3rem;
+        .sponsor-count {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            font-weight: normal;
         }
 
-        .grid-platinum { grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); }
-        .grid-gold { grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); }
-        .grid-silver { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-        .grid-bronze { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+        /* Sponsors Grid */
+        .sponsors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+        }
 
         .sponsor-card {
             background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: var(--shadow);
-            text-align: center;
-            transition: transform 0.3s ease;
-            border: 3px solid transparent;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border-left: 5px solid var(--accent-gold);
+            cursor: pointer;
+            position: relative;
         }
 
         .sponsor-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
         }
 
-        .sponsor-card.platinum { border-color: #e5e4e2; }
-        .sponsor-card.gold { border-color: #ffd700; }
-        .sponsor-card.silver { border-color: #c0c0c0; }
-        .sponsor-card.bronze { border-color: #cd7f32; }
-
-        .sponsor-logo-large {
-            height: 120px;
+        .sponsor-logo-display {
             width: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 1.5rem;
             background: var(--bg-light);
-            border-radius: 10px;
-            padding: 1rem;
+            overflow: hidden;
         }
 
-        .sponsor-logo-large img {
-            max-height: 100px;
+        .sponsor-logo-display img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .sponsor-logo-display.no-logo {
+            background: linear-gradient(45deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            font-size: 2.5rem;
+            font-weight: bold;
+            min-height: 150px;
+        }
+
+        .sponsor-card-body {
+            padding: 1.5rem;
+        }
+
+        .sponsor-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--primary-green);
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .sponsor-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .sponsor-detail {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            padding: 0.5rem;
+            background: var(--bg-light);
+            border-radius: 8px;
+        }
+
+        .sponsor-detail-icon {
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sponsor-detail a {
+            color: var(--text-dark);
+            text-decoration: none;
+            word-break: break-word;
+        }
+
+        .sponsor-detail a:hover {
+            color: var(--primary-maroon);
+        }
+
+        /* Loading State */
+        .loading-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-light);
+        }
+
+        .spinner {
+            border: 4px solid var(--bg-light);
+            border-top: 4px solid var(--primary-green);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-light);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state-text {
+            font-size: 1.3rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 2rem;
+            border-bottom: 2px solid var(--bg-light);
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: var(--text-light);
+            transition: color 0.3s;
+        }
+
+        .modal-close:hover {
+            color: var(--primary-maroon);
+        }
+
+        .modal-sponsor-name {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-green);
+            margin: 0;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .modal-logo {
+            height: 200px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-light);
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            padding: 2rem;
+        }
+
+        .modal-logo img {
+            max-height: 100%;
             max-width: 100%;
             object-fit: contain;
         }
 
-        .sponsor-logo-large.placeholder {
+        .modal-logo.no-logo {
             background: linear-gradient(45deg, var(--primary-green), var(--primary-maroon));
             color: white;
+            font-size: 4rem;
             font-weight: bold;
-            font-size: 1.1rem;
         }
 
-        .sponsor-name {
-            font-size: 1.3rem;
-            font-weight: bold;
-            color: var(--primary-green);
-            margin-bottom: 1rem;
-        }
-
-        .sponsor-contact {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .sponsor-contact span {
-            font-size: 0.9rem;
-            color: var(--text-light);
-        }
-
-        .sponsor-website {
-            display: inline-block;
-            background: var(--accent-gold);
-            color: var(--primary-green);
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: transform 0.3s ease;
-        }
-
-        .sponsor-website:hover {
-            transform: translateY(-2px);
-        }
-
-        /* Admin Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 10000;
-        }
-
-        .modal-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 2rem;
-            border-radius: 15px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--bg-light);
-        }
-
-        .close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 50%;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: bold;
-            color: var(--text-dark);
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 0.8rem;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: var(--primary-green);
-        }
-
-        .file-upload {
-            border: 2px dashed #ddd;
-            padding: 2rem;
-            text-align: center;
-            border-radius: 8px;
-            background: var(--bg-light);
-        }
-
-        .btn {
-            padding: 0.8rem 1.5rem;
-            border: none;
-            border-radius: 25px;
-            background: var(--primary-green);
-            color: white;
-            cursor: pointer;
-            font-weight: bold;
-            transition: var(--transition);
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn:hover {
-            background: var(--primary-maroon);
-            transform: translateY(-2px);
-        }
-
-        .btn-admin {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background: var(--accent-gold);
-            color: var(--primary-green);
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            font-size: 1.2rem;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            z-index: 1000;
-        }
-
-        .admin-section {
-            background: white;
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: var(--shadow);
-            margin: 2rem 0;
-            display: none;
-        }
-
-        .admin-section.active {
-            display: block;
-        }
-
-        .sponsors-list {
+        .modal-details {
             display: flex;
             flex-direction: column;
             gap: 1rem;
         }
 
-        .sponsor-item {
+        .modal-detail {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+            gap: 1rem;
             padding: 1rem;
             background: var(--bg-light);
-            border-radius: 10px;
+            border-radius: 8px;
         }
 
-        .sponsor-actions {
-            display: flex;
-            gap: 0.5rem;
+        .modal-detail-icon {
+            font-size: 1.5rem;
+            width: 30px;
+            text-align: center;
+            flex-shrink: 0;
         }
 
-        .btn-small {
-            padding: 0.4rem 0.8rem;
-            font-size: 0.9rem;
+        .modal-detail-content {
+            flex: 1;
         }
 
-        .btn-edit {
-            background: var(--accent-gold);
+        .modal-detail-label {
+            font-weight: bold;
             color: var(--primary-green);
+            display: block;
+            margin-bottom: 0.25rem;
         }
 
-        .btn-delete {
-            background: #dc3545;
-            color: white;
+        .modal-detail-text {
+            color: var(--text-dark);
+            word-break: break-word;
         }
 
-        /* Responsive */
+        .modal-detail-text a {
+            color: var(--primary-maroon);
+            text-decoration: none;
+        }
+
+        .modal-detail-text a:hover {
+            text-decoration: underline;
+        }
+
         @media (max-width: 768px) {
-            .page-title {
+            .page-header h1 {
                 font-size: 2rem;
             }
 
             .sponsors-grid {
-                grid-template-columns: 1fr !important;
+                grid-template-columns: 1fr;
             }
 
-            .sponsor-card {
-                padding: 1.5rem;
+            .filter-buttons {
+                width: 100%;
             }
 
-            .ticker-wrapper {
-                gap: 2rem;
-            }
-
-            .sponsor-logo {
-                min-width: 100px;
-                height: 50px;
+            .filter-btn {
+                flex: 1;
+                min-width: 120px;
+                justify-content: center;
             }
 
             .modal-content {
-                width: 95%;
-                padding: 1.5rem;
+                margin: 1rem;
+            }
+
+            .sponsors-list-header {
+                flex-direction: column;
+                align-items: flex-start;
             }
         }
     </style>
 </head>
 <body>
     <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <div class="logo-section">
-                <div class="logo">
-                    <span style="font-weight: bold; color: var(--primary-green);">OLS</span>
-                </div>
-                <div>
-                    <div style="font-size: 1.2rem; font-weight: bold;">Old Laurentian RFC</div>
-                    <div style="font-size: 0.8rem; opacity: 0.9;">Our Club Sponsors</div>
-                </div>
-            </div>
-            <nav class="nav">
-                <a href="../index.html">Home</a>
-                <a href="#sponsors">Sponsors</a>
-                <a href="#contact">Contact</a>
-                <a href="../index.html#about">About</a>
-            </nav>
-        </div>
-    </header>
-
-    <!-- Sponsor Tickertape Banner -->
-    <div class="sponsor-ticker">
-        <div class="ticker-wrapper" id="sponsorTicker">
-            <!-- Sponsors will be loaded here dynamically -->
-            <div class="sponsor-logo placeholder">Local Business</div>
-            <div class="sponsor-logo placeholder">Rugby Supplier</div>
-            <div class="sponsor-logo placeholder">Community Partner</div>
-            <div class="sponsor-logo placeholder">Equipment Sponsor</div>
-            <div class="sponsor-logo placeholder">Training Partner</div>
-            <div class="sponsor-logo placeholder">Match Day Sponsor</div>
-            <!-- Duplicate for seamless scroll -->
-            <div class="sponsor-logo placeholder">Local Business</div>
-            <div class="sponsor-logo placeholder">Rugby Supplier</div>
-            <div class="sponsor-logo placeholder">Community Partner</div>
-            <div class="sponsor-logo placeholder">Equipment Sponsor</div>
-            <div class="sponsor-logo placeholder">Training Partner</div>
-            <div class="sponsor-logo placeholder">Match Day Sponsor</div>
-        </div>
-    </div>
+    <div id="header-placeholder" data-page="sponsors"></div>
 
     <!-- Page Header -->
     <section class="page-header">
         <div class="container">
-            <h1 class="page-title">Our Sponsors</h1>
-            <p class="page-subtitle">Supporting Old Laurentian RFC - Thank you to our valued partners</p>
+            <h1>Our Sponsors</h1>
+            <p>Thank you to our sponsors for their support</p>
         </div>
     </section>
 
-    <!-- Sponsors Section -->
-    <section class="sponsors-section" id="sponsors">
-        <div class="container">
-            <!-- Platinum Sponsors -->
-            <div class="tier-section" id="platinum-tier" style="display: none;">
-                <div class="tier-header tier-platinum">
-                    💎 Platinum Sponsors
-                </div>
-                <div class="sponsors-grid grid-platinum" id="platinum-sponsors">
-                    <!-- Platinum sponsors will be loaded here -->
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sponsors List Section -->
+        <div class="sponsors-list-section">
+            <div class="sponsors-list-header">
+                <div class="sponsors-list-title">
+                    Our Sponsors <span class="sponsor-count" id="sponsor-count">(0)</span>
                 </div>
             </div>
 
-            <!-- Gold Sponsors -->
-            <div class="tier-section" id="gold-tier" style="display: none;">
-                <div class="tier-header tier-gold">
-                    🥇 Gold Sponsors
-                </div>
-                <div class="sponsors-grid grid-gold" id="gold-sponsors">
-                    <!-- Gold sponsors will be loaded here -->
-                </div>
+            <!-- Loading State -->
+            <div id="loading" class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading sponsors...</p>
             </div>
 
-            <!-- Silver Sponsors -->
-            <div class="tier-section" id="silver-tier" style="display: none;">
-                <div class="tier-header tier-silver">
-                    🥈 Silver Sponsors
-                </div>
-                <div class="sponsors-grid grid-silver" id="silver-sponsors">
-                    <!-- Silver sponsors will be loaded here -->
-                </div>
-            </div>
+            <!-- Sponsors Grid -->
+            <div class="sponsors-grid" id="sponsors-grid" style="display: none;"></div>
 
-            <!-- Bronze Sponsors -->
-            <div class="tier-section" id="bronze-tier" style="display: none;">
-                <div class="tier-header tier-bronze">
-                    🥉 Bronze Sponsors
-                </div>
-                <div class="sponsors-grid grid-bronze" id="bronze-sponsors">
-                    <!-- Bronze sponsors will be loaded here -->
-                </div>
-            </div>
-
-            <!-- Default message when no sponsors -->
-            <div id="no-sponsors" class="tier-section">
-                <div style="text-align: center; padding: 3rem; background: white; border-radius: 15px; box-shadow: var(--shadow);">
-                    <h3 style="color: var(--primary-green); margin-bottom: 1rem;">🤝 Become a Sponsor</h3>
-                    <p style="color: var(--text-light); margin-bottom: 2rem;">Support Old Laurentian RFC and gain exposure to our rugby community.</p>
-                    <a href="mailto:sponsors@olrfc.com" class="btn">Contact Us About Sponsorship</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Admin Button (only visible to admins) -->
-    <button class="btn-admin" id="adminBtn" onclick="toggleAdminPanel()" style="display: none;">⚙️</button>
-
-    <!-- Admin Panel -->
-    <div class="admin-section" id="adminPanel">
-        <div class="container">
-            <h2 style="color: var(--primary-green); margin-bottom: 2rem;">🛠️ Sponsor Management</h2>
-            
-            <div style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
-                <button class="btn" onclick="openModal('sponsorModal')">➕ Add Sponsor</button>
-                <button class="btn" onclick="exportSponsors()">📤 Export Data</button>
-                <button class="btn" onclick="hideAdminPanel()">❌ Hide Panel</button>
-            </div>
-
-            <div class="sponsors-list" id="adminSponsorsList">
-                <!-- Admin sponsors list will be loaded here -->
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">🤝</div>
+                <p class="empty-state-text">No sponsors to display at this time.</p>
             </div>
         </div>
     </div>
 
     <!-- Sponsor Modal -->
-    <div id="sponsorModal" class="modal">
+    <div id="sponsor-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Add/Edit Sponsor</h3>
-                <button class="close" onclick="closeModal('sponsorModal')">&times;</button>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+                <h2 class="modal-sponsor-name" id="modal-name"></h2>
             </div>
-            <form id="sponsorForm">
-                <div class="form-group">
-                    <label>Company Name:</label>
-                    <input type="text" id="sponsorName" required placeholder="Enter company name">
-                </div>
-                
-                <div class="form-group">
-                    <label>Sponsor Tier:</label>
-                    <select id="sponsorTier" required>
-                        <option value="bronze">Bronze</option>
-                        <option value="silver">Silver</option>
-                        <option value="gold">Gold</option>
-                        <option value="platinum">Platinum</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Phone Number:</label>
-                    <input type="tel" id="sponsorPhone" placeholder="01234 567890">
-                </div>
-
-                <div class="form-group">
-                    <label>Email Address:</label>
-                    <input type="email" id="sponsorEmail" placeholder="contact@company.com">
-                </div>
-
-                <div class="form-group">
-                    <label>Website URL:</label>
-                    <input type="url" id="sponsorWebsite" placeholder="https://www.company.com">
-                </div>
-
-                <div class="form-group">
-                    <div class="file-upload">
-                        <p>📎 Upload Company Logo</p>
-                        <input type="file" id="sponsorLogo" accept="image/*">
-                        <p><small>PNG, JPG, or SVG files recommended</small></p>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 0.5rem;">
-                        <input type="checkbox" id="sponsorActive" checked>
-                        Active Sponsor (show on website)
-                    </label>
-                </div>
-
-                <button type="submit" class="btn" style="width: 100%;">💾 Save Sponsor</button>
-            </form>
+            <div class="modal-body">
+                <div class="modal-logo" id="modal-logo"></div>
+                <div class="modal-details" id="modal-details"></div>
+            </div>
         </div>
     </div>
 
+    <!-- Footer -->
+    <div id="footer-placeholder" data-page="sponsors"></div>
+
+    <!-- Scripts -->
+    <script src="../js/header.js"></script>
+    <script src="../js/footer.js"></script>
+    <script src="../js/color-manager.js"></script>
+
     <script>
-        // Sponsor Management System
-        class SponsorManager {
-            constructor() {
-                this.currentEditIndex = null;
-                this.init();
-            }
-
-            init() {
-                this.loadSponsors();
-                this.setupEventListeners();
-                this.checkAdminAccess();
-            }
-
-            checkAdminAccess() {
-                // Check if user has admin access (same system as main site)
-                const session = localStorage.getItem('olrfc_admin_session');
-                if (session) {
-                    document.getElementById('adminBtn').style.display = 'block';
-                }
-            }
-
-            getData() {
-                try {
-                    return JSON.parse(localStorage.getItem('olrfc_sponsors')) || [];
-                } catch (e) {
-                    console.error('Error loading sponsors:', e);
-                    return [];
-                }
-            }
-
-            saveData(sponsors) {
-                try {
-                    localStorage.setItem('olrfc_sponsors', JSON.stringify(sponsors));
-                    this.loadSponsors();
-                    this.showAlert('Sponsors updated successfully!', 'success');
-                } catch (e) {
-                    console.error('Error saving sponsors:', e);
-                    this.showAlert('Error saving sponsors. Storage might be full.', 'error');
-                }
-            }
-
-            loadSponsors() {
-                const sponsors = this.getData().filter(sponsor => sponsor.active);
+        // Load feature states from admin settings
+        async function loadFeatureStates() {
+            try {
+                const response = await fetch('/.netlify/functions/site-settings', {
+                    method: 'GET'
+                });
                 
-                // Load tickertape
-                this.loadTickertape(sponsors);
-                
-                // Load main sponsor sections
-                this.loadSponsorSections(sponsors);
-                
-                // Load admin list
-                this.loadAdminList();
-            }
-
-            loadTickertape(sponsors) {
-                const ticker = document.getElementById('sponsorTicker');
-                ticker.innerHTML = '';
-
-                if (sponsors.length === 0) {
-                    // Show placeholder sponsors
-                    ticker.innerHTML = `
-                        <div class="sponsor-logo placeholder">Local Business</div>
-                        <div class="sponsor-logo placeholder">Rugby Supplier</div>
-                        <div class="sponsor-logo placeholder">Community Partner</div>
-                        <div class="sponsor-logo placeholder">Equipment Sponsor</div>
-                        <div class="sponsor-logo placeholder">Training Partner</div>
-                        <div class="sponsor-logo placeholder">Match Day Sponsor</div>
-                        <div class="sponsor-logo placeholder">Local Business</div>
-                        <div class="sponsor-logo placeholder">Rugby Supplier</div>
-                        <div class="sponsor-logo placeholder">Community Partner</div>
-                        <div class="sponsor-logo placeholder">Equipment Sponsor</div>
-                        <div class="sponsor-logo placeholder">Training Partner</div>
-                        <div class="sponsor-logo placeholder">Match Day Sponsor</div>
-                    `;
-                    return;
+                if (!response.ok) {
+                    throw new Error('Failed to fetch settings');
                 }
-
-                // Create sponsor logos (duplicate for seamless scroll)
-                const sponsorLogos = [...sponsors, ...sponsors].map(sponsor => {
-                    const logoDiv = document.createElement('div');
-                    logoDiv.className = 'sponsor-logo';
-                    logoDiv.onclick = () => {
-                        if (sponsor.website) {
-                            window.open(sponsor.website, '_blank');
+                
+                const result = await response.json();
+                const settings = result.data || {};
+                
+                const featureStates = {
+                    shop: false,
+                    events: false,
+                    members: false,
+                    payments: false,
+                    sponsors: false
+                };
+                
+                // Extract feature states from settings object
+                Object.keys(settings).forEach(key => {
+                    if (key.startsWith('feature-')) {
+                        const featureName = key.replace('feature-', '');
+                        if (featureStates.hasOwnProperty(featureName)) {
+                            featureStates[featureName] = settings[key] === 'true';
                         }
-                    };
-
-                    if (sponsor.logo) {
-                        logoDiv.innerHTML = `<img src="${sponsor.logo}" alt="${sponsor.name}">`;
-                    } else {
-                        logoDiv.className += ' placeholder';
-                        logoDiv.textContent = sponsor.name;
-                    }
-
-                    return logoDiv;
-                });
-
-                sponsorLogos.forEach(logo => ticker.appendChild(logo));
-            }
-
-            loadSponsorSections(sponsors) {
-                const tiers = ['platinum', 'gold', 'silver', 'bronze'];
-                let hasSponsors = false;
-
-                tiers.forEach(tier => {
-                    const tierSponsors = sponsors.filter(sponsor => sponsor.tier === tier);
-                    const tierSection = document.getElementById(`${tier}-tier`);
-                    const tierGrid = document.getElementById(`${tier}-sponsors`);
-
-                    if (tierSponsors.length > 0) {
-                        hasSponsors = true;
-                        tierSection.style.display = 'block';
-                        tierGrid.innerHTML = '';
-
-                        tierSponsors.forEach(sponsor => {
-                            const sponsorCard = this.createSponsorCard(sponsor, tier);
-                            tierGrid.appendChild(sponsorCard);
-                        });
-                    } else {
-                        tierSection.style.display = 'none';
                     }
                 });
-
-                // Show/hide default message
-                document.getElementById('no-sponsors').style.display = hasSponsors ? 'none' : 'block';
+                
+                window.featureStates = featureStates;
+                
+                // Apply saved states to navigation
+                Object.keys(featureStates).forEach(feature => {
+                    const navItems = document.querySelectorAll(`[data-admin-controlled="true"][data-feature="${feature}"]`);
+                    navItems.forEach(item => {
+                        item.classList.toggle('admin-enabled', featureStates[feature]);
+                    });
+                });
+                
+                return featureStates;
+                
+            } catch (error) {
+                console.error('❌ Error loading feature states:', error);
+                
+                const fallbackStates = {
+                    shop: false,
+                    events: false,
+                    members: false,
+                    payments: false,
+                    sponsors: true
+                };
+                
+                window.featureStates = fallbackStates;
+                return fallbackStates;
             }
+        }
 
-            createSponsorCard(sponsor, tier) {
-                const card = document.createElement('div');
-                card.className = `sponsor-card ${tier}`;
+        let allSponsors = [];
 
-                const logoHtml = sponsor.logo 
-                    ? `<img src="${sponsor.logo}" alt="${sponsor.name}">`
-                    : sponsor.name;
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
 
-                const websiteButton = sponsor.website 
-                    ? `<a href="${sponsor.website}" target="_blank" class="sponsor-website">Visit Website</a>`
-                    : '';
+        async function loadSponsors() {
+            try {
+                console.log('📥 Loading sponsors from localStorage...');
+                
+                const sponsors = JSON.parse(localStorage.getItem('olrfc_sponsors') || '[]');
+                allSponsors = sponsors.filter(s => s.active === true || s.active === 'true');
+                
+                console.log(`✅ Loaded ${allSponsors.length} active sponsors`);
+                
+                displaySponsors();
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('sponsors-grid').style.display = 'grid';
+                
+            } catch (error) {
+                console.error('Error loading sponsors:', error);
+                document.getElementById('loading').innerHTML = `
+                    <p style="color: var(--primary-maroon);">⚠️ Error loading sponsors. Please try again.</p>
+                `;
+            }
+        }
 
-                card.innerHTML = `
-                    <div class="sponsor-logo-large ${sponsor.logo ? '' : 'placeholder'}">
+        function displaySponsors() {
+            const grid = document.getElementById('sponsors-grid');
+            const emptyState = document.getElementById('empty-state');
+            const countEl = document.getElementById('sponsor-count');
+            
+            countEl.textContent = `(${allSponsors.length})`;
+            
+            if (allSponsors.length === 0) {
+                grid.style.display = 'none';
+                
+                // Use CMS content for empty state
+                const emptyIcon = window.sponsorsCMSContent?.emptyIcon || '🤝';
+                const emptyText = window.sponsorsCMSContent?.emptyText || 'No sponsors to display at this time.';
+                
+                emptyState.innerHTML = `
+                    <div class="empty-state-icon">${emptyIcon}</div>
+                    <p class="empty-state-text">${emptyText}</p>
+                `;
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            grid.style.display = 'grid';
+            emptyState.style.display = 'none';
+            
+            // Randomize order
+            const randomSponsors = shuffleArray(allSponsors);
+            
+            grid.innerHTML = randomSponsors.map(sponsor => createSponsorCard(sponsor)).join('');
+        }
+
+        function createSponsorCard(sponsor) {
+            const logoHtml = sponsor.logo 
+                ? `<img src="${sponsor.logo}" alt="${sponsor.name}">`
+                : `<div style="font-size: 2.5rem;">${sponsor.name.substring(0, 2).toUpperCase()}</div>`;
+            
+            const websiteLabel = window.sponsorsCMSContent?.cardWebsiteLabel || 'Visit Website';
+            
+            return `
+                <div class="sponsor-card" onclick='showSponsorModal(${JSON.stringify(sponsor).replace(/'/g, "&#39;")})'>
+                    <div class="sponsor-logo-display ${!sponsor.logo ? 'no-logo' : ''}">
                         ${logoHtml}
                     </div>
-                    <h3 class="sponsor-name">${sponsor.name}</h3>
-                    <div class="sponsor-contact">
-                        ${sponsor.phone ? `<span>📞 ${sponsor.phone}</span>` : ''}
-                        ${sponsor.email ? `<span>✉️ ${sponsor.email}</span>` : ''}
+                    <div class="sponsor-card-body">
+                        <div class="sponsor-name">${sponsor.name}</div>
+                        <div class="sponsor-details">
+                            ${sponsor.website ? `
+                                <div class="sponsor-detail">
+                                    <span class="sponsor-detail-icon">🌐</span>
+                                    <span>${websiteLabel}</span>
+                                </div>
+                            ` : ''}
+                            ${sponsor.phone ? `
+                                <div class="sponsor-detail">
+                                    <span class="sponsor-detail-icon">📞</span>
+                                    <span>${sponsor.phone}</span>
+                                </div>
+                            ` : ''}
+                            ${sponsor.email ? `
+                                <div class="sponsor-detail">
+                                    <span class="sponsor-detail-icon">✉️</span>
+                                    <span>${sponsor.email}</span>
+                                </div>
+                            ` : ''}
+                        </div>
                     </div>
-                    ${websiteButton}
-                `;
-
-                return card;
-            }
-
-            loadAdminList() {
-                const allSponsors = this.getData();
-                const adminList = document.getElementById('adminSponsorsList');
-                
-                if (!adminList) return;
-
-                adminList.innerHTML = '';
-
-                if (allSponsors.length === 0) {
-                    adminList.innerHTML = '<p style="text-align: center; color: var(--text-light);">No sponsors added yet.</p>';
-                    return;
-                }
-
-                allSponsors.forEach((sponsor, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'sponsor-item';
-                    
-                    item.innerHTML = `
-                        <div>
-                            <strong>${sponsor.name}</strong>
-                            <span style="margin-left: 1rem; color: var(--text-light);">${this.formatTier(sponsor.tier)}</span>
-                            ${!sponsor.active ? '<span style="color: #dc3545; margin-left: 1rem;">(Inactive)</span>' : ''}
-                        </div>
-                        <div class="sponsor-actions">
-                            <button class="btn btn-small btn-edit" onclick="sponsorManager.editSponsor(${index})">✏️ Edit</button>
-                            <button class="btn btn-small btn-delete" onclick="sponsorManager.deleteSponsor(${index})">🗑️ Delete</button>
-                        </div>
-                    `;
-                    
-                    adminList.appendChild(item);
-                });
-            }
-
-            setupEventListeners() {
-                document.getElementById('sponsorForm').addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.saveSponsor();
-                });
-
-                // Logo file input handler
-                document.getElementById('sponsorLogo').addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            this.currentLogoData = e.target.result;
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                });
-            }
-
-            saveSponsor() {
-                const sponsors = this.getData();
-                
-                const sponsor = {
-                    id: this.currentEditIndex !== null ? sponsors[this.currentEditIndex].id : Date.now(),
-                    name: document.getElementById('sponsorName').value,
-                    tier: document.getElementById('sponsorTier').value,
-                    phone: document.getElementById('sponsorPhone').value,
-                    email: document.getElementById('sponsorEmail').value,
-                    website: document.getElementById('sponsorWebsite').value,
-                    logo: this.currentLogoData || (this.currentEditIndex !== null ? sponsors[this.currentEditIndex].logo : null),
-                    active: document.getElementById('sponsorActive').checked,
-                    dateAdded: this.currentEditIndex !== null ? sponsors[this.currentEditIndex].dateAdded : new Date().toISOString()
-                };
-
-                if (this.currentEditIndex !== null) {
-                    sponsors[this.currentEditIndex] = sponsor;
-                } else {
-                    sponsors.push(sponsor);
-                }
-
-                this.saveData(sponsors);
-                this.closeModal('sponsorModal');
-                this.resetForm();
-            }
-
-            editSponsor(index) {
-                const sponsors = this.getData();
-                const sponsor = sponsors[index];
-                
-                this.currentEditIndex = index;
-                this.currentLogoData = sponsor.logo;
-                
-                // Populate form
-                document.getElementById('sponsorName').value = sponsor.name;
-                document.getElementById('sponsorTier').value = sponsor.tier;
-                document.getElementById('sponsorPhone').value = sponsor.phone || '';
-                document.getElementById('sponsorEmail').value = sponsor.email || '';
-                document.getElementById('sponsorWebsite').value = sponsor.website || '';
-                document.getElementById('sponsorActive').checked = sponsor.active;
-                
-                this.openModal('sponsorModal');
-            }
-
-            deleteSponsor(index) {
-                const sponsors = this.getData();
-                const sponsor = sponsors[index];
-                
-                if (confirm(`Are you sure you want to delete ${sponsor.name}?`)) {
-                    sponsors.splice(index, 1);
-                    this.saveData(sponsors);
-                }
-            }
-
-            openModal(modalId) {
-                document.getElementById(modalId).style.display = 'block';
-                document.body.style.overflow = 'hidden';
-            }
-
-            closeModal(modalId) {
-                document.getElementById(modalId).style.display = 'none';
-                document.body.style.overflow = 'auto';
-                this.resetForm();
-            }
-
-            resetForm() {
-                document.getElementById('sponsorForm').reset();
-                this.currentEditIndex = null;
-                this.currentLogoData = null;
-            }
-
-            formatTier(tier) {
-                const tiers = {
-                    'platinum': '💎 Platinum',
-                    'gold': '🥇 Gold',
-                    'silver': '🥈 Silver',
-                    'bronze': '🥉 Bronze'
-                };
-                return tiers[tier] || tier;
-            }
-
-            exportSponsors() {
-                const sponsors = this.getData();
-                const dataStr = JSON.stringify(sponsors, null, 2);
-                const dataBlob = new Blob([dataStr], {type: 'application/json'});
-                
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(dataBlob);
-                link.download = 'olrfc-sponsors.json';
-                link.click();
-                
-                this.showAlert('Sponsors data exported successfully!', 'success');
-            }
-
-            showAlert(message, type) {
-                const alert = document.createElement('div');
-                alert.style.cssText = `
-                    position: fixed;
-                    top: 100px;
-                    right: 20px;
-                    background: ${type === 'success' ? '#28a745' : '#dc3545'};
-                    color: white;
-                    padding: 1rem;
-                    border-radius: 10px;
-                    font-weight: bold;
-                    z-index: 10000;
-                    animation: slideIn 0.3s ease;
-                `;
-                alert.textContent = message;
-                
-                document.body.appendChild(alert);
-                setTimeout(() => alert.remove(), 3000);
-            }
-
-            // Initialize sample data if none exists
-            initializeSampleData() {
-                const sponsors = this.getData();
-                if (sponsors.length === 0) {
-                    const sampleSponsors = [
-                        {
-                            id: 1,
-                            name: "Local Sports Equipment",
-                            tier: "gold",
-                            phone: "01234 567890",
-                            email: "info@localsports.com",
-                            website: "https://www.localsports.com",
-                            logo: null,
-                            active: true,
-                            dateAdded: new Date().toISOString()
-                        },
-                        {
-                            id: 2,
-                            name: "Community Bank",
-                            tier: "silver",
-                            phone: "01234 567891",
-                            email: "community@bank.com",
-                            website: "https://www.communitybank.com",
-                            logo: null,
-                            active: true,
-                            dateAdded: new Date().toISOString()
-                        }
-                    ];
-                    this.saveData(sampleSponsors);
-                }
-            }
+                </div>
+            `;
         }
 
-        // Global functions for HTML onclick events
-        function toggleAdminPanel() {
-            const panel = document.getElementById('adminPanel');
-            const isVisible = panel.classList.contains('active');
+        function showSponsorModal(sponsor) {
+            const modal = document.getElementById('sponsor-modal');
             
-            if (!isVisible) {
-                const password = prompt('Enter admin password:');
-                if (password === 'olrfc2025') { // Same password as main site
-                    panel.classList.add('active');
-                    sponsorManager.loadAdminList();
-                } else if (password !== null) {
-                    alert('Incorrect password');
-                }
+            // Get CMS labels
+            const phoneLabel = window.sponsorsCMSContent?.modalPhoneLabel || 'Phone';
+            const emailLabel = window.sponsorsCMSContent?.modalEmailLabel || 'Email';
+            const websiteLabel = window.sponsorsCMSContent?.modalWebsiteLabel || 'Website';
+            
+            // Set sponsor name
+            document.getElementById('modal-name').textContent = sponsor.name;
+            
+            // Logo
+            const modalLogo = document.getElementById('modal-logo');
+            if (sponsor.logo) {
+                modalLogo.className = 'modal-logo';
+                modalLogo.innerHTML = `<img src="${sponsor.logo}" alt="${sponsor.name}">`;
             } else {
-                panel.classList.remove('active');
+                modalLogo.className = 'modal-logo no-logo';
+                modalLogo.textContent = sponsor.name.substring(0, 2).toUpperCase();
             }
+            
+            // Details
+            const details = [];
+            
+            if (sponsor.phone) {
+                details.push(`
+                    <div class="modal-detail">
+                        <div class="modal-detail-icon">📞</div>
+                        <div class="modal-detail-content">
+                            <span class="modal-detail-label">${phoneLabel}</span>
+                            <div class="modal-detail-text">
+                                <a href="tel:${sponsor.phone}">${sponsor.phone}</a>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }
+            
+            if (sponsor.email) {
+                details.push(`
+                    <div class="modal-detail">
+                        <div class="modal-detail-icon">✉️</div>
+                        <div class="modal-detail-content">
+                            <span class="modal-detail-label">${emailLabel}</span>
+                            <div class="modal-detail-text">
+                                <a href="mailto:${sponsor.email}">${sponsor.email}</a>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }
+            
+            if (sponsor.website) {
+                details.push(`
+                    <div class="modal-detail">
+                        <div class="modal-detail-icon">🌐</div>
+                        <div class="modal-detail-content">
+                            <span class="modal-detail-label">${websiteLabel}</span>
+                            <div class="modal-detail-text">
+                                <a href="${sponsor.website}" target="_blank" rel="noopener noreferrer">${sponsor.website}</a>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }
+            
+            document.getElementById('modal-details').innerHTML = details.join('');
+            
+            modal.style.display = 'flex';
         }
 
-        function hideAdminPanel() {
-            document.getElementById('adminPanel').classList.remove('active');
+        function closeModal() {
+            document.getElementById('sponsor-modal').style.display = 'none';
         }
 
-        function openModal(modalId) {
-            sponsorManager.openModal(modalId);
-        }
-
-        function closeModal(modalId) {
-            sponsorManager.closeModal(modalId);
-        }
-
-        function exportSponsors() {
-            sponsorManager.exportSponsors();
-        }
-
-        // Close modal on background click
+        // Close modal when clicking outside
         window.onclick = function(event) {
-            if (event.target.classList.contains('modal')) {
-                event.target.style.display = 'none';
-                document.body.style.overflow = 'auto';
+            const modal = document.getElementById('sponsor-modal');
+            if (event.target === modal) {
+                closeModal();
             }
         }
 
-        // Initialize sponsor manager
-        const sponsorManager = new SponsorManager();
+        // Load sponsors when page loads
+        window.addEventListener('DOMContentLoaded', async function() {
+            // Load feature states first
+            await loadFeatureStates();
+            
+            // Then load sponsors
+            loadSponsors();
+        });
+    </script>
 
-        // Add slide-in animation style
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
+    <!-- CMS Content Loading -->
+    <script>
+    (async function() {
+        try {
+            // Fetch sponsors page content from CMS
+            const response = await fetch('/.netlify/functions/site-settings', {
+                method: 'GET'
+            });
+            
+            if (!response.ok) {
+                console.log('CMS content not available, using defaults');
+                return;
             }
-        `;
-        document.head.appendChild(style);
-
-        // Initialize sample data after a short delay
-        setTimeout(() => {
-            sponsorManager.initializeSampleData();
-        }, 1000);
+            
+            const result = await response.json();
+            const settings = result.data || {};
+            
+            // Build content map (only sponsors fields)
+            const content = {};
+            Object.keys(settings).forEach(key => {
+                if (key.startsWith('sponsors-')) {
+                    content[key] = settings[key];
+                }
+            });
+            
+            // Helper function to get content with fallback
+            const get = (key, fallback) => content[key] || fallback;
+            
+            // Store CMS content globally for use in JavaScript functions
+            window.sponsorsCMSContent = {
+                cardWebsiteLabel: get('sponsors-card-website-label', 'Visit Website'),
+                modalPhoneLabel: get('sponsors-modal-phone-label', 'Phone'),
+                modalEmailLabel: get('sponsors-modal-email-label', 'Email'),
+                modalWebsiteLabel: get('sponsors-modal-website-label', 'Website'),
+                emptyIcon: get('sponsors-empty-icon', '🤝'),
+                emptyText: get('sponsors-empty-text', 'No sponsors to display at this time.')
+            };
+            
+            // Apply content to page elements
+            applyContent();
+            
+            function applyContent() {
+                // 1. Page Title
+                const pageTitle = get('sponsors-page-title', 'Our Sponsors');
+                document.title = pageTitle;
+                
+                // 2. Main Heading
+                const mainHeading = document.querySelector('.page-header h1');
+                if (mainHeading) {
+                    const headingText = get('sponsors-main-heading', 'Our Sponsors');
+                    mainHeading.textContent = headingText;
+                }
+                
+                // 3. Page Description
+                const pageDescription = document.querySelector('.page-header p');
+                if (pageDescription) {
+                    const descText = get('sponsors-page-description', 'Thank you to our sponsors for their support');
+                    pageDescription.textContent = descText;
+                }
+                
+                // 4. List Title
+                const listTitle = document.querySelector('.sponsors-list-title');
+                if (listTitle) {
+                    const titleText = get('sponsors-list-title', 'Our Sponsors');
+                    // Preserve the sponsor count span
+                    const countSpan = listTitle.querySelector('.sponsor-count');
+                    listTitle.innerHTML = titleText + ' ';
+                    if (countSpan) {
+                        listTitle.appendChild(countSpan);
+                    }
+                }
+                
+                // 5. Loading Message
+                const loadingMsg = document.querySelector('#loading p');
+                if (loadingMsg) {
+                    const msgText = get('sponsors-loading-message', 'Loading sponsors...');
+                    loadingMsg.textContent = msgText;
+                }
+                
+                console.log('✅ Sponsors page CMS content applied successfully (11 fields)');
+            }
+            
+        } catch (error) {
+            console.log('Error loading CMS content:', error);
+        }
+    })();
     </script>
 </body>
 </html>

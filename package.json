@@ -16,6 +16,13 @@
   ],
   "author": "Old Laurentian RFC",
   "license": "MIT",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "@sparticuz/chromium": "^143.0.0",
+    "cheerio": "^1.0.0-rc.12",
+    "googleapis": "^144.0.0",
+    "puppeteer-core": "^24.32.1"
+  },
   "devDependencies": {
     "live-server": "^1.2.2"
   }

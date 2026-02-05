@@ -1,0 +1,644 @@
+/**
+ * Admin Export Manager - OLS-WEBSITE
+ * Professional data export functionality (JSON and CSV)
+ */
+
+class AdminExportManager {
+    constructor(adminSystem) {
+        this.adminSystem = adminSystem;
+    }
+
+    // ============================================
+    // JSON EXPORT FUNCTIONALITY
+    // ============================================
+
+    exportData() {
+        try {
+            this.showExportProgress('Initializing export...');
+            
+            const dataTypes = ['news', 'fixtures', 'players', 'sponsors', 'gallery', 'shop'];
+            
+            const exportData = {
+                metadata: {
+                    exportDate: new Date().toISOString(),
+                    exportVersion: '1.0',
+                    systemVersion: 'OLS-WEBSITE-v1.0',
+                    dataTypes: dataTypes,
+                    exportedBy: document.getElementById('currentUser')?.textContent || 'Admin User',
+                    browserInfo: {
+                        userAgent: navigator.userAgent,
+                        language: navigator.language,
+                        platform: navigator.platform
+                    }
+                },
+                data: {},
+                statistics: {},
+                validation: {
+                    errors: [],
+                    warnings: [],
+                    totalRecords: 0,
+                    validatedAt: new Date().toISOString()
+                }
+            };
+
+            let totalRecords = 0;
+            let hasErrors = false;
+
+            // Export each data type with validation
+            dataTypes.forEach(dataType => {
+                this.showExportProgress(`Processing ${dataType}...`);
+                
+                try {
+                    const rawData = this.adminSystem.getData(dataType);
+                    const validatedData = this.validateDataType(dataType, rawData);
+                    
+                    exportData.data[dataType] = {
+                        records: validatedData.data,
+                        count: validatedData.data.length,
+                        lastModified: this.getLastModified(dataType),
+                        dataIntegrity: validatedData.integrity,
+                        schemaVersion: this.getSchemaVersion(dataType)
+                    };
+                    
+                    exportData.statistics[dataType] = {
+                        recordCount: validatedData.data.length,
+                        validRecords: validatedData.valid,
+                        invalidRecords: validatedData.invalid,
+                        lastUpdate: this.getLastModified(dataType)
+                    };
+                    
+                    totalRecords += validatedData.data.length;
+                    
+                    if (validatedData.errors.length > 0) {
+                        exportData.validation.errors.push(...validatedData.errors);
+                        hasErrors = true;
+                    }
+                    
+                    if (validatedData.warnings.length > 0) {
+                        exportData.validation.warnings.push(...validatedData.warnings);
+                    }
+                    
+                } catch (error) {
+                    console.error(`Error processing ${dataType}:`, error);
+                    exportData.validation.errors.push({
+                        dataType: dataType,
+                        error: `Failed to export ${dataType}: ${error.message}`,
+                        timestamp: new Date().toISOString()
+                    });
+                    hasErrors = true;
+                }
+            });
+
+            exportData.validation.totalRecords = totalRecords;
+            
+            this.showExportProgress('Exporting settings...');
+            exportData.data.settings = {
+                websiteFeatures: JSON.parse(localStorage.getItem('olrfc_admin_features') || '{}'),
+                adminSession: JSON.parse(localStorage.getItem('olrfc_admin_session') || '{}'),
+                exportCount: this.getExportCount() + 1
+            };
+
+            const validationReport = this.generateValidationReport(exportData.validation);
+            
+            this.showExportProgress('Generating download file...');
+            
+            const filename = `olrfc_export_${new Date().toISOString().split('T')[0]}_${Date.now()}.json`;
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            this.downloadFile(dataBlob, filename);
+            this.incrementExportCount();
+            
+            const statusMessage = hasErrors ? 
+                `Export completed with ${exportData.validation.errors.length} errors and ${exportData.validation.warnings.length} warnings` :
+                `Export completed successfully! ${totalRecords} records exported.`;
+                
+            const alertType = hasErrors ? 'warning' : 'success';
+            
+            this.showExportComplete(statusMessage, validationReport, filename, alertType);
+            
+            console.log('Data export completed:', {
+                filename: filename,
+                totalRecords: totalRecords,
+                errors: exportData.validation.errors.length,
+                warnings: exportData.validation.warnings.length
+            });
+            
+        } catch (error) {
+            console.error('Export failed:', error);
+            this.showExportError(`Export failed: ${error.message}`);
+        }
+    }
+
+    // ============================================
+    // CSV EXPORT FUNCTIONALITY
+    // ============================================
+
+    exportToCSV() {
+        this.showCSVExportDialog();
+    }
+
+    showCSVExportDialog() {
+        const existingDialog = document.getElementById('csvExportDialog');
+        if (existingDialog) {
+            existingDialog.remove();
+        }
+        
+        const dataTypes = ['news', 'fixtures', 'players', 'sponsors', 'gallery', 'shop'];
+        const dataAnalysis = {};
+        
+        dataTypes.forEach(dataType => {
+            const data = this.adminSystem.getData(dataType);
+            dataAnalysis[dataType] = {
+                count: data.length,
+                hasData: data.length > 0
+            };
+        });
+        
+        const dialog = document.createElement('div');
+        dialog.id = 'csvExportDialog';
+        dialog.className = 'modal';
+        dialog.style.display = 'block';
+        
+        dialog.innerHTML = `
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h3>📊 Export to CSV/Excel</h3>
+                    <button class="close" onclick="this.closest('.modal').remove()">&times;</button>
+                </div>
+                
+                <div style="margin-bottom: 2rem;">
+                    <p>Export your data as CSV files for bulk editing in Excel or Google Sheets.</p>
+                    
+                    <div style="margin: 1rem 0;">
+                        <h4>Export Options</h4>
+                        <label style="display: block; margin: 0.5rem 0;">
+                            <input type="radio" name="csvExportType" value="individual" checked>
+                            Individual CSV files for each data type
+                        </label>
+                        <label style="display: block; margin: 0.5rem 0;">
+                            <input type="radio" name="csvExportType" value="combined">
+                            Single combined Excel-compatible file (.csv)
+                        </label>
+                    </div>
+                    
+                    <div style="margin: 1rem 0;">
+                        <h4>Data Types to Export</h4>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                            ${dataTypes.map(dataType => `
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" id="export_${dataType}" ${dataAnalysis[dataType].hasData ? 'checked' : ''} ${!dataAnalysis[dataType].hasData ? 'disabled' : ''}>
+                                    ${dataType.charAt(0).toUpperCase() + dataType.slice(1)} (${dataAnalysis[dataType].count} records)
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div style="background: #e3f2fd; border: 1px solid #1976d2; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                        <h4>CSV Import Notes</h4>
+                        <ul style="margin: 0.5rem 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                            <li>CSV files can be opened and edited in Excel, Google Sheets, or any spreadsheet application</li>
+                            <li>Do not change column headers - they are required for re-import</li>
+                            <li>Keep the 'id' column unchanged to preserve existing records</li>
+                            <li>Remove the 'id' value to create new records when importing</li>
+                            <li>Date formats should be: YYYY-MM-DD</li>
+                            <li>DateTime formats should be: YYYY-MM-DDTHH:MM</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+                    <button class="btn btn-primary" onclick="executeCSVExport()">Export CSV</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+    }
+
+    executeCSVExport() {
+        try {
+            const exportType = document.querySelector('input[name="csvExportType"]:checked')?.value || 'individual';
+            
+            const selectedDataTypes = [];
+            const dataTypes = ['news', 'fixtures', 'players', 'sponsors', 'gallery', 'shop'];
+            
+            dataTypes.forEach(dataType => {
+                const checkbox = document.getElementById(`export_${dataType}`);
+                if (checkbox && checkbox.checked) {
+                    selectedDataTypes.push(dataType);
+                }
+            });
+            
+            if (selectedDataTypes.length === 0) {
+                alert('Please select at least one data type to export');
+                return;
+            }
+            
+            const csvDialog = document.getElementById('csvExportDialog');
+            if (csvDialog) csvDialog.remove();
+            
+            if (exportType === 'individual') {
+                this.exportIndividualCSVFiles(selectedDataTypes);
+            } else {
+                this.exportCombinedCSVFile(selectedDataTypes);
+            }
+            
+        } catch (error) {
+            console.error('CSV Export failed:', error);
+            alert(`CSV Export failed: ${error.message}`);
+        }
+    }
+
+    exportIndividualCSVFiles(dataTypes) {
+        dataTypes.forEach(dataType => {
+            const data = this.adminSystem.getData(dataType);
+            if (data.length > 0) {
+                const csv = this.convertToCSV(data, dataType);
+                const filename = `olrfc_${dataType}_${new Date().toISOString().split('T')[0]}.csv`;
+                this.downloadCSV(csv, filename);
+            }
+        });
+        
+        this.showCSVExportComplete(`Exported ${dataTypes.length} CSV files`);
+    }
+
+    exportCombinedCSVFile(dataTypes) {
+        let combinedCSV = '';
+        let totalRecords = 0;
+        
+        dataTypes.forEach((dataType, index) => {
+            const data = this.adminSystem.getData(dataType);
+            if (data.length > 0) {
+                if (index > 0) {
+                    combinedCSV += '\n\n';
+                }
+                
+                combinedCSV += `"=== ${dataType.toUpperCase()} DATA ==="\n`;
+                combinedCSV += this.convertToCSV(data, dataType);
+                totalRecords += data.length;
+            }
+        });
+        
+        const filename = `olrfc_combined_export_${new Date().toISOString().split('T')[0]}.csv`;
+        this.downloadCSV(combinedCSV, filename);
+        
+        this.showCSVExportComplete(`Exported ${totalRecords} records in combined file`);
+    }
+
+    convertToCSV(data, dataType) {
+        if (!data || data.length === 0) {
+            return '';
+        }
+        
+        const columnMappings = {
+            news: ['id', 'title', 'content', 'category', 'author', 'date', 'featured'],
+            fixtures: ['id', 'team', 'opponent', 'dateTime', 'venue', 'competition', 'ourScore', 'theirScore'],
+            players: ['id', 'name', 'team', 'position', 'appearances', 'photo'],
+            sponsors: ['name', 'logo', 'website', 'active'],
+            gallery: ['id', 'title', 'category', 'description', 'date', 'photos'],
+            shop: ['id', 'name', 'category', 'price', 'stock', 'description', 'sku', 'sizes', 'status']
+        };
+        
+        const columns = columnMappings[dataType] || Object.keys(data[0] || {});
+        
+        let csv = columns.map(col => `"${col}"`).join(',') + '\n';
+        
+        data.forEach(record => {
+            const row = columns.map(column => {
+                let value = record[column] || '';
+                
+                if (Array.isArray(value)) {
+                    value = JSON.stringify(value);
+                } else if (typeof value === 'object' && value !== null) {
+                    value = JSON.stringify(value);
+                } else if (typeof value === 'boolean') {
+                    value = value ? 'TRUE' : 'FALSE';
+                } else {
+                    value = String(value);
+                }
+                
+                value = value.replace(/"/g, '""');
+                return `"${value}"`;
+            });
+            
+            csv += row.join(',') + '\n';
+        });
+        
+        return csv;
+    }
+
+    downloadCSV(csvContent, filename) {
+        const BOM = '\uFEFF';
+        const csvWithBOM = BOM + csvContent;
+        
+        const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
+        this.downloadFile(blob, filename);
+    }
+
+    // ============================================
+    // VALIDATION AND UTILITY FUNCTIONS
+    // ============================================
+
+    validateDataType(dataType, data) {
+        const result = {
+            data: data,
+            valid: 0,
+            invalid: 0,
+            errors: [],
+            warnings: [],
+            integrity: 'valid'
+        };
+        
+        if (!Array.isArray(data)) {
+            result.errors.push({
+                dataType: dataType,
+                error: 'Data is not an array',
+                timestamp: new Date().toISOString()
+            });
+            result.integrity = 'corrupted';
+            return result;
+        }
+        
+        data.forEach((record, index) => {
+            const validation = this.validateRecord(dataType, record, index);
+            
+            if (validation.isValid) {
+                result.valid++;
+            } else {
+                result.invalid++;
+                result.errors.push(...validation.errors);
+            }
+            
+            result.warnings.push(...validation.warnings);
+        });
+        
+        if (result.invalid > 0) {
+            result.integrity = result.invalid > result.valid ? 'corrupted' : 'partial';
+        }
+        
+        return result;
+    }
+
+    validateRecord(dataType, record, index) {
+        const validation = {
+            isValid: true,
+            errors: [],
+            warnings: []
+        };
+        
+        if (!record || typeof record !== 'object') {
+            validation.isValid = false;
+            validation.errors.push({
+                dataType: dataType,
+                recordIndex: index,
+                error: 'Record is not a valid object',
+                timestamp: new Date().toISOString()
+            });
+            return validation;
+        }
+        
+        // Data-type specific validation
+        const requiredFields = {
+            news: ['title', 'content'],
+            fixtures: ['team', 'opponent', 'dateTime'],
+            players: ['name', 'team'],
+            sponsors: ['name', 'tier'],
+            gallery: ['title', 'photos'],
+            shop: ['name', 'price']
+        };
+        
+        const required = requiredFields[dataType] || [];
+        const missing = required.filter(field => !record[field]);
+        
+        if (missing.length > 0) {
+            validation.isValid = false;
+            validation.errors.push({
+                dataType: dataType,
+                recordIndex: index,
+                error: `Missing required fields: ${missing.join(', ')}`,
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        return validation;
+    }
+
+    getLastModified(dataType) {
+        const metaKey = `olrfc_${dataType}_meta`;
+        const meta = JSON.parse(localStorage.getItem(metaKey) || '{}');
+        return meta.lastModified || new Date().toISOString();
+    }
+
+    getSchemaVersion(dataType) {
+        const schemas = {
+            news: '1.0',
+            fixtures: '1.0', 
+            players: '1.0',
+            sponsors: '1.0',
+            gallery: '1.0',
+            shop: '1.0'
+        };
+        return schemas[dataType] || '1.0';
+    }
+
+    getExportCount() {
+        return parseInt(localStorage.getItem('olrfc_export_count') || '0');
+    }
+
+    incrementExportCount() {
+        const count = this.getExportCount() + 1;
+        localStorage.setItem('olrfc_export_count', count.toString());
+    }
+
+    generateValidationReport(validation) {
+        let report = `Validation Report:\n`;
+        report += `Total Records: ${validation.totalRecords}\n`;
+        report += `Errors: ${validation.errors.length}\n`;
+        report += `Warnings: ${validation.warnings.length}\n\n`;
+        
+        if (validation.errors.length > 0) {
+            report += `ERRORS:\n`;
+            validation.errors.forEach((error, index) => {
+                report += `${index + 1}. [${error.dataType}] ${error.error}\n`;
+            });
+            report += `\n`;
+        }
+        
+        if (validation.warnings.length > 0) {
+            report += `WARNINGS:\n`;
+            validation.warnings.forEach((warning, index) => {
+                report += `${index + 1}. [${warning.dataType}] ${warning.warning}\n`;
+            });
+        }
+        
+        return report;
+    }
+
+    downloadFile(blob, filename) {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // ============================================
+    // UI FEEDBACK FUNCTIONS
+    // ============================================
+
+    showExportProgress(message) {
+        let alertElement = document.getElementById('exportProgress');
+        if (!alertElement) {
+            alertElement = document.createElement('div');
+            alertElement.id = 'exportProgress';
+            alertElement.className = 'alert alert-info';
+            alertElement.style.position = 'fixed';
+            alertElement.style.top = '100px';
+            alertElement.style.right = '20px';
+            alertElement.style.zIndex = '10000';
+            alertElement.style.minWidth = '300px';
+            document.body.appendChild(alertElement);
+        }
+        
+        alertElement.innerHTML = `
+            <strong>Exporting Data...</strong><br>
+            ${message}
+            <div style="margin-top: 10px;">
+                <div style="background: #ddd; height: 6px; border-radius: 3px;">
+                    <div style="background: var(--primary-green); height: 100%; width: 50%; border-radius: 3px; animation: pulse 1s infinite;"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    showExportComplete(message, report, filename, alertType) {
+        const progressElement = document.getElementById('exportProgress');
+        if (progressElement) {
+            progressElement.remove();
+        }
+        
+        const alertElement = document.createElement('div');
+        alertElement.className = `alert alert-${alertType}`;
+        alertElement.style.position = 'fixed';
+        alertElement.style.top = '100px';
+        alertElement.style.right = '20px';
+        alertElement.style.zIndex = '10000';
+        alertElement.style.minWidth = '350px';
+        alertElement.style.maxHeight = '400px';
+        alertElement.style.overflowY = 'auto';
+        
+        alertElement.innerHTML = `
+            <strong>Export Complete!</strong><br>
+            ${message}<br>
+            <small>File: ${filename}</small><br>
+            <details style="margin-top: 10px;">
+                <summary>View Validation Report</summary>
+                <pre style="font-size: 12px; margin-top: 10px; background: #f8f9fa; padding: 10px; border-radius: 4px;">${report}</pre>
+            </details>
+            <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px; border: none; background: var(--primary-green); color: white; border-radius: 4px; cursor: pointer;">Close</button>
+        `;
+        
+        document.body.appendChild(alertElement);
+        
+        setTimeout(() => {
+            if (alertElement.parentElement) {
+                alertElement.remove();
+            }
+        }, 30000);
+    }
+
+    showExportError(message) {
+        const progressElement = document.getElementById('exportProgress');
+        if (progressElement) {
+            progressElement.remove();
+        }
+        
+        const alertElement = document.createElement('div');
+        alertElement.className = 'alert alert-danger';
+        alertElement.style.position = 'fixed';
+        alertElement.style.top = '100px';
+        alertElement.style.right = '20px';
+        alertElement.style.zIndex = '10000';
+        alertElement.innerHTML = `
+            <strong>Export Failed!</strong><br>
+            ${message}<br>
+            <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px; border: none; background: #dc3545; color: white; border-radius: 4px; cursor: pointer;">Close</button>
+        `;
+        
+        document.body.appendChild(alertElement);
+        
+        setTimeout(() => {
+            if (alertElement.parentElement) {
+                alertElement.remove();
+            }
+        }, 10000);
+    }
+
+    showCSVExportComplete(message) {
+        const alertElement = document.createElement('div');
+        alertElement.className = 'alert alert-success';
+        alertElement.style.position = 'fixed';
+        alertElement.style.top = '100px';
+        alertElement.style.right = '20px';
+        alertElement.style.zIndex = '10000';
+        alertElement.style.minWidth = '350px';
+        
+        alertElement.innerHTML = `
+            <strong>CSV Export Complete!</strong><br>
+            ${message}<br>
+            <small>Files are ready for editing in Excel or Google Sheets</small><br>
+            <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px; border: none; background: var(--primary-green); color: white; border-radius: 4px; cursor: pointer;">Close</button>
+        `;
+        
+        document.body.appendChild(alertElement);
+        
+        setTimeout(() => {
+            if (alertElement.parentElement) {
+                alertElement.remove();
+            }
+        }, 10000);
+    }
+}
+
+// ============================================
+// INITIALIZE AND GLOBAL EXPORTS
+// ============================================
+
+let adminExportManager;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.adminSystem) {
+        adminExportManager = new AdminExportManager(window.adminSystem);
+        console.log('Admin Export Manager initialized');
+    }
+});
+
+// Export all functions to global scope for HTML onclick compatibility
+window.exportData = function() {
+    if (adminExportManager) {
+        adminExportManager.exportData();
+    } else {
+        console.error('AdminExportManager not initialized');
+    }
+};
+
+window.exportToCSV = function() {
+    if (adminExportManager) {
+        adminExportManager.exportToCSV();
+    } else {
+        console.error('AdminExportManager not initialized');
+    }
+};
+
+window.executeCSVExport = function() {
+    if (adminExportManager) {
+        adminExportManager.executeCSVExport();
+    } else {
+        console.error('AdminExportManager not initialized');
+    }
+};

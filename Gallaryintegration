@@ -1,0 +1,101 @@
+// GALLERY FORM SUBMISSION - Add this after the players form handler
+document.getElementById('galleryForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const galleryData = {
+        id: adminSystem.currentEditIndex !== null ? 
+            adminSystem.getData('gallery')[adminSystem.currentEditIndex].id : 
+            Date.now().toString(),
+        title: document.getElementById('galleryTitle').value.trim(),
+        category: document.getElementById('galleryCategory').value,
+        description: document.getElementById('galleryDescription').value.trim(),
+        photos: [], // Handle photo upload separately - for now store empty array
+        date: new Date().toISOString().split('T')[0]
+    };
+
+    // Validate required fields
+    if (!galleryData.title) {
+        alert('Please enter an album title');
+        return;
+    }
+
+    try {
+        // 1. IMMEDIATE localStorage update
+        let existingGallery = adminSystem.getData('gallery');
+        
+        if (adminSystem.currentEditIndex !== null) {
+            existingGallery[adminSystem.currentEditIndex] = galleryData;
+        } else {
+            existingGallery.unshift(galleryData);
+        }
+        
+        adminSystem.saveData('gallery', existingGallery);
+        adminSystem.loadGallery();
+        adminSystem.updateStats();
+        
+        const action = adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+        adminSystem.showAlert('gallery', `Gallery album ${action} successfully!`, 'success');
+        
+        // 2. BACKGROUND cloud storage
+        if (window.netlifyDataManager) {
+            try {
+                const result = await window.netlifyDataManager.createGallery(galleryData);
+                
+                if (result.success) {
+                    console.log('Gallery album successfully synced to cloud storage');
+                    setTimeout(() => {
+                        adminSystem.showAlert('gallery', 'Album synced to cloud storage ✓', 'success');
+                    }, 1000);
+                } else {
+                    throw new Error(result.error);
+                }
+                
+            } catch (cloudError) {
+                console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
+                adminSystem.showAlert('gallery', 'Album saved locally (cloud sync failed)', 'warning');
+            }
+        }
+        
+        closeModal('galleryModal');
+        document.getElementById('galleryForm').reset();
+        adminSystem.currentEditIndex = null;
+        
+    } catch (error) {
+        console.error('Error saving gallery album:', error);
+        adminSystem.showAlert('gallery', 'Error saving album: ' + error.message, 'danger');
+    }
+});
+
+// Replace the placeholder gallery functions with these enhanced versions:
+function viewAlbum(index) {
+    const gallery = adminSystem.getData('gallery');
+    const album = gallery[index];
+    
+    // For now, just edit the album - can enhance to show photo viewer later
+    adminSystem.currentEditIndex = index;
+    adminSystem.currentSection = 'gallery';
+    
+    document.getElementById('galleryTitle').value = album.title;
+    document.getElementById('galleryCategory').value = album.category;
+    document.getElementById('galleryDescription').value = album.description || '';
+    
+    openModal('galleryModal');
+}
+
+function deleteAlbum(index) {
+    const gallery = adminSystem.getData('gallery');
+    const album = gallery[index];
+    
+    if (confirm(`Are you sure you want to delete the album "${album.title}"?`)) {
+        try {
+            gallery.splice(index, 1);
+            adminSystem.saveData('gallery', gallery);
+            adminSystem.loadGallery();
+            adminSystem.updateStats();
+            adminSystem.showAlert('gallery', 'Album deleted successfully', 'success');
+        } catch (error) {
+            console.error('Error deleting album:', error);
+            adminSystem.showAlert('gallery', 'Error deleting album: ' + error.message, 'danger');
+        }
+    }
+}

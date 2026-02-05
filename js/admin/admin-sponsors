@@ -1,0 +1,515 @@
+17.96 KB •512 lines
+•
+Formatting may be inconsistent from source
+/**
+ * Admin Sponsors Manager - OLS-WEBSITE
+ * Sponsor management with tiered system and banner preview
+ */
+
+class AdminSponsorsManager {
+    constructor(adminSystem) {
+        this.adminSystem = adminSystem;
+        this.formHandlerAttached = false; // ADD THIS FLAG
+        // REMOVE setupFormHandler() call from constructor
+    }
+
+    // ADD THIS METHOD - Lazy form handler initialization
+    ensureFormHandler() {
+        if (this.formHandlerAttached) return;
+        
+        const form = document.getElementById('sponsorForm');
+        if (form) {
+            form.addEventListener('submit', (e) => this.handleSponsorSubmission(e));
+            this.formHandlerAttached = true;
+            console.log('AdminSponsorsManager form handler attached');
+        }
+    }
+
+    async handleSponsorSubmission(e) {
+        e.preventDefault();
+        
+        const sponsors = this.adminSystem.getData('sponsors');
+        const currentLogo = document.getElementById('logoPreviewImg')?.src || null;
+        
+        const sponsorData = {
+            name: document.getElementById('sponsorName').value.trim(),
+            tier: document.getElementById('sponsorTier').value,
+            phone: document.getElementById('sponsorPhone').value.trim(),
+            email: document.getElementById('sponsorEmail').value.trim(),
+            website: document.getElementById('sponsorWebsite').value.trim(),
+            logo: currentLogo,
+            active: document.getElementById('sponsorActive').checked,
+            showInBanner: document.getElementById('sponsorBanner').checked
+        };
+
+        // Validate required fields
+        if (!sponsorData.name || !sponsorData.tier) {
+            alert('Please fill in both company name and tier fields');
+            return;
+        }
+
+        try {
+            // Save to localStorage first
+            const sponsor = {
+                id: this.adminSystem.currentEditIndex !== null 
+                    ? sponsors[this.adminSystem.currentEditIndex].id 
+                    : Date.now(),
+                ...sponsorData,
+                dateAdded: this.adminSystem.currentEditIndex !== null 
+                    ? sponsors[this.adminSystem.currentEditIndex].dateAdded 
+                    : new Date().toISOString()
+            };
+
+            if (this.adminSystem.currentEditIndex !== null) {
+                sponsors[this.adminSystem.currentEditIndex] = sponsor;
+            } else {
+                sponsors.push(sponsor);
+            }
+
+            this.adminSystem.saveData('sponsors', sponsors);
+
+            // Submit to Netlify Forms
+            if (window.netlifyDataManager) {
+                const result = await window.netlifyDataManager.createSponsor(sponsorData);
+                if (result.success) {
+                    console.log('Sponsor saved to Netlify Forms successfully');
+                    setTimeout(() => {
+                        this.adminSystem.showAlert('sponsors', 'Sponsor synced to cloud storage ✓', 'success');
+                    }, 1000);
+                } else {
+                    console.warn('Netlify Forms submission failed:', result.error);
+                    this.adminSystem.showAlert('sponsors', 'Sponsor saved locally (cloud sync failed)', 'warning');
+                }
+            }
+
+            const action = this.adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+            this.adminSystem.showAlert('sponsors', `Sponsor ${action} successfully!`, 'success');
+
+            closeModal('sponsorModal');
+            document.getElementById('sponsorForm').reset();
+            document.getElementById('logoPreview').style.display = 'none';
+            this.adminSystem.currentEditIndex = null;
+
+        } catch (error) {
+            console.error('Error saving sponsor:', error);
+            this.adminSystem.showAlert('sponsors', 'Error saving sponsor: ' + error.message, 'danger');
+        }
+    }
+
+    editSponsor(index) {
+        const sponsors = this.adminSystem.getData('sponsors');
+        const sponsor = sponsors[index];
+        
+        if (!sponsor) {
+            console.error('Sponsor not found at index:', index);
+            return;
+        }
+        
+        this.adminSystem.currentEditIndex = index;
+        this.adminSystem.currentSection = 'sponsors';
+        
+        // CRITICAL: Ensure form handler before opening modal
+        setTimeout(() => {
+            this.ensureFormHandler();
+            
+            // Populate form with existing data
+            document.getElementById('sponsorName').value = sponsor.name || '';
+            document.getElementById('sponsorTier').value = sponsor.tier || 'bronze';
+            document.getElementById('sponsorPhone').value = sponsor.phone || '';
+            document.getElementById('sponsorEmail').value = sponsor.email || '';
+            document.getElementById('sponsorWebsite').value = sponsor.website || '';
+            document.getElementById('sponsorActive').checked = sponsor.active !== false;
+            document.getElementById('sponsorBanner').checked = sponsor.showInBanner !== false;
+            
+            // Show logo preview if exists
+            if (sponsor.logo) {
+                const preview = document.getElementById('logoPreview');
+                const img = document.getElementById('logoPreviewImg');
+                if (preview && img) {
+                    preview.style.display = 'block';
+                    img.src = sponsor.logo;
+                }
+            }
+        }, 50);
+        
+        openModal('sponsorModal');
+    }
+
+    deleteSponsor(index) {
+        const sponsors = this.adminSystem.getData('sponsors');
+        const sponsor = sponsors[index];
+        
+        if (!sponsor) {
+            console.error('Sponsor not found at index:', index);
+            return;
+        }
+        
+        if (confirm(`Are you sure you want to delete ${sponsor.name}?`)) {
+            sponsors.splice(index, 1);
+            this.adminSystem.saveData('sponsors', sponsors);
+            this.adminSystem.showAlert('sponsors', 'Sponsor deleted successfully', 'success');
+        }
+    }
+
+    duplicateSponsor(index) {
+        const sponsors = this.adminSystem.getData('sponsors');
+        const sponsor = sponsors[index];
+        
+        if (!sponsor) {
+            console.error('Sponsor not found at index:', index);
+            return;
+        }
+        
+        const duplicatedSponsor = {
+            ...sponsor,
+            id: Date.now(),
+            name: sponsor.name + ' (Copy)',
+            dateAdded: new Date().toISOString()
+        };
+        
+        sponsors.push(duplicatedSponsor);
+        this.adminSystem.saveData('sponsors', sponsors);
+        this.adminSystem.showAlert('sponsors', 'Sponsor duplicated successfully', 'success');
+    }
+
+    // Sponsor tier management
+    getSponsorsByTier(tier) {
+        const sponsors = this.adminSystem.getData('sponsors');
+        if (tier === 'all') {
+            return sponsors;
+        }
+        return sponsors.filter(sponsor => sponsor.tier === tier);
+    }
+
+    getActiveSponsorsByTier() {
+        const sponsors = this.adminSystem.getData('sponsors').filter(s => s.active);
+        
+        const tierGroups = {
+            platinum: [],
+            gold: [],
+            silver: [],
+            bronze: []
+        };
+        
+        sponsors.forEach(sponsor => {
+            if (tierGroups[sponsor.tier]) {
+                tierGroups[sponsor.tier].push(sponsor);
+            }
+        });
+        
+        return tierGroups;
+    }
+
+    promoteSponsor(index, newTier) {
+        const sponsors = this.adminSystem.getData('sponsors');
+        const sponsor = sponsors[index];
+        
+        if (!sponsor) {
+            console.error('Sponsor not found at index:', index);
+            return;
+        }
+        
+        const oldTier = this.adminSystem.formatSponsorTier(sponsor.tier);
+        const newTierFormatted = this.adminSystem.formatSponsorTier(newTier);
+        
+        if (confirm(`Promote ${sponsor.name} from ${oldTier} to ${newTierFormatted}?`)) {
+            sponsor.tier = newTier;
+            
+            this.adminSystem.saveData('sponsors', sponsors);
+            this.adminSystem.loadSponsors();
+            
+            this.adminSystem.showAlert('sponsors', 
+                `${sponsor.name} promoted to ${newTierFormatted}`, 'success');
+        }
+    }
+
+    toggleSponsorStatus(index) {
+        const sponsors = this.adminSystem.getData('sponsors');
+        const sponsor = sponsors[index];
+        
+        if (!sponsor) {
+            console.error('Sponsor not found at index:', index);
+            return;
+        }
+        
+        sponsor.active = !sponsor.active;
+        
+        this.adminSystem.saveData('sponsors', sponsors);
+        this.adminSystem.loadSponsors();
+        
+        const status = sponsor.active ? 'activated' : 'deactivated';
+        this.adminSystem.showAlert('sponsors', `${sponsor.name} ${status}`, 'success');
+    }
+
+    toggleBannerVisibility(index) {
+        const sponsors = this.adminSystem.getData('sponsors');
+        const sponsor = sponsors[index];
+        
+        if (!sponsor) {
+            console.error('Sponsor not found at index:', index);
+            return;
+        }
+        
+        sponsor.showInBanner = !sponsor.showInBanner;
+        
+        this.adminSystem.saveData('sponsors', sponsors);
+        this.adminSystem.loadSponsors(); // This will update the banner preview
+        
+        const visibility = sponsor.showInBanner ? 'shown in' : 'hidden from';
+        this.adminSystem.showAlert('sponsors', `${sponsor.name} ${visibility} banner`, 'success');
+    }
+
+    // Banner management
+    getBannerSponsors() {
+        return this.adminSystem.getData('sponsors')
+            .filter(sponsor => sponsor.active && sponsor.showInBanner !== false);
+    }
+
+    reorderBannerSponsors(newOrder) {
+        // newOrder should be an array of sponsor IDs in the desired order
+        const sponsors = this.adminSystem.getData('sponsors');
+        const bannerSponsors = this.getBannerSponsors();
+        
+        const orderedSponsors = newOrder.map(id => 
+            bannerSponsors.find(sponsor => sponsor.id === id)
+        ).filter(Boolean);
+        
+        // Update banner display order (this would require additional implementation)
+        console.log('Banner sponsor order updated:', orderedSponsors.map(s => s.name));
+        
+        this.adminSystem.showAlert('sponsors', 'Banner order updated successfully', 'success');
+    }
+
+    // Sponsor analytics and reporting
+    getSponsorStats() {
+        const sponsors = this.adminSystem.getData('sponsors');
+        
+        const stats = {
+            total: sponsors.length,
+            active: sponsors.filter(s => s.active).length,
+            inactive: sponsors.filter(s => !s.active).length,
+            byTier: {
+                platinum: sponsors.filter(s => s.tier === 'platinum').length,
+                gold: sponsors.filter(s => s.tier === 'gold').length,
+                silver: sponsors.filter(s => s.tier === 'silver').length,
+                bronze: sponsors.filter(s => s.tier === 'bronze').length
+            },
+            bannerSponsors: sponsors.filter(s => s.active && s.showInBanner !== false).length,
+            withWebsite: sponsors.filter(s => s.website && s.website.trim() !== '').length,
+            withLogo: sponsors.filter(s => s.logo && s.logo.trim() !== '').length
+        };
+        
+        return stats;
+    }
+
+    generateSponsorReport() {
+        const sponsors = this.adminSystem.getData('sponsors');
+        const stats = this.getSponsorStats();
+        
+        const report = {
+            generatedAt: new Date().toISOString(),
+            summary: stats,
+            sponsors: sponsors.map(sponsor => ({
+                name: sponsor.name,
+                tier: sponsor.tier,
+                active: sponsor.active,
+                hasLogo: !!sponsor.logo,
+                hasWebsite: !!sponsor.website,
+                inBanner: sponsor.showInBanner !== false,
+                contactInfo: {
+                    hasPhone: !!sponsor.phone,
+                    hasEmail: !!sponsor.email
+                }
+            }))
+        };
+        
+        return report;
+    }
+
+    // Export sponsors data
+    exportSponsors(options = {}) {
+        let sponsors = this.adminSystem.getData('sponsors');
+        
+        if (options.tier && options.tier !== 'all') {
+            sponsors = sponsors.filter(s => s.tier === options.tier);
+        }
+        
+        if (options.activeOnly) {
+            sponsors = sponsors.filter(s => s.active);
+        }
+        
+        const csvData = this.convertSponsorsToCSV(sponsors);
+        const filename = `olrfc_sponsors_${options.tier || 'all'}_${new Date().toISOString().split('T')[0]}.csv`;
+        
+        this.downloadCSV(csvData, filename);
+    }
+
+    convertSponsorsToCSV(sponsors) {
+        const headers = ['Name', 'Tier', 'Phone', 'Email', 'Website', 'Active', 'In Banner', 'Has Logo'];
+        let csv = headers.join(',') + '\n';
+        
+        sponsors.forEach(sponsor => {
+            const row = [
+                sponsor.name || '',
+                this.adminSystem.formatSponsorTier(sponsor.tier),
+                sponsor.phone || '',
+                sponsor.email || '',
+                sponsor.website || '',
+                sponsor.active ? 'Yes' : 'No',
+                sponsor.showInBanner !== false ? 'Yes' : 'No',
+                sponsor.logo ? 'Yes' : 'No'
+            ];
+            
+            csv += row.map(field => `"${field}"`).join(',') + '\n';
+        });
+        
+        return csv;
+    }
+
+    downloadCSV(csvContent, filename) {
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+    }
+
+    // Sponsor communication tools
+    generateContactList(tier = 'all') {
+        let sponsors = this.adminSystem.getData('sponsors').filter(s => s.active);
+        
+        if (tier !== 'all') {
+            sponsors = sponsors.filter(s => s.tier === tier);
+        }
+        
+        const contactList = sponsors
+            .filter(s => s.email || s.phone)
+            .map(sponsor => ({
+                name: sponsor.name,
+                tier: sponsor.tier,
+                email: sponsor.email,
+                phone: sponsor.phone,
+                website: sponsor.website
+            }));
+            
+        return contactList;
+    }
+
+    generateRenewalReminders() {
+        const sponsors = this.adminSystem.getData('sponsors');
+        const sixMonthsFromNow = new Date();
+        sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+        
+        // This would need additional date fields in sponsor data for renewal tracking
+        const upcomingRenewals = sponsors.filter(sponsor => {
+            // Placeholder logic - would need renewal date field
+            return sponsor.active && Math.random() > 0.7; // Simulate some needing renewal
+        });
+        
+        return upcomingRenewals.map(sponsor => ({
+            name: sponsor.name,
+            tier: sponsor.tier,
+            email: sponsor.email,
+            renewalStatus: 'Due for renewal'
+        }));
+    }
+
+    // Logo and branding management
+    optimizeLogoSize(logoFile, maxWidth = 200, maxHeight = 100) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = () => {
+                // Calculate new dimensions maintaining aspect ratio
+                let { width, height } = img;
+                
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                
+                if (height > maxHeight) {
+                    width = (width * maxHeight) / height;
+                    height = maxHeight;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                canvas.toBlob((blob) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(blob);
+                }, 'image/jpeg', 0.8);
+            };
+            
+            img.src = URL.createObjectURL(logoFile);
+        });
+    }
+}
+
+// ============================================
+// INITIALIZE AND GLOBAL EXPORTS
+// ============================================
+
+let adminSponsorsManager;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.adminSystem) {
+        adminSponsorsManager = new AdminSponsorsManager(window.adminSystem);
+        console.log('Admin Sponsors Manager initialized');
+    }
+});
+
+// Export all CRUD functions to global scope for HTML onclick compatibility
+window.editSponsor = function(index) {
+    if (adminSponsorsManager) {
+        adminSponsorsManager.editSponsor(index);
+    } else {
+        console.error('AdminSponsorsManager not initialized');
+    }
+};
+
+window.deleteSponsor = function(index) {
+    if (adminSponsorsManager) {
+        adminSponsorsManager.deleteSponsor(index);
+    } else {
+        console.error('AdminSponsorsManager not initialized');
+    }
+};
+
+window.duplicateSponsor = function(index) {
+    if (adminSponsorsManager) {
+        adminSponsorsManager.duplicateSponsor(index);
+    } else {
+        console.error('AdminSponsorsManager not initialized');
+    }
+};
+
+window.promoteSponsor = function(index, newTier) {
+    if (adminSponsorsManager) {
+        adminSponsorsManager.promoteSponsor(index, newTier);
+    } else {
+        console.error('AdminSponsorsManager not initialized');
+    }
+};
+
+window.toggleSponsorStatus = function(index) {
+    if (adminSponsorsManager) {
+        adminSponsorsManager.toggleSponsorStatus(index);
+    } else {
+        console.error('AdminSponsorsManager not initialized');
+    }
+};
+
+window.toggleSponsorBanner = function(index) {
+    if (adminSponsorsManager) {
+        adminSponsorsManager.toggleBannerVisibility(index);
+    } else {
+        console.error('AdminSponsorsManager not initialized');
+    }
+};

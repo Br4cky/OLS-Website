@@ -85,21 +85,57 @@ document.addEventListener('DOMContentLoaded', function() {
 
     addCardHoverEffects();
 
-    // Loading animation for images
+    // ✅ FIXED: Loading animation for images - EXCLUDE heritage image and news cards
     const handleImageLoading = () => {
-        const images = document.querySelectorAll('img:not(.logo img)');
+        // ✅ CRITICAL FIX: Exclude heritage image, about-image, and news card images
+        const images = document.querySelectorAll('img:not(.logo img):not(#heritage-image):not(.about-image img):not(.news-card img)');
+        
         images.forEach(img => {
-            img.addEventListener('load', function() {
-                this.style.opacity = '1';
-                this.style.transform = 'scale(1)';
-            });
-            
-            // Set initial state
-            img.style.opacity = '0';
-            img.style.transform = 'scale(0.9)';
-            img.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            // ✅ Only apply animation to images that haven't loaded yet
+            if (!img.complete) {
+                img.style.opacity = '0';
+                img.style.transform = 'scale(0.9)';
+                
+                img.addEventListener('load', function() {
+                    this.style.opacity = '1';
+                    this.style.transform = 'scale(1)';
+                });
+                
+                img.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            } else {
+                // ✅ Image already loaded - keep it visible
+                img.style.opacity = '1';
+                img.style.transform = 'scale(1)';
+            }
         });
     };
 
     handleImageLoading();
+
+    // ✅ ADDED: Explicit protection for heritage image
+    const protectHeritageImage = () => {
+        const heritageImage = document.querySelector('.about-image img');
+        const heritageImageById = document.getElementById('heritage-image');
+        
+        if (heritageImage) {
+            heritageImage.style.opacity = '1';
+            heritageImage.style.transform = 'scale(1)';
+            heritageImage.style.visibility = 'visible';
+            heritageImage.style.display = 'block';
+            console.log('✅ Heritage image protection applied (.about-image img)');
+        }
+        
+        if (heritageImageById) {
+            heritageImageById.style.opacity = '1';
+            heritageImageById.style.transform = 'scale(1)';
+            heritageImageById.style.visibility = 'visible';
+            heritageImageById.style.display = 'block';
+            console.log('✅ Heritage image protection applied (#heritage-image)');
+        }
+    };
+
+    // Protect immediately and after animations might run
+    protectHeritageImage();
+    setTimeout(protectHeritageImage, 1000);
+    setTimeout(protectHeritageImage, 2000);
 });

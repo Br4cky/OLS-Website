@@ -1,0 +1,286 @@
+const { getStore } = require('@netlify/blobs');
+
+exports.handler = async (event, context) => {
+    const store = getStore({
+        name: 'ols-sponsors',
+        siteID: process.env.SITE_ID,
+        token: process.env.NETLIFY_ACCESS_TOKEN
+    });
+
+    const existingSponsors = [
+        {
+            "id": "1761606369131",
+            "name": "Cuppa Dunchurch",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761606361/p8ft6ywf7v7vp4s0y2bz.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761606213213",
+            "name": "Scanomat Uk",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761606211/uex6zyljzsyzsquygygb.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761604270764",
+            "name": "Thistle Scientific",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761595879/v4jqp0r4liuyvasma6e6.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761604192754",
+            "name": "Elland Fields Consultants Ltd",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761596648/gmhtmftgifd1yqcpztw9.png",
+            "website": "https://example.com",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761603765989",
+            "name": "Creative Plastics",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761603765/cfrxdtuw06xuqyouplwr.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761599766600",
+            "name": "Leader Systems",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761599759/kbchytrmgcariro25qn4.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761599735098",
+            "name": "The Merchants Inn",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761599733/sdf9s5adftzcsvchhgpx.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761599583385",
+            "name": "McApline Grant llco",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761599554/bqhrrolsrtundioh4vgj.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761599521553",
+            "name": "Cottons Accountants",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761599508/ybjs4a5cb3okdebooasr.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761599465781",
+            "name": "Courtyard Dental Practice",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761599451/xjcq4sozfyqvjnmc0dlz.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761597714335",
+            "name": "JJ Quinn Roofing",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761597702/hrptngzfcakyrcxzjdhs.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761597667452",
+            "name": "Hawk Scaffolding",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761597655/nlgclexkiynpsafqg0ie.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761597632728",
+            "name": "Optera Structural Solutions",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761597614/bu4ki1wcqtz3t1xynbxn.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761597598667",
+            "name": "Useful Structures",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761597588/rugpywuiowhnts0uffz9.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761597569955",
+            "name": "Landmark Surverys & Developments",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761597549/t3y8wsu9w9rjndogqx8y.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761597411937",
+            "name": "The Bell Inn",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761595787/j6c7z5wigz0eh9k4e2gb.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761597076040",
+            "name": "Heffernans Civil Engineering",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761597040/u3l2kioyyhv7hab3y0ct.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761596840857",
+            "name": "Brethertons Solicitors",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761596805/skrbgkz4ppcsz7iiem9z.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761596783468",
+            "name": "Power Nation Cheer",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761596758/wzhqbtjaynx23jvoi2yg.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761596731962",
+            "name": "RM Property",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761596717/odxvtvguf7ifnovwonsg.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761596690735",
+            "name": "Elland Fields Consultancy Ltd",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761596648/gmhtmftgifd1yqcpztw9.png",
+            "website": "https://example.com",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761596590707",
+            "name": "The Redbourn Group",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761596577/w3dmbs01ftsvcuklzpwf.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761596148494",
+            "name": "Scanomat UK&I",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761596146/w9t0juytg7q8hlzo3b9i.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761595892102",
+            "name": "Thistle Scientific",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761595879/v4jqp0r4liuyvasma6e6.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761595789699",
+            "name": "Cuppa Dunchurch",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761595787/j6c7z5wigz0eh9k4e2gb.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761595729639",
+            "name": "Creative Plastics",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761595705/mpzu1qulpxz6i662pma6.png",
+            "website": "",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        },
+        {
+            "id": "1761595267352",
+            "name": "DEB Designer",
+            "logo": "https://res.cloudinary.com/dep5rhteb/image/upload/v1761595248/lhlm2ymst96p1fnk9vj8.png",
+            "website": "https://example.com",
+            "active": "true",
+            "showInBanner": "true",
+            "tier": "bronze"
+        }
+    ];
+
+    try {
+        // Store in Netlify Blobs
+        await store.set('all-sponsors', JSON.stringify(existingSponsors));
+        
+        return {
+            statusCode: 200,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({
+                success: true,
+                message: `Successfully migrated ${existingSponsors.length} sponsors to Netlify Blobs`,
+                count: existingSponsors.length
+            })
+        };
+    } catch (error) {
+        console.error('Migration error:', error);
+        return {
+            statusCode: 500,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({
+                success: false,
+                error: error.message
+            })
+        };
+    }
+};

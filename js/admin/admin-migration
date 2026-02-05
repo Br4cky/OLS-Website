@@ -1,0 +1,760 @@
+/**
+ * Admin Migration Manager - OLS-WEBSITE
+ * Cloud migration tools and batch operations for Netlify integration
+ */
+
+class AdminMigrationManager {
+    constructor(adminSystem) {
+        this.adminSystem = adminSystem;
+    }
+
+    // ============================================
+    // MIGRATION OPERATIONS
+    // ============================================
+
+    migrateToCloud() {
+        this.showMigrationDialog();
+    }
+
+    showMigrationDialog() {
+        const existingDialog = document.getElementById('migrationDialog');
+        if (existingDialog) {
+            existingDialog.remove();
+        }
+        
+        const migrationAnalysis = this.analyzeMigrationData();
+        
+        const dialog = document.createElement('div');
+        dialog.id = 'migrationDialog';
+        dialog.className = 'modal';
+        dialog.style.display = 'block';
+        
+        dialog.innerHTML = `
+            <div class="modal-content" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h3>🚀 Migrate Data to Cloud Storage</h3>
+                    <button class="close" onclick="closeMigrationDialog()">&times;</button>
+                </div>
+                
+                <div style="margin-bottom: 2rem;">
+                    <p>This will transfer your localStorage data to Netlify Forms for persistent cloud storage.</p>
+                    
+                    <div style="background: #e3f2fd; border: 1px solid #1976d2; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                        <h4>Migration Analysis</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                            ${Object.entries(migrationAnalysis.dataTypes).map(([dataType, info]) => `
+                                <div style="text-align: center; padding: 0.5rem; background: white; border-radius: 4px;">
+                                    <strong>${dataType.charAt(0).toUpperCase() + dataType.slice(1)}</strong><br>
+                                    <span style="color: #1976d2;">${info.count} records</span><br>
+                                    <small style="color: ${info.hasIntegration ? '#4caf50' : '#ff9800'};">
+                                        ${info.hasIntegration ? 'Cloud Ready' : 'Local Only'}
+                                    </small>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div style="margin-top: 1rem;">
+                            <strong>Total Records:</strong> ${migrationAnalysis.totalRecords}<br>
+                            <strong>Cloud Integration:</strong> ${migrationAnalysis.integratedTypes} of 6 data types ready<br>
+                            <strong>Estimated Time:</strong> ${this.estimateMigrationTime(migrationAnalysis.totalRecords)}
+                        </div>
+                    </div>
+                    
+                    <div style="margin: 1rem 0;">
+                        <h4>Migration Options</h4>
+                        <label style="display: block; margin: 0.5rem 0;">
+                            <input type="radio" name="migrationMode" value="integrated" checked>
+                            Migrate only cloud-integrated data types (${migrationAnalysis.integratedTypes} types)
+                        </label>
+                        <label style="display: block; margin: 0.5rem 0;">
+                            <input type="radio" name="migrationMode" value="all">
+                            Attempt to migrate all data types (may fail for non-integrated types)
+                        </label>
+                    </div>
+                    
+                    <div style="margin: 1rem 0;">
+                        <h4>Safety Options</h4>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; margin: 0.5rem 0;">
+                            <input type="checkbox" id="createMigrationBackup" checked>
+                            Create backup before migration (recommended)
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; margin: 0.5rem 0;">
+                            <input type="checkbox" id="verifyAfterMigration" checked>
+                            Verify data integrity after migration
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; margin: 0.5rem 0;">
+                            <input type="checkbox" id="pauseOnErrors">
+                            Pause migration on errors for review
+                        </label>
+                    </div>
+                    
+                    <div style="margin: 1rem 0; padding: 1rem; background: #fff3e0; border: 1px solid #ff9800; border-radius: 8px;">
+                        <strong>⚠️ Important Notes:</strong><br>
+                        • This will submit each record individually to Netlify Forms<br>
+                        • Existing cloud data will not be affected (no duplicates)<br>
+                        • Migration can be stopped at any time<br>
+                        • localStorage data will remain unchanged
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="closeMigrationDialog()">Cancel</button>
+                    <button class="btn btn-primary" onclick="startMigration()" 
+                            ${migrationAnalysis.totalRecords === 0 ? 'disabled' : ''}>
+                        Start Migration
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+    }
+
+    analyzeMigrationData() {
+        const dataTypes = ['news', 'fixtures', 'players', 'sponsors', 'gallery', 'shop'];
+        const analysis = {
+            dataTypes: {},
+            totalRecords: 0,
+            integratedTypes: 0,
+            nonIntegratedTypes: 0
+        };
+        
+        const integratedTypes = ['news', 'fixtures', 'players', 'sponsors'];
+        
+        dataTypes.forEach(dataType => {
+            const data = this.adminSystem.getData(dataType);
+            const hasIntegration = integratedTypes.includes(dataType);
+            
+            analysis.dataTypes[dataType] = {
+                count: data.length,
+                hasIntegration: hasIntegration
+            };
+            
+            analysis.totalRecords += data.length;
+            
+            if (hasIntegration) {
+                analysis.integratedTypes++;
+            } else {
+                analysis.nonIntegratedTypes++;
+            }
+        });
+        
+        return analysis;
+    }
+
+    estimateMigrationTime(recordCount) {
+        const secondsPerRecord = 0.5;
+        const totalSeconds = recordCount * secondsPerRecord;
+        
+        if (totalSeconds < 60) {
+            return `${Math.ceil(totalSeconds)} seconds`;
+        } else {
+            return `${Math.ceil(totalSeconds / 60)} minutes`;
+        }
+    }
+
+    closeMigrationDialog() {
+        const dialog = document.getElementById('migrationDialog');
+        if (dialog) {
+            dialog.remove();
+        }
+    }
+
+    async startMigration() {
+        try {
+            const migrationMode = document.querySelector('input[name="migrationMode"]:checked')?.value || 'integrated';
+            const createBackup = document.getElementById('createMigrationBackup')?.checked || false;
+            const verifyAfter = document.getElementById('verifyAfterMigration')?.checked || false;
+            const pauseOnErrors = document.getElementById('pauseOnErrors')?.checked || false;
+            
+            this.closeMigrationDialog();
+            
+            if (createBackup) {
+                this.showMigrationProgress('Creating backup...', 0, 0);
+                await this.createMigrationBackup();
+            }
+            
+            const migrationResult = await this.performBatchMigration(migrationMode, pauseOnErrors);
+            
+            if (verifyAfter && migrationResult.success) {
+                this.showMigrationProgress('Verifying data integrity...', 0, 0);
+                await this.verifyMigrationIntegrity(migrationResult);
+            }
+            
+            this.showMigrationComplete(migrationResult);
+            
+        } catch (error) {
+            console.error('Migration failed:', error);
+            this.showMigrationError(`Migration failed: ${error.message}`);
+        }
+    }
+
+    async createMigrationBackup() {
+        const backupData = {
+            metadata: {
+                backupDate: new Date().toISOString(),
+                backupType: 'pre-migration',
+                backupVersion: '1.0'
+            },
+            data: {}
+        };
+        
+        const dataTypes = ['news', 'fixtures', 'players', 'sponsors', 'gallery', 'shop'];
+        dataTypes.forEach(dataType => {
+            backupData.data[dataType] = {
+                records: this.adminSystem.getData(dataType),
+                count: this.adminSystem.getData(dataType).length
+            };
+        });
+        
+        const filename = `olrfc_migration_backup_${Date.now()}.json`;
+        const dataStr = JSON.stringify(backupData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const downloadLink = document.createElement('a');
+        downloadLink.href = URL.createObjectURL(dataBlob);
+        downloadLink.download = filename;
+        downloadLink.style.display = 'none';
+        
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+
+    async performBatchMigration(migrationMode, pauseOnErrors) {
+        const migrationResult = {
+            success: false,
+            totalRecords: 0,
+            successCount: 0,
+            errorCount: 0,
+            skippedCount: 0,
+            errors: [],
+            dataTypes: {},
+            startTime: new Date(),
+            endTime: null
+        };
+        
+        const integratedTypes = ['news', 'fixtures', 'players', 'sponsors'];
+        const allTypes = ['news', 'fixtures', 'players', 'sponsors', 'gallery', 'shop'];
+        const dataTypesToMigrate = migrationMode === 'integrated' ? integratedTypes : allTypes;
+        
+        if (!window.netlifyDataManager) {
+            throw new Error('Netlify Data Manager not available. Please check your integration.');
+        }
+        
+        let totalRecords = 0;
+        let processedRecords = 0;
+        
+        dataTypesToMigrate.forEach(dataType => {
+            const data = this.adminSystem.getData(dataType);
+            totalRecords += data.length;
+            migrationResult.dataTypes[dataType] = {
+                total: data.length,
+                success: 0,
+                errors: 0,
+                skipped: 0
+            };
+        });
+        
+        migrationResult.totalRecords = totalRecords;
+        
+        if (totalRecords === 0) {
+            throw new Error('No records found to migrate');
+        }
+        
+        for (const dataType of dataTypesToMigrate) {
+            const data = this.adminSystem.getData(dataType);
+            
+            this.showMigrationProgress(`Migrating ${dataType}...`, processedRecords, totalRecords);
+            
+            for (let i = 0; i < data.length; i++) {
+                const record = data[i];
+                processedRecords++;
+                
+                try {
+                    if (record._cloudSynced) {
+                        migrationResult.dataTypes[dataType].skipped++;
+                        migrationResult.skippedCount++;
+                        continue;
+                    }
+                    
+                    this.showMigrationProgress(
+                        `Migrating ${dataType}: ${i + 1}/${data.length}`, 
+                        processedRecords, 
+                        totalRecords
+                    );
+                    
+                    let result;
+                    switch (dataType) {
+                        case 'news':
+                            result = await window.netlifyDataManager.createNews(record);
+                            break;
+                        case 'fixtures':
+                            result = await window.netlifyDataManager.createFixture(record);
+                            break;
+                        case 'players':
+                            result = await window.netlifyDataManager.createPlayer(record);
+                            break;
+                        case 'sponsors':
+                            result = await window.netlifyDataManager.createSponsor(record);
+                            break;
+                        case 'gallery':
+                            throw new Error(`${dataType} cloud integration not yet implemented`);
+                        case 'shop':
+                            throw new Error(`${dataType} cloud integration not yet implemented`);
+                        default:
+                            throw new Error(`Unknown data type: ${dataType}`);
+                    }
+                    
+                    if (result && result.success) {
+                        migrationResult.dataTypes[dataType].success++;
+                        migrationResult.successCount++;
+                    } else {
+                        throw new Error(result?.error || 'Unknown cloud submission error');
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                } catch (error) {
+                    migrationResult.dataTypes[dataType].errors++;
+                    migrationResult.errorCount++;
+                    migrationResult.errors.push({
+                        dataType: dataType,
+                        recordIndex: i,
+                        record: record,
+                        error: error.message,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    console.warn(`Migration error for ${dataType}[${i}]:`, error);
+                    
+                    if (pauseOnErrors) {
+                        const continueOnError = await this.askContinueOnError(error, dataType, i);
+                        if (!continueOnError) {
+                            throw new Error('Migration paused by user due to errors');
+                        }
+                    }
+                }
+            }
+        }
+        
+        migrationResult.endTime = new Date();
+        migrationResult.success = migrationResult.errorCount < migrationResult.totalRecords;
+        
+        return migrationResult;
+    }
+
+    async askContinueOnError(error, dataType, recordIndex) {
+        return new Promise((resolve) => {
+            const dialog = document.createElement('div');
+            dialog.className = 'modal';
+            dialog.style.display = 'block';
+            dialog.innerHTML = `
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h3>Migration Error</h3>
+                    </div>
+                    <div>
+                        <p><strong>Error occurred during migration:</strong></p>
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
+                            <strong>Data Type:</strong> ${dataType}<br>
+                            <strong>Record:</strong> ${recordIndex + 1}<br>
+                            <strong>Error:</strong> ${error.message}
+                        </div>
+                        <p>What would you like to do?</p>
+                    </div>
+                    <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                        <button class="btn btn-danger" onclick="handleErrorChoice(false)">Stop Migration</button>
+                        <button class="btn btn-secondary" onclick="handleErrorChoice(true)">Continue</button>
+                    </div>
+                </div>
+            `;
+            
+            window.handleErrorChoice = (continueChoice) => {
+                dialog.remove();
+                delete window.handleErrorChoice;
+                resolve(continueChoice);
+            };
+            
+            document.body.appendChild(dialog);
+        });
+    }
+
+    async verifyMigrationIntegrity(migrationResult) {
+        const verification = {
+            passed: true,
+            issues: []
+        };
+        
+        Object.entries(migrationResult.dataTypes).forEach(([dataType, stats]) => {
+            if (stats.errors > stats.success) {
+                verification.passed = false;
+                verification.issues.push(`${dataType}: More errors (${stats.errors}) than successes (${stats.success})`);
+            }
+        });
+        
+        migrationResult.verification = verification;
+        return verification;
+    }
+
+    // ============================================
+    // DATA CLEARING FUNCTIONALITY
+    // ============================================
+
+    clearAllData() {
+        const confirmDialog = document.createElement('div');
+        confirmDialog.className = 'modal';
+        confirmDialog.style.display = 'block';
+        
+        confirmDialog.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3 style="color: #dc3545;">⚠️ Clear All Data</h3>
+                </div>
+                
+                <div style="margin-bottom: 2rem;">
+                    <p><strong>This will permanently delete ALL data from localStorage:</strong></p>
+                    <ul style="margin: 1rem 0; padding-left: 2rem;">
+                        <li>News articles (${this.adminSystem.getData('news').length} items)</li>
+                        <li>Fixtures (${this.adminSystem.getData('fixtures').length} items)</li>
+                        <li>Players (${this.adminSystem.getData('players').length} items)</li>
+                        <li>Sponsors (${this.adminSystem.getData('sponsors').length} items)</li>
+                        <li>Gallery albums (${this.adminSystem.getData('gallery').length} items)</li>
+                        <li>Shop products (${this.adminSystem.getData('shop').length} items)</li>
+                        <li>Admin settings and preferences</li>
+                    </ul>
+                    
+                    <div style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
+                        <strong>Warning:</strong> This action cannot be undone. Cloud data will remain unaffected.
+                    </div>
+                    
+                    <p>Type <strong>"DELETE ALL DATA"</strong> to confirm:</p>
+                    <input type="text" id="deleteConfirmation" placeholder="Type confirmation text here" style="width: 100%; padding: 0.5rem; margin: 0.5rem 0;">
+                </div>
+                
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="cancelClearData()">Cancel</button>
+                    <button class="btn btn-danger" onclick="executeClearData()" id="confirmDeleteBtn" disabled>Clear All Data</button>
+                </div>
+            </div>
+        `;
+        
+        confirmDialog.id = 'clearDataDialog';
+        document.body.appendChild(confirmDialog);
+        
+        document.getElementById('deleteConfirmation').addEventListener('input', function(e) {
+            const deleteBtn = document.getElementById('confirmDeleteBtn');
+            if (e.target.value === 'DELETE ALL DATA') {
+                deleteBtn.disabled = false;
+                deleteBtn.style.backgroundColor = '#dc3545';
+            } else {
+                deleteBtn.disabled = true;
+                deleteBtn.style.backgroundColor = '#6c757d';
+            }
+        });
+    }
+
+    cancelClearData() {
+        const dialog = document.getElementById('clearDataDialog');
+        if (dialog) {
+            dialog.remove();
+        }
+    }
+
+    executeClearData() {
+        try {
+            this.cancelClearData();
+            
+            this.showClearProgress('Clearing all data...');
+            
+            const dataTypes = ['news', 'fixtures', 'players', 'sponsors', 'gallery', 'shop'];
+            dataTypes.forEach(dataType => {
+                localStorage.removeItem(`olrfc_${dataType}`);
+                localStorage.removeItem(`olrfc_${dataType}_meta`);
+            });
+            
+            localStorage.removeItem('olrfc_admin_features');
+            localStorage.removeItem('olrfc_export_count');
+            localStorage.removeItem('olrfc_pending_sync');
+            
+            this.adminSystem.initializeData();
+            this.adminSystem.loadAllData();
+            this.adminSystem.updateStats();
+            
+            this.showClearComplete();
+            
+        } catch (error) {
+            console.error('Clear data failed:', error);
+            this.showClearError(`Failed to clear data: ${error.message}`);
+        }
+    }
+
+    stopMigration() {
+        if (confirm('Are you sure you want to stop the migration? Progress will be lost.')) {
+            const progressElement = document.getElementById('migrationProgress');
+            if (progressElement) {
+                progressElement.remove();
+            }
+            
+            this.showMigrationError('Migration stopped by user');
+        }
+    }
+
+    // ============================================
+    // UI FEEDBACK FUNCTIONS
+    // ============================================
+
+    showMigrationProgress(message, current, total) {
+        let alertElement = document.getElementById('migrationProgress');
+        if (!alertElement) {
+            alertElement = document.createElement('div');
+            alertElement.id = 'migrationProgress';
+            alertElement.className = 'alert alert-info';
+            alertElement.style.position = 'fixed';
+            alertElement.style.top = '100px';
+            alertElement.style.right = '20px';
+            alertElement.style.zIndex = '10000';
+            alertElement.style.minWidth = '350px';
+            document.body.appendChild(alertElement);
+        }
+        
+        const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
+        
+        alertElement.innerHTML = `
+            <strong>Migration in Progress...</strong><br>
+            ${message}<br>
+            <div style="margin-top: 10px;">
+                <div style="background: #ddd; height: 8px; border-radius: 4px;">
+                    <div style="background: var(--primary-green); height: 100%; width: ${percentage}%; border-radius: 4px; transition: width 0.3s ease;"></div>
+                </div>
+                <small>${current} / ${total} records (${percentage}%)</small>
+            </div>
+            <button onclick="stopMigration()" style="margin-top: 10px; padding: 5px 10px; border: none; background: #dc3545; color: white; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                Stop Migration
+            </button>
+        `;
+    }
+
+    showMigrationComplete(result) {
+        const progressElement = document.getElementById('migrationProgress');
+        if (progressElement) {
+            progressElement.remove();
+        }
+        
+        const duration = result.endTime ? Math.round((result.endTime - result.startTime) / 1000) : 0;
+        const successRate = result.totalRecords > 0 ? Math.round((result.successCount / result.totalRecords) * 100) : 0;
+        
+        const alertType = result.errorCount === 0 ? 'success' : result.successCount > result.errorCount ? 'warning' : 'danger';
+        
+        const alertElement = document.createElement('div');
+        alertElement.className = `alert alert-${alertType}`;
+        alertElement.style.position = 'fixed';
+        alertElement.style.top = '100px';
+        alertElement.style.right = '20px';
+        alertElement.style.zIndex = '10000';
+        alertElement.style.minWidth = '400px';
+        alertElement.style.maxHeight = '500px';
+        alertElement.style.overflowY = 'auto';
+        
+        alertElement.innerHTML = `
+            <strong>Migration Complete!</strong><br>
+            <div style="margin: 1rem 0;">
+                <strong>Results:</strong><br>
+                • Total Records: ${result.totalRecords}<br>
+                • Successfully Migrated: ${result.successCount} (${successRate}%)<br>
+                • Errors: ${result.errorCount}<br>
+                • Skipped: ${result.skippedCount}<br>
+                • Duration: ${duration} seconds
+            </div>
+            
+            <div style="margin: 1rem 0;">
+                <strong>Data Type Breakdown:</strong><br>
+                ${Object.entries(result.dataTypes).map(([dataType, stats]) => 
+                    `• ${dataType}: ${stats.success}/${stats.total} (${stats.errors} errors)`
+                ).join('<br>')}
+            </div>
+            
+            ${result.errors.length > 0 ? `
+                <details style="margin-top: 1rem;">
+                    <summary>View Error Details (${result.errors.length} errors)</summary>
+                    <div style="max-height: 150px; overflow-y: auto; margin-top: 0.5rem; font-size: 12px;">
+                        ${result.errors.map(error => 
+                            `<div style="border-bottom: 1px solid #ddd; padding: 0.3rem 0;">
+                                <strong>${error.dataType}:</strong> ${error.error}
+                            </div>`
+                        ).join('')}
+                    </div>
+                </details>
+            ` : ''}
+            
+            <button onclick="this.parentElement.remove()" style="margin-top: 15px; padding: 8px 15px; border: none; background: var(--primary-green); color: white; border-radius: 4px; cursor: pointer;">
+                Close
+            </button>
+        `;
+        
+        document.body.appendChild(alertElement);
+        
+        setTimeout(() => {
+            if (alertElement.parentElement) {
+                alertElement.remove();
+            }
+        }, 120000);
+    }
+
+    showMigrationError(message) {
+        const progressElement = document.getElementById('migrationProgress');
+        if (progressElement) {
+            progressElement.remove();
+        }
+        
+        const alertElement = document.createElement('div');
+        alertElement.className = 'alert alert-danger';
+        alertElement.style.position = 'fixed';
+        alertElement.style.top = '100px';
+        alertElement.style.right = '20px';
+        alertElement.style.zIndex = '10000';
+        alertElement.style.minWidth = '350px';
+        
+        alertElement.innerHTML = `
+            <strong>Migration Failed!</strong><br>
+            ${message}<br>
+            <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px; border: none; background: #dc3545; color: white; border-radius: 4px; cursor: pointer;">Close</button>
+        `;
+        
+        document.body.appendChild(alertElement);
+        
+        setTimeout(() => {
+            if (alertElement.parentElement) {
+                alertElement.remove();
+            }
+        }, 15000);
+    }
+
+    showClearProgress(message) {
+        const alertElement = document.createElement('div');
+        alertElement.id = 'clearProgress';
+        alertElement.className = 'alert alert-warning';
+        alertElement.style.position = 'fixed';
+        alertElement.style.top = '100px';
+        alertElement.style.right = '20px';
+        alertElement.style.zIndex = '10000';
+        alertElement.innerHTML = `<strong>Clearing Data...</strong><br>${message}`;
+        document.body.appendChild(alertElement);
+    }
+
+    showClearComplete() {
+        const progressElement = document.getElementById('clearProgress');
+        if (progressElement) {
+            progressElement.remove();
+        }
+        
+        const alertElement = document.createElement('div');
+        alertElement.className = 'alert alert-success';
+        alertElement.style.position = 'fixed';
+        alertElement.style.top = '100px';
+        alertElement.style.right = '20px';
+        alertElement.style.zIndex = '10000';
+        alertElement.innerHTML = `
+            <strong>Data Cleared Successfully!</strong><br>
+            All localStorage data has been removed.<br>
+            <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px; border: none; background: var(--primary-green); color: white; border-radius: 4px; cursor: pointer;">Close</button>
+        `;
+        document.body.appendChild(alertElement);
+        
+        setTimeout(() => {
+            if (alertElement.parentElement) {
+                alertElement.remove();
+            }
+        }, 10000);
+    }
+
+    showClearError(message) {
+        const progressElement = document.getElementById('clearProgress');
+        if (progressElement) {
+            progressElement.remove();
+        }
+        
+        const alertElement = document.createElement('div');
+        alertElement.className = 'alert alert-danger';
+        alertElement.style.position = 'fixed';
+        alertElement.style.top = '100px';
+        alertElement.style.right = '20px';
+        alertElement.style.zIndex = '10000';
+        alertElement.innerHTML = `
+            <strong>Clear Failed!</strong><br>
+            ${message}<br>
+            <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px; border: none; background: #dc3545; color: white; border-radius: 4px; cursor: pointer;">Close</button>
+        `;
+        document.body.appendChild(alertElement);
+    }
+}
+
+// ============================================
+// INITIALIZE AND GLOBAL EXPORTS
+// ============================================
+
+let adminMigrationManager;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.adminSystem) {
+        adminMigrationManager = new AdminMigrationManager(window.adminSystem);
+        console.log('Admin Migration Manager initialized');
+    }
+});
+
+// Export all functions to global scope for HTML onclick compatibility
+window.migrateToCloud = function() {
+    if (adminMigrationManager) {
+        adminMigrationManager.migrateToCloud();
+    } else {
+        console.error('AdminMigrationManager not initialized');
+    }
+};
+
+window.clearAllData = function() {
+    if (adminMigrationManager) {
+        adminMigrationManager.clearAllData();
+    } else {
+        console.error('AdminMigrationManager not initialized');
+    }
+};
+
+window.closeMigrationDialog = function() {
+    if (adminMigrationManager) {
+        adminMigrationManager.closeMigrationDialog();
+    } else {
+        console.error('AdminMigrationManager not initialized');
+    }
+};
+
+window.startMigration = function() {
+    if (adminMigrationManager) {
+        adminMigrationManager.startMigration();
+    } else {
+        console.error('AdminMigrationManager not initialized');
+    }
+};
+
+window.cancelClearData = function() {
+    if (adminMigrationManager) {
+        adminMigrationManager.cancelClearData();
+    } else {
+        console.error('AdminMigrationManager not initialized');
+    }
+};
+
+window.executeClearData = function() {
+    if (adminMigrationManager) {
+        adminMigrationManager.executeClearData();
+    } else {
+        console.error('AdminMigrationManager not initialized');
+    }
+};
+
+window.stopMigration = function() {
+    if (adminMigrationManager) {
+        adminMigrationManager.stopMigration();
+    } else {
+        console.error('AdminMigrationManager not initialized');
+    }
+};

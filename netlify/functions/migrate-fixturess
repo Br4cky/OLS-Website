@@ -1,0 +1,418 @@
+// netlify/functions/migrate-fixtures.js
+// ONE-TIME MIGRATION: Transfer existing fixtures to Netlify Blobs
+// OLS 83
+
+const { getStore } = require('@netlify/blobs');
+
+exports.handler = async (event, context) => {
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type'
+    };
+
+    try {
+        // Your existing fixtures data here
+        const existingFixtures = [
+  {
+    "id": "1762730247908",
+    "team": "mens-2nd",
+    "opponent": "Broadstreet 3's",
+    "dateTime": "2025-11-22T14:15",
+    "venue": "home",
+    "competition": "",
+    "ourScore": "",
+    "theirScore": "",
+    "status": "upcoming",
+    "createdAt": "2025-11-09T23:17:55.408Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1762216764804",
+    "team": "colts",
+    "opponent": "Nuneaton",
+    "dateTime": "2025-11-08T14:15",
+    "venue": "away",
+    "competition": "Warwickshire Colts League",
+    "ourScore": "0",
+    "theirScore": "41",
+    "status": "upcoming",
+    "createdAt": "2025-11-09T23:13:52.028Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1760994975504",
+    "team": "mens-1st",
+    "opponent": "Brackley",
+    "dateTime": "2025-11-08T14:15",
+    "venue": "home",
+    "competition": "Counties 2 Midlands East (South)",
+    "ourScore": "29",
+    "theirScore": "8",
+    "status": "upcoming",
+    "createdAt": "2025-11-09T23:10:22.958Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1762550346276",
+    "team": "mens-2nd",
+    "opponent": "Barkers Butts RFC",
+    "dateTime": "2025-11-08T14:15",
+    "venue": "away",
+    "competition": "",
+    "ourScore": "44",
+    "theirScore": "22",
+    "status": "upcoming",
+    "createdAt": "2025-11-09T23:09:34.647Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1761904102125",
+    "team": "mens-2nd",
+    "opponent": "Rugby St. Andrews",
+    "dateTime": "2025-11-01T14:00",
+    "venue": "home",
+    "competition": "Vets Team / Friendly",
+    "ourScore": "37",
+    "theirScore": "21",
+    "status": "upcoming",
+    "createdAt": "2025-11-04T08:49:08.519Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1761506181583",
+    "team": "colts",
+    "opponent": "Kenilworth Colts",
+    "dateTime": "2025-11-28T19:30",
+    "venue": "away",
+    "competition": "Warwickshire Youth & Colts Merit Leagues",
+    "ourScore": "",
+    "theirScore": "",
+    "status": "upcoming",
+    "createdAt": "2025-11-02T16:12:07.911Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1761506505107",
+    "team": "mens-2nd",
+    "opponent": "Leamington RFC",
+    "dateTime": "2025-11-01T13:00",
+    "venue": "home",
+    "competition": "",
+    "ourScore": "",
+    "theirScore": "",
+    "status": "upcoming",
+    "createdAt": "2025-10-28T12:19:14.032Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1761506121102",
+    "team": "colts",
+    "opponent": "Broadstreet Colts",
+    "dateTime": "2025-11-15T13:30",
+    "venue": "home",
+    "competition": "Warwickshire Youth & Colts Merit Leagues",
+    "ourScore": "",
+    "theirScore": "",
+    "status": "upcoming",
+    "createdAt": "2025-10-26T19:15:28.446Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1760452552923",
+    "team": "mens-1st",
+    "opponent": "Peterborough Lions",
+    "dateTime": "2025-10-18T15:00",
+    "venue": "away",
+    "competition": "Counties 2 Midlands East (South)",
+    "ourScore": "43",
+    "theirScore": "24",
+    "status": "upcoming",
+    "createdAt": "2025-10-26T19:11:19.346Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1760002404558",
+    "team": "mens-1st",
+    "opponent": "Huntingdon & District",
+    "dateTime": "2025-10-11T15:00",
+    "venue": "home",
+    "competition": "Counties 2 Midlands East (South)",
+    "ourScore": "59",
+    "theirScore": "24",
+    "status": "upcoming",
+    "createdAt": "2025-10-26T19:11:10.036Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1760003383342",
+    "team": "mens-1st",
+    "opponent": "St. Neots RFC",
+    "dateTime": "2025-10-04T15:00",
+    "venue": "away",
+    "competition": "Counties 2 Midlands East (South)",
+    "ourScore": "26",
+    "theirScore": "17",
+    "status": "upcoming",
+    "createdAt": "2025-10-26T19:10:51.268Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1761504501464",
+    "team": "colts",
+    "opponent": "Harbury RFC Colts",
+    "dateTime": "2025-09-13T13:30",
+    "venue": "away",
+    "competition": "Warwickshire Colts & Youth Merit Leagues",
+    "ourScore": "31",
+    "theirScore": "14",
+    "status": "upcoming",
+    "createdAt": "2025-10-26T18:56:49.641Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1761504903944",
+    "team": "colts",
+    "opponent": "Earlsdon RFC Colts",
+    "dateTime": "2025-09-06T13:30",
+    "venue": "away",
+    "competition": "Warwickshire Youth & Colts Merit Leagues",
+    "ourScore": "7",
+    "theirScore": "10",
+    "status": "upcoming",
+    "createdAt": "2025-10-26T18:55:03.952Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1761504357925",
+    "team": "colts",
+    "opponent": "Keresley Colts",
+    "dateTime": "2025-09-20T13:30",
+    "venue": "away",
+    "competition": "Warwickshire Colts & Youth Merit Leagues",
+    "ourScore": "0",
+    "theirScore": "26",
+    "status": "upcoming",
+    "createdAt": "2025-10-26T18:46:07.520Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1761504275678",
+    "team": "colts",
+    "opponent": "Stratford Upon Avon Colts",
+    "dateTime": "2025-09-26T13:30",
+    "venue": "away",
+    "competition": "Warwickshire Colts & Youth Merit Leagues",
+    "ourScore": "29",
+    "theirScore": "22",
+    "status": "upcoming",
+    "createdAt": "2025-10-26T18:44:35.690Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1761503918810",
+    "team": "colts",
+    "opponent": "Berkswell & Balsall RFC Colts",
+    "dateTime": "2025-10-25T13:30",
+    "venue": "home",
+    "competition": "Warwickshire Colts & Youth Merit Leagues",
+    "ourScore": "20",
+    "theirScore": "0",
+    "status": "upcoming",
+    "createdAt": "2025-10-26T18:38:38.816Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1761503709442",
+    "team": "colts",
+    "opponent": "Pinley RFC Colts",
+    "dateTime": "2025-10-11T13:30",
+    "venue": "home",
+    "competition": "Warwickshire Colts & Youth Merit Leagues",
+    "ourScore": "20",
+    "theirScore": "0",
+    "status": "upcoming",
+    "createdAt": "2025-10-26T18:35:09.450Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1760007227626",
+    "team": "mens-1st",
+    "opponent": "Barkers Butts RFC",
+    "dateTime": "2025-10-25T14:15",
+    "venue": "home",
+    "competition": "Counties Cup",
+    "ourScore": "21",
+    "theirScore": "22",
+    "status": "upcoming",
+    "createdAt": "2025-10-25T14:54:28.932Z",
+    "updatedAt": "",
+    "ip": "145.224.67.41",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1761388068084",
+    "team": "mens-2nd",
+    "opponent": "Broadstreet 3's",
+    "dateTime": "2025-10-24T19:30",
+    "venue": "away",
+    "competition": "",
+    "ourScore": "17",
+    "theirScore": "62",
+    "status": "upcoming",
+    "createdAt": "2025-10-25T11:42:54.126Z",
+    "updatedAt": "",
+    "ip": "95.146.130.192",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1760995308051",
+    "team": "mens-1st",
+    "opponent": "Northampton Casuals",
+    "dateTime": "2025-11-29T14:15",
+    "venue": "home",
+    "competition": "Counties 2 Midlands East (South)",
+    "ourScore": "",
+    "theirScore": "",
+    "status": "upcoming",
+    "createdAt": "2025-10-20T21:21:48.056Z",
+    "updatedAt": "",
+    "ip": "95.146.246.243",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1760995088932",
+    "team": "mens-1st",
+    "opponent": "Rugby Lions",
+    "dateTime": "2025-11-22T14:15",
+    "venue": "away",
+    "competition": "Counties 2 Midlands East (South)",
+    "ourScore": "",
+    "theirScore": "",
+    "status": "upcoming",
+    "createdAt": "2025-10-20T21:18:08.938Z",
+    "updatedAt": "",
+    "ip": "95.146.246.243",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1760007528247",
+    "team": "mens-1st",
+    "opponent": "Leighton Buzzard",
+    "dateTime": "2025-09-13T15:00",
+    "venue": "home",
+    "competition": "Counties 2 Midlands East (South)",
+    "ourScore": "5",
+    "theirScore": "50",
+    "status": "upcoming",
+    "createdAt": "2025-10-09T10:58:48.250Z",
+    "updatedAt": "",
+    "ip": "145.224.90.0",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  },
+  {
+    "id": "1760007439731",
+    "team": "mens-1st",
+    "opponent": "St. Ives RFC",
+    "dateTime": "2025-09-06T15:00",
+    "venue": "away",
+    "competition": "Counties 2 Midlands East (South)",
+    "ourScore": "25",
+    "theirScore": "36",
+    "status": "upcoming",
+    "createdAt": "2025-10-09T10:57:19.737Z",
+    "updatedAt": "",
+    "ip": "145.224.90.0",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
+    "referrer": "https://olsrugby.com/pages/admin-dashboard.html"
+  }
+ ];
+
+        // Save to Netlify Blobs
+        const store = getStore({
+            name: 'ols-fixtures',
+            siteID: process.env.SITE_ID,
+            token: process.env.NETLIFY_ACCESS_TOKEN
+        });
+        await store.set('all-fixtures', JSON.stringify(existingFixtures));
+
+        console.log(`✅ Migrated ${existingFixtures.length} fixtures to Netlify Blobs`);
+
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+                success: true,
+                message: `Successfully migrated ${existingFixtures.length} fixtures to Netlify Blobs`,
+                migratedCount: existingFixtures.length
+            })
+        };
+
+    } catch (error) {
+        console.error('Migration error:', error);
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+                success: false,
+                error: 'Migration failed',
+                message: error.message
+            })
+        };
+    }
+};

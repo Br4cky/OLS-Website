@@ -3,132 +3,764 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Club Contacts - Old Laurentian RFC</title>
+    <title>Club Contacts</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/responsive.css">
-    <link rel="stylesheet" href="../css/contacts.css">
+    <script src="../js/color-manager.js"></script>
+    <style>
+        /* Admin controlled elements */
+        .nav-item[data-admin-controlled="true"] {
+            display: none;
+        }
+
+        .nav-item[data-admin-controlled="true"].admin-enabled {
+            display: block;
+        }
+
+        /* Contacts Page Styles */
+        .contacts-page {
+            margin-top: 100px;
+            padding: 3rem 0;
+            min-height: calc(100vh - 200px);
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            border-radius: 15px;
+            margin-bottom: 3rem;
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .page-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Section Headers */
+        .section-header {
+            background: var(--bg-light);
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            margin: 3rem 0 2rem;
+            border-left: 5px solid var(--primary-green);
+        }
+
+        .section-header h2 {
+            color: var(--primary-green);
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .section-header.maroon {
+            border-left-color: var(--primary-maroon);
+        }
+
+        .section-header.maroon h2 {
+            color: var(--primary-maroon);
+        }
+
+        .section-header.gold {
+            border-left-color: var(--accent-gold);
+        }
+
+        .section-header.gold h2 {
+            color: var(--accent-gold);
+        }
+
+        /* Contact Cards Grid */
+        .contacts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .contact-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            border-top: 4px solid var(--primary-green);
+            position: relative;
+        }
+
+        .contact-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .contact-card.maroon {
+            border-top-color: var(--primary-maroon);
+        }
+
+        .contact-card.gold {
+            border-top-color: var(--accent-gold);
+        }
+
+        /* Profile Photo */
+        .contact-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 1rem;
+            border: 3px solid var(--primary-green);
+        }
+
+        .contact-card.maroon .contact-photo {
+            border-color: var(--primary-maroon);
+        }
+
+        .contact-card.gold .contact-photo {
+            border-color: var(--accent-gold);
+        }
+
+        .contact-photo-placeholder {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .contact-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .contact-role {
+            color: var(--primary-green);
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .contact-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 0.5rem;
+            background: var(--bg-light);
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .contact-link:hover {
+            background: #e8f5e9;
+            color: var(--primary-green);
+        }
+
+        .contact-note {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            font-style: italic;
+            padding: 0.5rem;
+            background: var(--bg-light);
+            border-radius: 5px;
+        }
+
+        /* Loading State */
+        .loading-contacts {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        .loading-contacts p {
+            font-size: 1.2rem;
+            margin-top: 1rem;
+        }
+
+        /* Empty State */
+        .no-contacts {
+            text-align: center;
+            padding: 3rem;
+            background: var(--bg-light);
+            border-radius: 15px;
+            color: var(--text-light);
+        }
+
+        .no-contacts h3 {
+            color: var(--primary-green);
+            margin-bottom: 1rem;
+        }
+
+        /* 🎯 PREVENT FLASH OF DEFAULT CONTENT */
+        .page-header {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .cms-content-loaded .page-header {
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .contacts-page {
+                margin-top: 80px;
+                padding: 2rem 0;
+            }
+
+            .page-header {
+                padding: 2rem 1.5rem;
+            }
+
+            .page-header h1 {
+                font-size: 2rem;
+            }
+
+            .contacts-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .section-header {
+                margin: 2rem 0 1.5rem;
+            }
+
+            .section-header h2 {
+                font-size: 1.4rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-header h1 {
+                font-size: 1.6rem;
+            }
+
+            .contact-name {
+                font-size: 1.1rem;
+            }
+
+            .contact-role {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <header class="header">
-        <div class="header-content">
-            <div class="logo-section">
-                <div class="logo">
-                    <img src="../images/logo/olrfc-logo.png" alt="Old Laurentian RFC Crest">
-                </div>
-                <div>
-                    <div class="club-name">Old Laurentian RFC</div>
-                    <div class="tagline">Your Club. Your Pride. Your Legacy.</div>
-                </div>
-            </div>
-            <nav class="nav">
-                <a href="../index.html">Home</a>
-                <a href="../index.html#news">News</a>
-                <a href="../index.html#fixtures">Fixtures</a>
-                <div class="nav-dropdown">
-                    <a href="#teams" class="nav-link dropdown-toggle">Teams <span class="dropdown-arrow">▼</span></a>
-                    <div class="dropdown-menu">
-                        <a href="teams/mens-1st-xv.html" class="dropdown-item">Mens 1st XV</a>
-                        <a href="teams/mens-2nd-xv.html" class="dropdown-item">Mens 2nd XV</a>
-                        <a href="teams/womens.html" class="dropdown-item">Womens</a>
-                        <a href="teams/colts.html" class="dropdown-item">Colts</a>
-                        <a href="teams/u16s.html" class="dropdown-item">U16s</a>
-                        <a href="teams/u14s.html" class="dropdown-item">U14s</a>
-                    </div>
-                </div>
-                <a href="../index.html#about">About</a>
-                <a href="gallery.html">Gallery</a>
-                <a href="#" class="active">Club Contacts</a>
-            </nav>
-        </div>
-    </header>
+    <!-- Header -->
+    <div id="header-placeholder" data-page="contacts"></div>
 
-    <main style="margin-top: 120px; padding: 3rem 0;">
+    <!-- Main Content -->
+    <main class="contacts-page">
         <div class="container">
-            <h1 class="section-title">Club Contacts</h1>
             
-            <div style="text-align: center; margin-bottom: 3rem;">
-                <p style="font-size: 1.1rem; color: var(--text-light); max-width: 600px; margin: 0 auto;">
-                    Meet the dedicated people who keep Old Laurentian RFC running. Whether you're looking to join, need information, or want to get involved, these are the people to contact.
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1>Club Committee Contacts</h1>
+                <p>Our dedicated committee members are here to help. Find the right person for your enquiry below.</p>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingContacts" class="loading-contacts">
+                <div class="spinner"></div>
+                <p>Loading contacts...</p>
+            </div>
+
+            <!-- Dynamic Contacts Container -->
+            <div id="contactsContainer"></div>
+
+            <!-- GENERAL INFO - OLS 117: Dynamic from CMS -->
+            <div id="club-info-section" style="background: var(--bg-light); padding: 2rem; border-radius: 15px; margin-top: 3rem; text-align: center;">
+                <h3 id="location-heading" style="color: var(--primary-green); margin-bottom: 1rem;">📍 Club Address</h3>
+                <p id="venue-address" style="margin-bottom: 1rem;">
+                    <strong>Loading...</strong>
                 </p>
-            </div>
-
-            <!-- Executive Committee -->
-            <div class="contacts-section">
-                <h2 class="contacts-section-title">Executive Committee</h2>
-                <div id="executive-grid" class="contacts-grid">
-                    <!-- Populated by JavaScript -->
+                <h3 id="training-heading" style="color: var(--primary-green); margin: 2rem 0 1rem;">⏰ Training Times</h3>
+                <div id="training-by-day" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+                    <!-- Populated dynamically from Teams data -->
+                    <p style="color: var(--text-light);">Loading training schedule...</p>
                 </div>
             </div>
 
-            <!-- Coaching Staff -->
-            <div class="contacts-section">
-                <h2 class="contacts-section-title">Coaching Staff</h2>
-                <div id="coaching-grid" class="contacts-grid">
-                    <!-- Populated by JavaScript -->
-                </div>
-            </div>
-
-            <!-- Team Captains -->
-            <div class="contacts-section">
-                <h2 class="contacts-section-title">Team Captains</h2>
-                <div id="captains-grid" class="contacts-grid">
-                    <!-- Populated by JavaScript -->
-                </div>
-            </div>
-
-            <!-- Youth & Development -->
-            <div class="contacts-section">
-                <h2 class="contacts-section-title">Youth & Development</h2>
-                <div id="youth-grid" class="contacts-grid">
-                    <!-- Populated by JavaScript -->
-                </div>
-            </div>
-
-            <!-- General Information -->
-            <div class="general-info">
-                <h2 style="color: var(--primary-green); text-align: center; margin-bottom: 2rem;">General Club Information</h2>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-                    
-                    <div style="background: white; padding: 2rem; border-radius: 15px; box-shadow: var(--shadow); text-align: center;">
-                        <h3 style="color: var(--primary-green); margin-bottom: 1rem;">Club Address</h3>
-                        <p style="color: var(--text-dark); margin-bottom: 1rem;">
-                            [Club Ground Name]<br>
-                            [Street Address]<br>
-                            [City, Postcode]
-                        </p>
-                        <a href="#" style="color: var(--primary-maroon); text-decoration: none;">📍 Get Directions</a>
-                    </div>
-
-                    <div style="background: white; padding: 2rem; border-radius: 15px; box-shadow: var(--shadow); text-align: center;">
-                        <h3 style="color: var(--primary-green); margin-bottom: 1rem;">Training Times</h3>
-                        <p style="color: var(--text-dark); margin-bottom: 0.5rem;"><strong>Senior Teams:</strong><br>Tuesday & Thursday 7:00 PM</p>
-                        <p style="color: var(--text-dark);"><strong>Youth Teams:</strong><br>Saturday 10:00 AM</p>
-                    </div>
-
-                    <div style="background: white; padding: 2rem; border-radius: 15px; box-shadow: var(--shadow); text-align: center;">
-                        <h3 style="color: var(--primary-green); margin-bottom: 1rem;">General Enquiries</h3>
-                        <p style="color: var(--text-dark); margin-bottom: 0.5rem;">
-                            📞 [Main Phone Number]<br>
-                            ✉️ [General Email]
-                        </p>
-                        <div style="margin-top: 1rem;">
-                            <a href="#" style="color: var(--primary-maroon); text-decoration: none; margin-right: 1rem;">Facebook</a>
-                            <a href="#" style="color: var(--primary-maroon); text-decoration: none;">Instagram</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div style="text-align: center; margin-top: 3rem;">
-                <a href="../index.html" class="btn btn-primary">Back to Home</a>
-                <a href="contact.html" class="btn btn-secondary">Send Message</a>
-            </div>
         </div>
     </main>
 
+    <!-- Hidden Netlify Form -->
+    <form name="olrfc-contacts" netlify netlify-honeypot="bot-field" hidden>
+        <input type="text" name="id" />
+        <input type="text" name="name" />
+        <input type="text" name="role" />
+        <input type="text" name="category" />
+        <input type="text" name="categoryColor" />
+        <input type="text" name="categoryEmoji" />
+        <input type="email" name="email" />
+        <input type="text" name="phone" />
+        <input type="text" name="photo" />
+        <input type="text" name="bio" />
+        <input type="number" name="displayOrder" />
+        <input type="text" name="active" />
+        <input type="text" name="createdAt" />
+        <input type="text" name="updatedAt" />
+    </form>
+
+    <!-- Footer -->
+    <div id="footer-placeholder" data-page="contacts"></div>
+
+    <!-- Scripts -->
     <script src="../js/main.js"></script>
-    <script src="../js/contacts-data.js"></script>
-    <script src="../js/contacts.js"></script>
-    <script src="../js/admin-data-loader.js"></script>
+    <script src="../js/header.js"></script>
+    <script src="../js/footer.js"></script>
+    <script src="../js/contacts-manager.js"></script>
+    <script src="../js/contacts-migration.js"></script>
+    <script>
+        // Load feature states from admin settings
+        async function loadFeatureStates() {
+            try {
+                const response = await fetch('/.netlify/functions/site-settings', {
+                    method: 'GET'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch settings');
+                }
+                
+                const result = await response.json();
+                const settings = result.data || {};
+                
+                const featureStates = {
+                    shop: false,
+                    events: false,
+                    members: false,
+                    payments: false,
+                    sponsors: false
+                };
+                
+                // Extract feature states from settings object
+                Object.keys(settings).forEach(key => {
+                    if (key.startsWith('feature-')) {
+                        const featureName = key.replace('feature-', '');
+                        if (featureStates.hasOwnProperty(featureName)) {
+                            featureStates[featureName] = settings[key] === 'true';
+                        }
+                    }
+                });
+                
+                window.featureStates = featureStates;
+                
+                // Apply saved states to navigation
+                Object.keys(featureStates).forEach(feature => {
+                    const navItems = document.querySelectorAll(`[data-admin-controlled="true"][data-feature="${feature}"]`);
+                    navItems.forEach(item => {
+                        item.classList.toggle('admin-enabled', featureStates[feature]);
+                    });
+                });
+                
+                return featureStates;
+                
+            } catch (error) {
+                console.error('❌ Error loading feature states:', error);
+                
+                const fallbackStates = {
+                    shop: false,
+                    events: false,
+                    members: false,
+                    payments: false,
+                    sponsors: true
+                };
+                
+                window.featureStates = fallbackStates;
+                return fallbackStates;
+            }
+        }
+
+        // Load and display contacts
+        function loadContactsPage() {
+            const container = document.getElementById('contactsContainer');
+            const loading = document.getElementById('loadingContacts');
+            
+            // Get all categories
+            const categories = contactsManager.getCategories();
+            
+            if (categories.length === 0) {
+                loading.style.display = 'none';
+                
+                // Use CMS content if available
+                const emptyTitle = window.contactsCMSContent?.emptyTitle || 'No Contacts Available';
+                const emptyMessage = window.contactsCMSContent?.emptyMessage || 'Contact information will be displayed here once added by club administrators.';
+                
+                container.innerHTML = `
+                    <div class="no-contacts">
+                        <h3>${emptyTitle}</h3>
+                        <p>${emptyMessage}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Hide loading
+            loading.style.display = 'none';
+            
+            // Build HTML for each category
+            let html = '';
+            
+            categories.forEach(category => {
+                const contacts = contactsManager.getContactsByCategory(category.name);
+                
+                if (contacts.length > 0) {
+                    // Section header
+                    html += `
+                        <div class="section-header ${category.color}">
+                            <h2>${category.emoji} ${category.name}</h2>
+                        </div>
+                        <div class="contacts-grid">
+                    `;
+                    
+                    // Contact cards
+                    contacts.forEach(contact => {
+                        html += createContactCard(contact, category.color);
+                    });
+                    
+                    html += '</div>';
+                }
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // Create contact card HTML
+        function createContactCard(contact, categoryColor) {
+            // Get initials for placeholder
+            const initials = contact.name
+                .split(' ')
+                .map(n => n[0])
+                .join('')
+                .toUpperCase()
+                .substring(0, 2);
+            
+            // Photo or placeholder
+            const photoHTML = contact.photo 
+                ? `<img src="${contact.photo}" alt="${contact.name}" class="contact-photo">`
+                : `<div class="contact-photo-placeholder">${initials}</div>`;
+            
+            // Contact info
+            let contactInfoHTML = '';
+            
+            if (contact.email) {
+                contactInfoHTML += `
+                    <a href="mailto:${contact.email}" class="contact-link">
+                        <span class="contact-icon">📧</span>
+                        <span>${contact.email}</span>
+                    </a>
+                `;
+            }
+            
+            if (contact.phone) {
+                contactInfoHTML += `
+                    <a href="tel:${contact.phone}" class="contact-link">
+                        <span class="contact-icon">📞</span>
+                        <span>${formatPhoneNumber(contact.phone)}</span>
+                    </a>
+                `;
+            }
+            
+            if (!contact.email && !contact.phone) {
+                const noInfoMsg = window.contactsCMSContent?.noInfoMessage || 'Contact via club for details';
+                contactInfoHTML = `<div class="contact-note">${noInfoMsg}</div>`;
+            }
+            
+            return `
+                <div class="contact-card ${categoryColor}">
+                    ${photoHTML}
+                    <div class="contact-name">${contact.name}</div>
+                    <div class="contact-role">${contact.role}</div>
+                    <div class="contact-info">
+                        ${contactInfoHTML}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Mobile menu toggle
+        document.getElementById('menuToggle')?.addEventListener('click', function() {
+            const nav = document.querySelector('.nav');
+            nav.classList.toggle('active');
+        });
+
+        // Close mobile menu when clicking a link
+        document.querySelectorAll('.nav a').forEach(link => {
+            link.addEventListener('click', () => {
+                document.querySelector('.nav').classList.remove('active');
+            });
+        });
+
+        // Load contacts on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Load feature states first
+            await loadFeatureStates();
+            
+            // Initialize contacts manager (loads from localStorage, syncs from Netlify if empty)
+            await contactsManager.initialize(true);
+            
+            // Then load page content
+            loadContactsPage();
+        });
+    </script>
+
+    <!-- CMS Content Loading - NO FLASH APPROACH -->
+    <script>
+    (async function() {
+        try {
+            let settingsToApply = null;
+            let loadedFromCache = false;
+            
+            // 🚀 STEP 1: Check localStorage FIRST (instant, no flash)
+            const cachedSettings = localStorage.getItem('olrfc_site-settings');
+            if (cachedSettings) {
+                try {
+                    settingsToApply = JSON.parse(cachedSettings);
+                    loadedFromCache = true;
+                    console.log('⚡ Using cached settings (instant load, no flash)');
+                    applyContent(settingsToApply);
+                    document.body.classList.add('cms-content-loaded'); // Show content immediately
+                } catch (e) {
+                    console.warn('⚠️ Cache parse error:', e);
+                }
+            }
+            
+            // 🌐 STEP 2: Fetch fresh data from Netlify (background refresh OR first load)
+            const response = await fetch('/.netlify/functions/site-settings', {
+                method: 'GET'
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                const freshSettings = result.data || {};
+                
+                // Update localStorage cache
+                localStorage.setItem('olrfc_site-settings', JSON.stringify(freshSettings));
+                
+                // Only re-apply if content changed OR this is first load
+                if (!loadedFromCache) {
+                    console.log('📡 First load: applying fresh settings from Netlify');
+                    applyContent(freshSettings);
+                    document.body.classList.add('cms-content-loaded'); // Show content with fade-in
+                } else if (JSON.stringify(freshSettings) !== cachedSettings) {
+                    console.log('🔄 Content updated, refreshing page...');
+                    applyContent(freshSettings);
+                }
+            } else if (!loadedFromCache) {
+                // No cache AND Netlify failed - show defaults
+                console.log('⚠️ No cache, Netlify unavailable - using defaults');
+                document.body.classList.add('cms-content-loaded'); // Show defaults
+            }
+            
+            function applyContent(settingsData) {
+                // Build content map (only contacts fields)
+                const content = {};
+                Object.keys(settingsData).forEach(key => {
+                    if (key.startsWith('contacts-')) {
+                        content[key] = settingsData[key];
+                    }
+                });
+                
+                // Helper function to get content with fallback
+                const get = (key, fallback) => content[key] || fallback;
+                
+                // 1. Page Title
+                const pageTitle = get('contacts-page-title', 'Club Contacts');
+                document.title = pageTitle;
+                
+                // 2. Main Heading
+                const mainHeading = document.querySelector('.page-header h1');
+                if (mainHeading) {
+                    const headingText = get('contacts-main-heading', 'Club Committee Contacts');
+                    mainHeading.textContent = headingText;
+                }
+                
+                // 3. Page Description
+                const pageDescription = document.querySelector('.page-header p');
+                if (pageDescription) {
+                    const descText = get('contacts-page-description', 'Our dedicated committee members are here to help. Find the right person for your enquiry below.');
+                    pageDescription.textContent = descText;
+                }
+                
+                // 4. Location Heading
+                const locationHeading = document.getElementById('location-heading');
+                if (locationHeading) {
+                    const headingText = get('contacts-location-heading', '📍 Club Address');
+                    locationHeading.textContent = headingText;
+                }
+                
+                // 5-7. Venue Address (combined into one paragraph)
+                const venueAddress = document.getElementById('venue-address');
+                if (venueAddress) {
+                    const venueName = get('contacts-venue-name', 'Club Venue');
+                    const venueStreet = get('contacts-venue-street', '');
+                    const venueCity = get('contacts-venue-city', '');
+                    
+                    venueAddress.innerHTML = `
+                        <strong>${venueName}</strong><br>
+                        ${venueStreet}<br>
+                        ${venueCity}
+                    `;
+                }
+                
+                // 8. Training Times Heading
+                const trainingHeading = document.getElementById('training-heading');
+                if (trainingHeading) {
+                    const headingText = get('contacts-training-heading', '⏰ Training Times');
+                    trainingHeading.textContent = headingText;
+                }
+                
+                // OLS 117: Load training from Teams data (single source of truth)
+                loadTrainingFromTeams();
+                
+                // 13. Loading Message
+                const loadingMsg = document.querySelector('#loadingContacts p');
+                if (loadingMsg) {
+                    const msgText = get('contacts-loading-message', 'Loading contacts...');
+                    loadingMsg.textContent = msgText;
+                }
+                
+                // 14-15. Empty State (applied when contacts are empty)
+                // These will be used by the loadContactsPage function
+                window.contactsCMSContent = {
+                    emptyTitle: get('contacts-empty-title', 'No Contacts Available'),
+                    emptyMessage: get('contacts-empty-message', 'Contact information will be displayed here once added by club administrators.'),
+                    noInfoMessage: get('contacts-no-info-message', 'Contact via club for details')
+                };
+                
+                console.log('✅ Contacts page CMS content applied (16 fields)');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error loading CMS content:', error);
+            // Show defaults even if error
+            document.body.classList.add('cms-content-loaded');
+        }
+    })();
+    
+    /**
+     * OLS 117: Load training schedule from Teams data
+     * Groups teams by training day for compact display
+     */
+    async function loadTrainingFromTeams() {
+        const container = document.getElementById('training-by-day');
+        if (!container) return;
+        
+        try {
+            // Try cache first
+            let teams = JSON.parse(localStorage.getItem('olrfc_teams') || '[]');
+            renderTrainingByDay(teams, container);
+            
+            // Fetch fresh in background
+            try {
+                const response = await fetch('/.netlify/functions/teams');
+                if (response.ok) {
+                    const result = await response.json();
+                    teams = result.data || [];
+                    localStorage.setItem('olrfc_teams', JSON.stringify(teams));
+                    renderTrainingByDay(teams, container);
+                }
+            } catch (e) {
+                console.warn('Could not fetch fresh teams:', e);
+            }
+        } catch (error) {
+            console.error('Error loading training from teams:', error);
+            container.innerHTML = '<p style="color: var(--text-light);">Training schedule unavailable</p>';
+        }
+    }
+    
+    /**
+     * Render training grouped by day
+     */
+    function renderTrainingByDay(teams, container) {
+        // Filter to teams with training enabled
+        const trainingTeams = teams
+            .filter(team => team.showInTraining && team.trainingDays)
+            .sort((a, b) => (a.trainingSortOrder || 99) - (b.trainingSortOrder || 99));
+        
+        if (trainingTeams.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-light);">Training schedule coming soon</p>';
+            return;
+        }
+        
+        // Group teams by which days they train
+        const dayGroups = {};
+        const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        
+        trainingTeams.forEach(team => {
+            // Parse training days - could be "Tuesday & Thursday" or "Tuesday, Thursday" etc
+            const days = team.trainingDays.split(/[&,]/).map(d => d.trim());
+            
+            days.forEach(day => {
+                // Normalize day name (handle "Tue" -> "Tuesday" etc)
+                const normalizedDay = dayOrder.find(d => d.toLowerCase().startsWith(day.toLowerCase().substring(0, 3))) || day;
+                
+                if (!dayGroups[normalizedDay]) {
+                    dayGroups[normalizedDay] = [];
+                }
+                
+                // Build display string: "Team Name TIME" or "Team Name (notes) TIME"
+                const notes = team.trainingNotes ? ` ${team.trainingNotes}` : '';
+                const times = team.trainingTimes || 'Time TBC';
+                // If multiple time lines, just use first for compact view
+                const timeDisplay = times.split('\n')[0];
+                
+                dayGroups[normalizedDay].push({
+                    name: team.name,
+                    notes: notes,
+                    time: timeDisplay,
+                    sortOrder: team.trainingSortOrder || 99
+                });
+            });
+        });
+        
+        // Sort each day's teams by sort order
+        Object.keys(dayGroups).forEach(day => {
+            dayGroups[day].sort((a, b) => a.sortOrder - b.sortOrder);
+        });
+        
+        // Render in day order
+        const activeDays = dayOrder.filter(day => dayGroups[day] && dayGroups[day].length > 0);
+        
+        if (activeDays.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-light);">Training schedule coming soon</p>';
+            return;
+        }
+        
+        container.innerHTML = activeDays.map(day => `
+            <div>
+                <p style="font-weight: bold; color: var(--primary-green); margin-bottom: 0.5rem;">${day}</p>
+                <p style="font-size: 0.9rem;">
+                    ${dayGroups[day].map(t => `${t.name}${t.notes} ${t.time}`).join('<br>')}
+                </p>
+            </div>
+        `).join('');
+        
+        console.log('✅ Training schedule loaded from Teams data');
+    }
+    </script>
 </body>
 </html>

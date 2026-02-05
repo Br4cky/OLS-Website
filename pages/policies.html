@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Policies & Documents - Old Laurentian RFC</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <style>
+        :root {
+            --primary-green: #006747;
+            --primary-maroon: #7a1034;
+            --accent-gold: #f4c430;
+        }
+
+        /* Hero Section */
+        .policies-hero {
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-maroon));
+            color: white;
+            padding: 6rem 0 3rem;
+            text-align: center;
+        }
+
+        .policies-hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .policies-hero p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        /* Main Container */
+        .policies-container {
+            max-width: 1200px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        /* Accordion Item */
+        .policy-item {
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .policy-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        /* Accordion Header */
+        .policy-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem 2rem;
+            background: linear-gradient(to right, var(--primary-green), var(--primary-maroon));
+            color: white;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .policy-header:hover {
+            opacity: 0.95;
+        }
+
+        .policy-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .policy-icon {
+            font-size: 2rem;
+        }
+
+        .toggle-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .policy-item.active .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Accordion Content */
+        .policy-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+        .policy-item.active .policy-content {
+            max-height: 1200px;
+        }
+
+        .policy-inner {
+            padding: 2rem;
+            background: #f8f9fa;
+        }
+
+        /* PDF Viewer */
+        .pdf-viewer {
+            width: 100%;
+            height: 800px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            margin-bottom: 1rem;
+        }
+
+        /* Download Button */
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--primary-green);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: var(--primary-maroon);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .policies-hero h1 {
+                font-size: 2rem;
+            }
+
+            .policies-hero p {
+                font-size: 1rem;
+            }
+
+            .policies-container {
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+
+            .policy-header {
+                padding: 1rem 1.5rem;
+            }
+
+            .policy-title {
+                font-size: 1.1rem;
+            }
+
+            .policy-icon {
+                font-size: 1.5rem;
+            }
+
+            .pdf-viewer {
+                height: 600px;
+            }
+
+            .policy-inner {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">
+                    <img src="../images/logo/olrfc-logo.png" alt="Old Laurentian RFC Crest">
+                </div>
+                <div>
+                    <div class="club-name">Old Laurentian RFC</div>
+                    <div class="tagline">Est. 1919</div>
+                </div>
+            </div>
+            <nav class="nav">
+                <a href="../index.html">Home</a>
+                <a href="news.html">News</a>
+                <a href="fixtures.html">Fixtures</a>
+                <a href="events.html">Events</a>
+                <a href="../index.html#about">About</a>
+                <a href="gallery.html">Gallery</a>
+                <a href="sponsors.html">Sponsors</a>
+                <a href="policies.html" class="active">Policies</a>
+                <a href="club-contacts.html">Contact</a>
+            </nav>
+            <button class="menu-toggle" id="menuToggle">☰</button>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="policies-hero">
+        <h1>📋 Club Policies & Documents</h1>
+        <p>Important information and guidelines for Old Laurentian RFC</p>
+    </section>
+
+    <!-- Policies Container -->
+    <div class="policies-container">
+        
+        <!-- OLRFC Brochure -->
+        <div class="policy-item">
+            <div class="policy-header" onclick="togglePolicy(this)">
+                <div class="policy-title">
+                    <span class="policy-icon">📘</span>
+                    <span>OLRFC Brochure 2025/26</span>
+                </div>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="policy-content">
+                <div class="policy-inner">
+                    <iframe 
+                        src="../documents/olrfc-brochure-2025-26.pdf" 
+                        class="pdf-viewer"
+                        title="OLRFC Brochure 2025/26">
+                    </iframe>
+                    <a href="../documents/olrfc-brochure-2025-26.pdf" download class="download-btn">
+                        📥 Download PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Safeguarding Policy -->
+        <div class="policy-item">
+            <div class="policy-header" onclick="togglePolicy(this)">
+                <div class="policy-title">
+                    <span class="policy-icon">🛡️</span>
+                    <span>Safeguarding & Safer Recruitment 2025/26</span>
+                </div>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="policy-content">
+                <div class="policy-inner">
+                    <iframe 
+                        src="../documents/safeguarding-2025-26.pdf" 
+                        class="pdf-viewer"
+                        title="Safeguarding & Safer Recruitment 2025/26">
+                    </iframe>
+                    <a href="../documents/safeguarding-2025-26.pdf" download class="download-btn">
+                        📥 Download PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Toggle accordion
+        function togglePolicy(header) {
+            const item = header.parentElement;
+            const wasActive = item.classList.contains('active');
+            
+            // Close all items
+            document.querySelectorAll('.policy-item').forEach(i => {
+                i.classList.remove('active');
+            });
+            
+            // Open clicked item (unless it was already open)
+            if (!wasActive) {
+                item.classList.add('active');
+            }
+        }
+
+        // Mobile menu toggle
+        document.getElementById('menuToggle')?.addEventListener('click', function() {
+            document.querySelector('.nav').classList.toggle('active');
+        });
+    </script>
+</body>
+</html>

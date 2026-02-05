@@ -1,0 +1,85 @@
+// netlify/functions/migrate-news.js
+// OLS 85 - One-time migration of news from Netlify Forms to Netlify Blobs
+// DELETE THIS FILE AFTER RUNNING ONCE
+
+const { getStore } = require('@netlify/blobs');
+
+exports.handler = async (event, context) => {
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type'
+    };
+
+    try {
+        // Your existing 3 news articles from localStorage
+        const existingNews = [
+            {
+                "id": "1760455447705",
+                "title": "1st XV Home Win (59-24) vs Huntingdon & District",
+                "content": "The club grand Reopening, was a fitting start to a great day, and very special evening, as 100s returned to Fenley Fields and the refurbished Club House. The Griffin Club, officially cut the ribbon, at 12.00 and the awe and amazement at the transformation for all to see, after the 8 weeks of works by ex-Captain Stuart Birch, his various contractors, and an army of volunteers. The first Griffin lunch was a huge success, despite the lack of a kitchen, as the Family Caterers took over the reigns for the first time. As Club Chairman I had the privilege of raising the new electric blinds, to allow the gathering crowds to see into the building. Every single person was extremely complimentary of the changes, and the amount who stayed on well in the evening, is hopefully a guide as to how things will continue, with the Ladies' Social on Friday, being significantly over subscribed.\r\n\r\n \r\n\r\nThe players ran out onto the pitch through a 24 strong tunnel formed by the M&Js of varying ages, and a crowd now approaching 500 or so, greeted them with huge anticipation. H&D had been pummelled at home by league leaders Leighton Buzzard the previous, week, conceding over 100 points, but it was hard to understand why, as the first 20 mins were a very equal battle.\r\n\r\n \r\n\r\nOLs struck first as Evan Ridd intercepted the ball in our half to sprint home under the sticks, Dan O'Brien, with the simple conversion. Then stupid errors allowed the big H&D pack to score 2 tries, led by their tight head, who is called The Tank, who was knocking on 30 stone. The OLS game to light to score 52 unanswered points. In the first half Jamie Harris, crashed over for his first ever 1s try, followed by Rob Gwababa, and then Oscar Blunsom Washbrook, pirouetted over after making huge yardage on an earlier break to set up the opportunity. H&D were starting to fall apart at this point. Dan O was securing the extras on pretty much every occasion.\r\n\r\n \r\n\r\nIn the second half the flood gates opening, our back line, was showing no mercy, as Charlie Reed was firing huge, fast passes everywhere. Next to score was by MofTM, Toby Rigg, he took, a not so great pass, over his head in our 22, side stepped 4 players, dummied another, then ran through a gap that wasn't there, and 85m later dived under the posts, he modestly described it to his sister, as a \"wonder try\", OLs racing to a 31-12 lead, and the crowd wanted more. Dan Russell, starting in the centres was next, then Harry Drake got his compulsory try, another for Oscar, and finally Dan O, ghosted through the defence, he converted all of these, for a commanding 59-12 score line. Two late tries flattered H&D, and they certainly didn't give up, and were a very decent bunch, who stayed for a good while, and were hugely impressed with the club.\r\n\r\n \r\n\r\nThe forwards certainly laid the platform against, as always, much heavier pack, with Wilf Samsom, Tom Werren, Jamie H, Alfie Dunn, Gwab and Billy Nobes also standing out, but it was the back who did the real damage, and showed the home crowd what we can do with a fair share of the ball. Away next week to Peterborough Lions, who lost to LB by a similar margin as we did, and currently sit 0-4.\r\n\r\n \r\n\r\nLet's keep the momentum up!",
+                "category": "match",
+                "author": "Simon Rigg - Chairman",
+                "date": "2025-10-14",
+                "image": "https://res.cloudinary.com/dep5rhteb/image/upload/v1760997342/olrfc/news/o1thu48hdrun3qtbquvt.jpg",
+                "featured": false,
+                "createdAt": "2025-10-14T00:00:00.000Z"
+            },
+            {
+                "id": "1760967344030",
+                "title": "1st XV Win Away (24-43) vs. Peterborough Lions",
+                "content": "After two bonus point wins on the bounce, OLs took another trip to Cambridgeshire along the A14, this time with confidence of another victory, as PL were sitting 0-4 in the league. PL won both fixtures in the league last year, aided by a monsoon at home, and their \"flexible\" selection criteria at Fenley Fields. So confident, but not over-confident. A couple of late changes saw Jack Hipwell on the wing and 18-year-old Lennie Wallis taking a place on the bench.\r\n\r\nThe usual tough start, as both teams tried to gain the upper hand, but OLs seemed to have the edge, and an early score from Oscar Webb settled the nerves. Dan O'Brien missed a touchline conversion, but that was about the only error from his boot all day, as he was awarded the MotM for his kicking masterclass and overall game management. Indeed, it was Dan O who scored next, charging over from close range for his second try in two weeks, also converting. Straight from the kick-off, an area we need to improve on, saw a PL penalty to reduce the deficit to 3-12. Charlie Reed then pounced on a loose ball on half way to scamper over out wide, 3-17; this was followed by a length-of-the-pitch interception from a telegraphed pass by Olly Scott, making it 3-24, though this was his last contribution, as he pulled a hamstring in doing so. His replacement, Nick Potgeiter, moved to an unfamiliar place at Full Back. Bonus point secured by half time.\r\n\r\nReedo went over again early in the second half to make it 3-31, before PL hit back, as the ball was again missed from the kick-off, and their replacement prop charged over, 10-31. After a scrappy passage of play, with both sides conceding penalties for apparent high tackles, over 20 between the sides over the full game, yet no cards were to be seen, despite the majority being from the home side. A perfect cross-kick from Dan O was gathered by Oscar W for his second, and an unassailable 10-36 lead.\r\n\r\nPL again hit back with a try from the lineout, as OLs didn't compete; there wasn't a maul formed, but the ref allowed PL to walk the ball over, much to everybody's surprise. 17-36. With about 10 mins to go, the win was assured as Wilf Sansum charged down a clearance kick and dived over for a converted try, 17-43. PL then scored again, driving over from close range, 24-43.\r\n\r\nAfter a bout of unnecessary handbags, caused by the frustrated PL forwards, we kept them out on the line on several occasions to deny them a try bonus point. A solid victory, which could and maybe should have been by a greater margin, but 5 points away from home—job done.\r\n\r\nAs ever, several players also deserve a mention. Billy Nobes is improving with every game, Jamie Harries does not take a backwards step, but the two I must highlight are Josh Goodman, who is growing with every game, as he proves you do not have to be 20 stone to be a prop, and the carries he makes are just immense, as is his tackling and pace around the park. The other is Lennie; off the bench, his first action was to absolutely smash their number 8 backwards, much to his shock, and then, despite being the recipient of the highest tackle of the day, he simply got up and tackled anything and everything that moved.\r\n\r\nA rest from the league, as we play Barkers Butts away and home in two separate cups over the next 2 weekends.",
+                "category": "match",
+                "author": "Simon Rigg - Chairman",
+                "date": "2025-10-20",
+                "image": "https://res.cloudinary.com/dep5rhteb/image/upload/v1760997211/olrfc/news/gwv33a7x2tlrs7oqjhdd.jpg",
+                "featured": false,
+                "createdAt": "2025-10-20T00:00:00.000Z"
+            },
+            {
+                "id": "1760006900737",
+                "title": "1st XV Win (26-17) vs St. Neots RFC (A)",
+                "content": "ST Neots RFC 17 – 26 Old Laurentian RFC\r\n \r\nFor the first time ever the 1s travelled to ST Neots, for the third league game of season, with both teams being 0-2 so far. After the chastening defeat at Leighton Buzzard last time out, OLs were determined to come out fighting. The game was dictated by a 50mph wind, blowing diagonally across a very exposed pitch, with the forecast for this to drop to a mere 20-25 later in the game, OLS opted to make first use of it. Making his first league appearance of the season, Dan O'Brien used his massive size 13s to literally boot the ball miles. Never mind the 50-22, he hit several 22-22s, to pin SN back near their line. The pressure told, as Harry Drake glided over for the first score, with Dan O, converting. OLs again were much lighter in the pack, so scrum time was not our friend, but the line-out functioned well, with sensibly, the 2 ball being the preferred option, and SN started to give away penalties due to the onslaught. Great work from Billy Nobes, throwing, and James Pritchard winning the majority of the ball, ably assisted by Wilf Sansum. One pen 6m out, saw Tom Werren tap and go, and simply steam rollered the defence for and unconverted try. SN were always a threat, with their 13 being there best player by some margin, running things well. After a period of pressure, they scored a converted try to close the gap to 7-12. With only a few more mins with wind, Dan O kicked long, the ball was dropped and from the ensuing mele, Wilf, somehow managed to ground the ball, whilst being suspended in the air, using his Inspector Gadget arms, so 7-19 at HT\r\n \r\nThe wind dropped ever so slightly, and their kicker was never going to make as much ground, but OLS back 3 of Toby Rigg, Harry Drake, and Oscar Webb, caught everything and ran the ball back, with pace and precision, to negate the advantage. One such kick was taken by Harry, passed through the hands, and deft chicken wing flick to Wilf from Dan O, who then timed his pass perfectly to Toby, who raced in under the sticks from 40m out. Dan O with the easy conversion, for a healthy 26-12 lead, 2 full scores clear, but with 20 plus mins to go, would it be enough? OLs only had 2 subs, but both made huge impact, and Oscar Blunsom-Washbrook, was named MotM, despite only playing less than half the game. Also Kudos to Billy for moving to prop and Alfie to hooker, as the scrums settled down.\r\n \r\nOLs tackled like their life's depended on it, with Dan Russell, Alfie Dunn, Ash Moore all making crunching tackles, over and over.\r\n \r\nA Late unconverted score, and the final result was 17-26, and a sigh of relief from all, the weather dictated it wasn't a classic, but the right result. We didn't see SN at their best due to the conditions, I can imagine an a calm sunny day it would more hospitable, but the players, spectators and staff were all very friendly and welcoming, which was great.\r\n \r\nWe look forward to the return game and the all new singing and dancing Fenley Fields",
+                "category": "match",
+                "author": "Simon Rigg - Chairman",
+                "date": "2025-10-09",
+                "featured": false,
+                "createdAt": "2025-10-09T10:48:20.741Z"
+            }
+        ];
+
+        console.log(`📰 Migrating ${existingNews.length} news articles to Netlify Blobs...`);
+
+        const store = getStore({
+            name: 'ols-news',
+            siteID: process.env.SITE_ID,
+            token: process.env.NETLIFY_ACCESS_TOKEN
+        });
+        
+        await store.set('all-news', JSON.stringify(existingNews));
+
+        console.log(`✅ Successfully migrated ${existingNews.length} news articles to Netlify Blobs`);
+
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+                success: true,
+                message: `Successfully migrated ${existingNews.length} news articles`,
+                migratedCount: existingNews.length,
+                articles: existingNews.map(a => ({ id: a.id, title: a.title }))
+            })
+        };
+
+    } catch (error) {
+        console.error('Migration error:', error);
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+                success: false,
+                error: 'Migration failed',
+                message: error.message
+            })
+        };
+    }
+};

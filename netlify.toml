@@ -8,7 +8,14 @@
 [functions]
   # Functions directory
   directory = "netlify/functions/"
-  
+  # Required for Puppeteer/Chromium
+  external_node_modules = ["@sparticuz/chromium"]
+
+# League table function needs more memory for headless browser
+[functions."league-table"]
+  memory = 1024
+  timeout = 30
+
 [[headers]]
   # Apply these headers to all pages
   for = "/*"

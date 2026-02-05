@@ -1,0 +1,264 @@
+// netlify/functions/migrate-site-settings-SMART.js
+// SMART MIGRATION: Uses Forms data where available, sensible defaults where missing
+// OLS 91 - Complete migration with 112 fields
+
+const { getStore } = require('@netlify/blobs');
+
+exports.handler = async (event, context) => {
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type'
+    };
+
+    try {
+        console.log('🔄 Starting SMART site settings migration...');
+        
+        // Fetch ALL submissions from Netlify Forms
+        const formsResponse = await fetch(
+            `https://api.netlify.com/api/v1/sites/${process.env.SITE_ID}/submissions?form_name=olrfc-site-settings`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${process.env.NETLIFY_ACCESS_TOKEN}`
+                }
+            }
+        );
+        
+        if (!formsResponse.ok) {
+            throw new Error(`Failed to fetch forms: ${formsResponse.status}`);
+        }
+        
+        const submissions = await formsResponse.json();
+        console.log(`📊 Found ${submissions.length} total form submissions`);
+        
+        // Define GENERIC defaults for all 112 fields (white-label ready)
+        const defaults = {
+            // Site Customization (14)
+            'club-name': 'Rugby Club',
+            'club-tagline': 'Est. 1900',
+            'logo-url': '',
+            'contact-address': 'Club Address\nCity, County, Postcode',
+            'contact-email': 'info@rugbyclub.com',
+            'contact-phone': '01234 567890',
+            'social-facebook': '',
+            'social-instagram': '',
+            'social-twitter': '',
+            'social-youtube': '',
+            'copyright': '© 2025 Rugby Club. All rights reserved.',
+            'color-primary-green': '#2e5016',
+            'color-primary-maroon': '#8b1538',
+            'color-accent-gold': '#f4c430',
+            
+            // Navigation (5)
+            'navigation-home': 'true',
+            'navigation-players': 'true',
+            'navigation-shop': 'true',
+            'navigation-policies': 'false',
+            'navigation-contact': 'true',
+            
+            // Features (2)
+            'feature-members': 'false',
+            'feature-sponsors': 'true',
+            
+            // Homepage (23)
+            'homepage-hero-heading': 'Welcome to Our Rugby Club',
+            'homepage-hero-tagline': 'Excellence, tradition, and community spirit in rugby',
+            'homepage-fixtures-title': 'Fixtures & Results',
+            'homepage-social-title': 'Our Socials',
+            'homepage-news-title': 'Latest News',
+            'homepage-league-title': 'League Table',
+            'homepage-calendar-title': '📅 Club Calendar',
+            'homepage-about-title': 'About Our Club',
+            'homepage-findus-title': '📍 Find Us',
+            'homepage-training-title': 'Training Times',
+            'homepage-about-content': 'Welcome to our rugby club. We are a community-focused organization dedicated to promoting the sport of rugby at all levels.',
+            'homepage-stat1-number': '100+',
+            'homepage-stat1-label': 'Club Members',
+            'homepage-stat2-number': '50+',
+            'homepage-stat2-label': 'Years of Heritage',
+            'homepage-stat3-number': '3',
+            'homepage-stat3-label': 'Teams',
+            'homepage-stat4-number': '1',
+            'homepage-stat4-label': 'Senior Team',
+            'homepage-instagram-url': '',
+            'homepage-facebook-url': '',
+            'homepage-league-url': '',
+            'homepage-page-title': 'Rugby Club - Home',
+            
+            // Fixtures (14)
+            'fixtures-page-title': 'Fixtures & Results - Rugby Club',
+            'fixtures-main-heading': 'Fixtures & Results',
+            'fixtures-page-description': 'Complete fixture list and results for all club teams',
+            'fixtures-filter-label': 'Filter by Team:',
+            'fixtures-all-teams-label': 'All Teams',
+            'fixtures-results-title': 'Recent Results',
+            'fixtures-upcoming-title': 'Upcoming Fixtures',
+            'fixtures-summary1-label': 'Games Played',
+            'fixtures-summary1-detail': 'Total matches this season',
+            'fixtures-summary2-label': 'Wins',
+            'fixtures-summary3-label': 'Home Games',
+            'fixtures-summary3-detail': 'Played at home ground',
+            'fixtures-summary4-label': 'Away Games',
+            'fixtures-summary4-detail': 'Traveling fixtures',
+            
+            // Gallery (27)
+            'gallery-page-title': 'Photo Gallery - Rugby Club',
+            'gallery-main-heading': 'Club Photo Gallery',
+            'gallery-page-description': 'Browse our collection of match day photos, team events, and club activities',
+            'gallery-loading-message': 'Loading photos...',
+            'gallery-team-filter-label': 'Filter by Team:',
+            'gallery-season-filter-label': 'Season:',
+            'gallery-sort-label': 'Sort by:',
+            'gallery-team-all': 'All Teams',
+            'gallery-team-mens1st': "Men's 1st XV",
+            'gallery-team-mens2nd': "Men's 2nd XV",
+            'gallery-team-ladies': 'Ladies',
+            'gallery-team-colts': 'Colts',
+            'gallery-team-other': 'Other',
+            'gallery-season-all': 'All Seasons',
+            'gallery-sort-newest': 'Newest First',
+            'gallery-sort-oldest': 'Oldest First',
+            'gallery-empty-title': 'No Photos Available',
+            'gallery-empty-message': 'Photos will appear here once uploaded by club administrators.',
+            'gallery-credit-title': 'Photography Credit',
+            'gallery-photographer-name': '',
+            'gallery-credit-message': 'Photo credits and attribution information.',
+            'gallery-photographer-instagram-url': '',
+            'gallery-photographer-instagram-label': 'Follow on Instagram',
+            'gallery-photographer-facebook-url': '',
+            'gallery-photographer-facebook-label': 'Follow on Facebook',
+            'gallery-photographer-email': '',
+            'gallery-photographer-email-label': 'Email Photographer',
+            
+            // Contacts (16)
+            'contacts-page-title': 'Club Contacts - Rugby Club',
+            'contacts-main-heading': 'Club Committee Contacts',
+            'contacts-page-description': 'Our dedicated committee members are here to help. Find the right person for your enquiry below.',
+            'contacts-location-heading': '📍 Club Address',
+            'contacts-venue-name': 'Club Ground',
+            'contacts-venue-street': 'Street Address',
+            'contacts-venue-city': 'City, County, Postcode',
+            'contacts-training-heading': '⏰ Training Times',
+            'contacts-tuesday-heading': 'Tuesday',
+            'contacts-tuesday-schedule': 'Training times to be announced',
+            'contacts-thursday-heading': 'Thursday',
+            'contacts-thursday-schedule': 'Training times to be announced',
+            'contacts-loading-message': 'Loading contacts...',
+            'contacts-empty-title': 'No Contacts Available',
+            'contacts-empty-message': 'Contact information will be displayed here once added by club administrators.',
+            'contacts-no-info-message': 'Contact via club for details',
+            
+            // Sponsors (11)
+            'sponsors-page-title': 'Our Sponsors - Rugby Club',
+            'sponsors-main-heading': 'Our Sponsors',
+            'sponsors-page-description': 'Thank you to our sponsors for their support',
+            'sponsors-list-title': 'Our Sponsors',
+            'sponsors-loading-message': 'Loading sponsors...',
+            'sponsors-empty-icon': '🤝',
+            'sponsors-empty-text': 'No sponsors to display at this time.',
+            'sponsors-card-website-label': 'Visit Website',
+            'sponsors-modal-phone-label': 'Phone',
+            'sponsors-modal-email-label': 'Email',
+            'sponsors-modal-website-label': 'Website'
+        };
+        
+        console.log(`🎯 Using defaults for ${Object.keys(defaults).length} fields...`);
+        
+        // Start with defaults
+        const settings = { ...defaults };
+        
+        // Override with actual saved values from Forms
+        const fieldStats = {
+            fromForms: 0,
+            fromDefaults: 0
+        };
+        
+        for (const fieldName of Object.keys(defaults)) {
+            // Find the most recent submission for this field
+            const submission = submissions.find(sub => 
+                sub.data && 
+                sub.data['setting-name'] === fieldName &&
+                sub.data['setting-value'] !== undefined
+            );
+            
+            if (submission) {
+                settings[fieldName] = submission.data['setting-value'];
+                fieldStats.fromForms++;
+                console.log(`✅ Found in Forms: ${fieldName}`);
+            } else {
+                fieldStats.fromDefaults++;
+            }
+        }
+        
+        // Add migration metadata
+        settings.migratedAt = new Date().toISOString();
+        settings.migratedFrom = 'smart-migration-with-defaults';
+        settings.migrationSession = 'OLS-91-SMART';
+        settings.migrationVersion = '3.0';
+        
+        console.log(`✅ Using ${fieldStats.fromForms} values from Forms`);
+        console.log(`📝 Using ${fieldStats.fromDefaults} default values`);
+        
+        // Save to Netlify Blobs (overwrites previous migrations)
+        const store = getStore({
+            name: 'ols-site-settings',
+            siteID: process.env.SITE_ID,
+            token: process.env.NETLIFY_ACCESS_TOKEN
+        });
+        
+        await store.set('current-settings', JSON.stringify(settings));
+        
+        console.log(`✅ Successfully migrated ALL 112 fields to Netlify Blobs`);
+
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+                success: true,
+                message: `Successfully migrated all 112 settings to Netlify Blobs`,
+                summary: {
+                    totalFields: Object.keys(defaults).length,
+                    valuesFromForms: fieldStats.fromForms,
+                    valuesFromDefaults: fieldStats.fromDefaults,
+                    percentComplete: 100
+                },
+                breakdown: {
+                    siteCustomization: { expected: 14, migrated: 14 },
+                    navigation: { expected: 5, migrated: 5 },
+                    features: { expected: 2, migrated: 2 },
+                    homepage: { expected: 23, migrated: 23 },
+                    fixtures: { expected: 14, migrated: 14 },
+                    gallery: { expected: 27, migrated: 27 },
+                    contacts: { expected: 16, migrated: 16 },
+                    sponsors: { expected: 11, migrated: 11 }
+                },
+                metadata: {
+                    migratedAt: settings.migratedAt,
+                    migratedFrom: settings.migratedFrom,
+                    migrationSession: settings.migrationSession,
+                    migrationVersion: settings.migrationVersion
+                },
+                fieldsFromForms: Object.keys(defaults).filter(field => {
+                    const submission = submissions.find(sub => 
+                        sub.data && 
+                        sub.data['setting-name'] === field &&
+                        sub.data['setting-value'] !== undefined
+                    );
+                    return !!submission;
+                })
+            })
+        };
+
+    } catch (error) {
+        console.error('❌ Migration error:', error);
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+                success: false,
+                error: 'Migration failed',
+                message: error.message,
+                stack: error.stack
+            })
+        };
+    }
+};

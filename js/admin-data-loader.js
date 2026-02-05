@@ -2,6 +2,8 @@ class OLRFCDataLoader {
     constructor() {
         this.newsContainer = null;
         this.fixturesContainer = null;
+        this.netlifyToken = null; // Will be set from admin dashboard
+        this.siteId = 'gleeful-panda-146290';
         this.init();
     }
 
@@ -14,41 +16,379 @@ class OLRFCDataLoader {
         }
     }
 
-    loadAllContent() {
-        this.loadNews();
-        this.loadFixtures();
-        this.loadStats();
+    // NEW: Fetch data from Netlify Blobs via serverless function
+    async syncFromNetlify(formName) {
+    try {
+        console.log(`Syncing ${formName} from Netlify...`);
+        
+        let response;
+        let parsedData;
+
+        // FIXTURES: Use Blobs endpoint
+        if (formName === 'fixtures') {
+            response = await fetch('/.netlify/functions/fixtures', {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch fixtures: ${response.status}`);
+            }
+
+            const result = await response.json();
+            parsedData = result.data || [];
+        }
+        // NEWS: Use Blobs endpoint
+        else if (formName === 'news') {
+            response = await fetch('/.netlify/functions/news', {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch news: ${response.status}`);
+            }
+
+            const result = await response.json();
+            parsedData = result.data || [];
+        }
+        // PLAYERS: Use Blobs endpoint (NEW!)
+        else if (formName === 'players') {
+            response = await fetch('/.netlify/functions/players', {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch players: ${response.status}`);
+            }
+
+            const result = await response.json();
+            parsedData = result.data || [];
+        }
+        // SPONSORS: Use Blobs endpoint
+        else if (formName === 'sponsors') {
+            response = await fetch('/.netlify/functions/sponsors', {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch sponsors: ${response.status}`);
+            }
+
+            const result = await response.json();
+            parsedData = result.data || [];
+        }
+        // GALLERY: Use Blobs endpoint
+        else if (formName === 'gallery') {
+            response = await fetch('/.netlify/functions/gallery', {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch gallery: ${response.status}`);
+            }
+
+            const result = await response.json();
+            parsedData = result.data || [];
+        }
+        // CONTACTS: Use Blobs endpoint
+        else if (formName === 'contacts') {
+            response = await fetch('/.netlify/functions/contacts', {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch contacts: ${response.status}`);
+            }
+
+            const result = await response.json();
+            parsedData = result.data || [];
+        }
+        // TEAMS: Use Blobs endpoint
+        else if (formName === 'teams') {
+            response = await fetch('/.netlify/functions/teams', {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch teams: ${response.status}`);
+            }
+
+            const result = await response.json();
+            parsedData = result.data || [];
+        }
+        // SITE-SETTINGS: Use Blobs endpoint (OLS 90)
+        // Returns single object (not array) with all settings
+        else if (formName === 'site-settings') {
+            response = await fetch('/.netlify/functions/site-settings', {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch site-settings: ${response.status}`);
+            }
+
+            const result = await response.json();
+            parsedData = result.data || {};
+            
+            // Store as object (not array) in localStorage
+            localStorage.setItem(`olrfc_${formName}`, JSON.stringify(parsedData));
+            console.log(`✅ Synced ${Object.keys(parsedData).length} site settings from Netlify Blobs`);
+            
+            return parsedData;
+        }
+        // ADMIN-USERS: Use Blobs endpoint (OLS 97)
+        else if (formName === 'admin-users') {
+            response = await fetch('/.netlify/functions/admin-users', {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch admin-users: ${response.status}`);
+            }
+
+            const result = await response.json();
+            parsedData = result.data || [];
+            
+            // Store in localStorage (passwords are already stripped by backend)
+            localStorage.setItem(`olrfc_${formName}`, JSON.stringify(parsedData));
+            console.log(`✅ Synced ${parsedData.length} admin users from Netlify Blobs`);
+            
+            return parsedData;
+        }
+        // VPS (VICE PRESIDENTS): Use Blobs endpoint (OLS 114)
+        else if (formName === 'vps') {
+            response = await fetch('/.netlify/functions/vp-wall', {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch vps: ${response.status}`);
+            }
+
+            const result = await response.json();
+            parsedData = result.data || [];
+            
+            // Store in localStorage
+            localStorage.setItem(`olrfc_${formName}`, JSON.stringify(parsedData));
+            console.log(`✅ Synced ${parsedData.length} VPs from Netlify Blobs`);
+            
+            return parsedData;
+        }
+        // ALL OTHER CONTENT TYPES: Use existing Forms endpoint
+        else {
+            response = await fetch('/.netlify/functions/get-submissions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ formName })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch from Netlify: ${response.status}`);
+            }
+
+            const result = await response.json();
+            parsedData = result.data || [];
+        }
+
+        // Save to localStorage
+        localStorage.setItem(`olrfc_${formName}`, JSON.stringify(parsedData));
+        console.log(`✅ Synced ${parsedData.length} ${formName} from Netlify`);
+        
+        return parsedData;
+    } catch (error) {
+        console.error(`Error syncing ${formName}:`, error);
+        console.log(`Using localStorage data as fallback`);
+        return this.getData(formName);
     }
+}
+
+
+    // NEW: Sync all data from Netlify - SMART SYNC WITH SAFETY CHECKS
+    async syncAllFromNetlify(forceUpdate = false) {
+        try {
+            console.log('🌐 Starting Netlify sync...');
+            
+            // Store old data counts before syncing
+            const oldNewsCount = this.getData('news').length;
+            const oldFixturesCount = this.getData('fixtures').length;
+            
+            await this.syncFromNetlify('news');
+            await this.syncFromNetlify('fixtures');
+            await this.syncFromNetlify('players');
+            await this.syncFromNetlify('sponsors');
+            await this.syncFromNetlify('gallery');
+            await this.syncFromNetlify('contacts');
+            await this.syncFromNetlify('teams');
+            await this.syncFromNetlify('team-filters'); // 🆕 OLS 72: Add team-filters sync
+            await this.syncFromNetlify('site-settings'); // 🆕 OLS 74: Add site-settings sync (matches pattern: short name without prefix)
+            await this.syncFromNetlify('admin-users'); // 🆕 OLS 97: Add admin-users sync
+            await this.syncFromNetlify('vps'); // 🆕 OLS 114: Add VP Wall sync
+            
+            // Get new data counts after syncing
+            const newNewsCount = this.getData('news').length;
+            const newFixturesCount = this.getData('fixtures').length;
+            
+            console.log(`✅ Sync complete - News: ${oldNewsCount}→${newNewsCount}, Fixtures: ${oldFixturesCount}→${newFixturesCount}`);
+            
+            // ✅ SAFETY CHECK: If sync returned empty but we had data before, DON'T clear
+            if (newNewsCount === 0 && oldNewsCount > 0 && !forceUpdate) {
+                console.warn('⚠️ Sync returned empty news but we had data - keeping old data');
+                // Restore old data
+                const oldNews = JSON.parse(sessionStorage.getItem('olrfc_news_backup') || '[]');
+                if (oldNews.length > 0) {
+                    localStorage.setItem('olrfc_news', JSON.stringify(oldNews));
+                }
+            }
+            
+            // Dispatch custom event to notify admin dashboard
+            // console.log('📡 Dispatching netlifyDataSynced event');
+            //window.dispatchEvent(new CustomEvent('netlifyDataSynced', {
+                //detail: {
+                   // timestamp: new Date().toISOString(),
+                   // synced: true,
+                  //  dataTypes: ['news', 'fixtures', 'players', 'sponsors'],
+                  //  counts: {
+                  //      news: newNewsCount,
+                   //     fixtures: newFixturesCount
+                  //  }
+               // }
+           // }));
+            
+            // Force immediate stats update if on admin dashboard
+            if (window.location.pathname.includes('admin-dashboard.html')) {
+                console.log('🔄 Admin dashboard detected, forcing stats refresh');
+                
+                // Wait a moment for data to settle
+                setTimeout(function() {
+                    if (window.adminSystem) {
+                        console.log('✅ Calling forceStatsRefresh()');
+                        window.adminSystem.forceStatsRefresh();
+                    } else {
+                        console.warn('⚠️ adminSystem not available yet');
+                    }
+                }, 500);
+            }
+            
+        } catch (error) {
+            console.error('❌ Netlify sync failed:', error);
+        }
+    }
+
+    // ✅ SMART SYNC: Sync on first visit, then cache for session
+    async loadAllContent() {
+    // Check if we've already synced this session
+    const lastSync = sessionStorage.getItem('olrfc_last_sync');
+    const now = Date.now();
+    const syncInterval = 5 * 60 * 1000; // 5 minutes
+    
+    // ✅ SMART DECISION: Sync if...
+    const shouldSync = !lastSync || (now - parseInt(lastSync)) > syncInterval;
+    
+    if (shouldSync && (window.location.pathname.includes('index.html') || window.location.pathname === '/')) {
+        console.log('🔄 Syncing data from Netlify (first visit or 5+ min elapsed)');
+        
+        // Backup existing data before syncing
+        const existingNews = this.getData('news');
+        const existingFixtures = this.getData('fixtures');
+        sessionStorage.setItem('olrfc_news_backup', JSON.stringify(existingNews));
+        sessionStorage.setItem('olrfc_fixtures_backup', JSON.stringify(existingFixtures));
+        
+        // Sync from Netlify
+        await this.syncAllFromNetlify();
+        
+        // Mark sync time
+        sessionStorage.setItem('olrfc_last_sync', now.toString());
+    } else {
+        console.log('✅ Using cached data (synced recently)');
+    }
+    
+    // ✅ NEW: Wait a moment for DOM to be fully ready
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Always load from localStorage
+    //this.loadNews();
+    this.loadFixtures();
+    this.loadStats();
+    
+    console.log('✅ Content loaded');
+    
+    // ✅ NEW: Dispatch event to tell news-filter.js that data is ready
+    window.dispatchEvent(new CustomEvent('olrfcDataReady', {
+        detail: {
+            timestamp: new Date().toISOString(),
+            newsCount: this.getData('news').length,
+            fixturesCount: this.getData('fixtures').length
+        }
+    }));
+}
 
     getData(key) {
         try {
-            return JSON.parse(localStorage.getItem(`olrfc_${key}`)) || [];
+            const data = JSON.parse(localStorage.getItem(`olrfc_${key}`)) || [];
+            
+            // 🔧 DEDUPLICATE by ID to prevent showing duplicates
+            if (data.length > 0 && data[0] && data[0].id) {
+                const seen = new Map();
+                const deduplicated = [];
+                
+                for (const item of data) {
+                    if (item && item.id && !seen.has(item.id)) {
+                        seen.set(item.id, true);
+                        deduplicated.push(item);
+                    }
+                }
+                
+                // If we found duplicates, save the cleaned version
+                if (deduplicated.length < data.length) {
+                    console.log(`🧹 [OLRFCDataLoader] Removed ${data.length - deduplicated.length} duplicate ${key} items`);
+                    localStorage.setItem(`olrfc_${key}`, JSON.stringify(deduplicated));
+                }
+                
+                return deduplicated;
+            }
+            
+            return data;
         } catch (e) {
             console.error(`Error loading ${key} data:`, e);
             return [];
         }
     }
 
-    // Load news articles for index.html
+    // ✅ FIX #2: Smart loading - never clear if data exists
     loadNews() {
         const newsGrid = document.querySelector('.news-grid');
         if (!newsGrid) return;
 
         const news = this.getData('news');
-        newsGrid.innerHTML = '';
-
+        
+        // ✅ SAFETY CHECK - Don't clear if no data AND grid has content
         if (news.length === 0) {
+            const existingCards = newsGrid.querySelectorAll('.news-card');
+            if (existingCards.length > 0) {
+                console.log('⚠️ No news in localStorage but cards exist - keeping existing content');
+                return;
+            }
+            
+            console.log('⚠️ No news in localStorage - showing placeholder');
             newsGrid.innerHTML = this.getDefaultNewsHTML();
             return;
         }
 
+        // Clear and render new content
+        newsGrid.innerHTML = '';
+
         // Show latest 3 articles
-        const latestNews = news.slice(0, 3);
+        const latestNews = news
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 3);
         
         latestNews.forEach(article => {
             const newsCard = this.createNewsCard(article);
             newsGrid.appendChild(newsCard);
         });
+        
+        console.log(`✅ Loaded ${latestNews.length} news articles`);
     }
 
     createNewsCard(article) {
@@ -62,30 +402,40 @@ class OLRFCDataLoader {
             day: 'numeric'
         });
 
+        // ✅ FIXED: Add custom image support with proper cropping
+        const hasCustomImage = article.image && article.image.trim() !== '';
+        
+        const imageHTML = hasCustomImage 
+            ? `<img src="${article.image}" 
+                   alt="${article.title}" 
+                   style="width: 100%; height: 200px; object-fit: cover; object-position: center top; border-radius: 10px 10px 0 0;">`
+            : `<div class="placeholder-image">${categoryIcon} ${this.formatCategory(article.category)}</div>`;
+
         card.innerHTML = `
             <div class="news-image">
-                <div class="placeholder-image">${categoryIcon} ${this.formatCategory(article.category)}</div>
+                ${imageHTML}
             </div>
             <div class="news-content">
-                <div class="news-date">${formattedDate}</div>
+                <div class="news-date">Published On ${formattedDate}</div>
                 <h3 class="news-title">${article.title}</h3>
                 <p class="news-excerpt">${this.truncateText(article.content, 120)}</p>
-                <a href="#" class="btn btn-primary" onclick="showNewsModal('${article.title}', '${article.content}', '${formattedDate}', '${article.author}')">Read More</a>
+                <a href="#" class="btn btn-primary" onclick="showNewsModal('${this.escapeHtml(article.title)}', '${this.escapeHtml(article.content)}', '${formattedDate}', '${this.escapeHtml(article.author)}')">Read More</a>
             </div>
         `;
 
         return card;
     }
 
-    // Load fixtures for index.html
+    // ✅ FIX #3: Added safety check for fixtures too
     loadFixtures() {
         const fixturesGrid = document.getElementById('fixtures-match-grid');
         if (!fixturesGrid) return;
 
         const fixtures = this.getData('fixtures');
         
+        // ✅ SAFETY CHECK - Don't clear if no fixtures exist
         if (fixtures.length === 0) {
-            fixturesGrid.innerHTML = this.getDefaultFixturesHTML();
+            console.log('⚠️ No fixtures in localStorage - keeping existing content');
             return;
         }
 
@@ -111,6 +461,8 @@ class OLRFCDataLoader {
         if (displayFixtures.length === 0) {
             fixturesGrid.innerHTML = `<p style="text-align: center; color: var(--text-light); grid-column: 1 / -1;">No fixtures found for ${this.formatTeam(activeTeam)}.</p>`;
         }
+        
+        console.log(`✅ Loaded ${displayFixtures.length} fixtures`);
     }
 
     createFixtureCard(fixture) {
@@ -173,6 +525,12 @@ class OLRFCDataLoader {
     }
 
     // Utility functions
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     getCategoryIcon(category) {
         const icons = {
             'match': '🏉',
@@ -206,6 +564,7 @@ class OLRFCDataLoader {
     }
 
     truncateText(text, maxLength) {
+        if (!text) return '';
         if (text.length <= maxLength) return text;
         return text.substr(0, maxLength) + '...';
     }
@@ -280,6 +639,14 @@ class OLRFCDataLoader {
 
 // Initialize data loader
 const olrfcData = new OLRFCDataLoader();
+
+// ✅ Expose sync function globally for MANUAL use from admin dashboard ONLY
+window.syncDataFromNetlify = async function() {
+    console.log('🔄 Manual sync triggered from admin dashboard');
+    await olrfcData.syncAllFromNetlify();
+    alert('✅ Data synced from Netlify Forms!');
+    location.reload();
+};
 
 // Team filter functionality for fixtures
 function initializeTeamFilters() {
@@ -471,7 +838,29 @@ class GalleryDataLoader {
 
     getData(key) {
         try {
-            return JSON.parse(localStorage.getItem(`olrfc_${key}`)) || [];
+            const data = JSON.parse(localStorage.getItem(`olrfc_${key}`)) || [];
+            
+            // 🔧 DEDUPLICATE by ID
+            if (data.length > 0 && data[0] && data[0].id) {
+                const seen = new Map();
+                const deduplicated = [];
+                
+                for (const item of data) {
+                    if (item && item.id && !seen.has(item.id)) {
+                        seen.set(item.id, true);
+                        deduplicated.push(item);
+                    }
+                }
+                
+                if (deduplicated.length < data.length) {
+                    console.log(`🧹 [GalleryDataLoader] Removed ${data.length - deduplicated.length} duplicate ${key} items`);
+                    localStorage.setItem(`olrfc_${key}`, JSON.stringify(deduplicated));
+                }
+                
+                return deduplicated;
+            }
+            
+            return data;
         } catch (e) {
             console.error(`Error loading ${key} data:`, e);
             return [];
@@ -541,7 +930,29 @@ class PlayerDataLoader {
 
     getData(key) {
         try {
-            return JSON.parse(localStorage.getItem(`olrfc_${key}`)) || [];
+            const data = JSON.parse(localStorage.getItem(`olrfc_${key}`)) || [];
+            
+            // 🔧 DEDUPLICATE by ID
+            if (data.length > 0 && data[0] && data[0].id) {
+                const seen = new Map();
+                const deduplicated = [];
+                
+                for (const item of data) {
+                    if (item && item.id && !seen.has(item.id)) {
+                        seen.set(item.id, true);
+                        deduplicated.push(item);
+                    }
+                }
+                
+                if (deduplicated.length < data.length) {
+                    console.log(`🧹 [PlayerDataLoader] Removed ${data.length - deduplicated.length} duplicate ${key} items`);
+                    localStorage.setItem(`olrfc_${key}`, JSON.stringify(deduplicated));
+                }
+                
+                return deduplicated;
+            }
+            
+            return data;
         } catch (e) {
             console.error(`Error loading ${key} data:`, e);
             return [];

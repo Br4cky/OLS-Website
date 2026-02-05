@@ -1,0 +1,70 @@
+// netlify/functions/fix-fixtures-data.js
+// ONE-TIME FIX: Unwrap double-nested array in Blobs
+// OLS 84
+
+const { getStore } = require('@netlify/blobs');
+
+exports.handler = async (event, context) => {
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type'
+    };
+
+    try {
+        const store = getStore({
+            name: 'ols-fixtures',
+            siteID: process.env.SITE_ID,
+            token: process.env.NETLIFY_ACCESS_TOKEN
+        });
+
+        // Get current data
+        const data = await store.get('all-fixtures', { type: 'json' });
+        
+        console.log('Current data structure:', JSON.stringify(data).substring(0, 200));
+        
+        // Check if it's double-nested
+        let fixtures;
+        if (Array.isArray(data) && Array.isArray(data[0])) {
+            // Double-nested - unwrap it
+            fixtures = data[0];
+            console.log('Unwrapping double-nested array');
+        } else if (Array.isArray(data)) {
+            // Already correct
+            fixtures = data;
+            console.log('Data structure is correct');
+        } else {
+            throw new Error('Unexpected data structure');
+        }
+
+        // Filter out any invalid fixtures
+        const validFixtures = fixtures.filter(f => f && f.id);
+        
+        console.log(`Found ${validFixtures.length} valid fixtures`);
+
+        // Save the corrected data
+        await store.set('all-fixtures', JSON.stringify(validFixtures));
+
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+                success: true,
+                message: 'Fixtures data structure fixed',
+                fixturesCount: validFixtures.length,
+                wasDoubleNested: Array.isArray(data[0])
+            })
+        };
+
+    } catch (error) {
+        console.error('Fix error:', error);
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+                success: false,
+                error: 'Fix failed',
+                message: error.message
+            })
+        };
+    }
+};
