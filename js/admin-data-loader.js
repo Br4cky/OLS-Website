@@ -191,10 +191,17 @@ class OLRFCDataLoader {
             parsedData = result.data || [];
         }
 
+        // SAFETY CHECK: Don't overwrite existing data with empty cloud response
+        const existingData = this.getData(formName);
+        if (Array.isArray(parsedData) && parsedData.length === 0 && Array.isArray(existingData) && existingData.length > 0) {
+            console.warn(`Sync returned empty ${formName} but localStorage has ${existingData.length} items - keeping existing data`);
+            return existingData;
+        }
+
         // Save to localStorage
         localStorage.setItem(`olrfc_${formName}`, JSON.stringify(parsedData));
-        console.log(`✅ Synced ${parsedData.length} ${formName} from Netlify`);
-        
+        console.log(`Synced ${parsedData.length} ${formName} from Netlify`);
+
         return parsedData;
     } catch (error) {
         console.error(`Error syncing ${formName}:`, error);
@@ -231,15 +238,7 @@ class OLRFCDataLoader {
             
             console.log(`✅ Sync complete - News: ${oldNewsCount}→${newNewsCount}, Fixtures: ${oldFixturesCount}→${newFixturesCount}`);
             
-            // ✅ SAFETY CHECK: If sync returned empty but we had data before, DON'T clear
-            if (newNewsCount === 0 && oldNewsCount > 0 && !forceUpdate) {
-                console.warn('⚠️ Sync returned empty news but we had data - keeping old data');
-                // Restore old data
-                const oldNews = JSON.parse(sessionStorage.getItem('olrfc_news_backup') || '[]');
-                if (oldNews.length > 0) {
-                    localStorage.setItem('olrfc_news', JSON.stringify(oldNews));
-                }
-            }
+            // Safety check now handled in syncFromNetlify() for all data types
             
             // Dispatch custom event to notify admin dashboard
             // console.log('📡 Dispatching netlifyDataSynced event');
@@ -288,13 +287,7 @@ class OLRFCDataLoader {
     if (shouldSync && (window.location.pathname.includes('index.html') || window.location.pathname === '/')) {
         console.log('🔄 Syncing data from Netlify (first visit or 5+ min elapsed)');
         
-        // Backup existing data before syncing
-        const existingNews = this.getData('news');
-        const existingFixtures = this.getData('fixtures');
-        sessionStorage.setItem('olrfc_news_backup', JSON.stringify(existingNews));
-        sessionStorage.setItem('olrfc_fixtures_backup', JSON.stringify(existingFixtures));
-        
-        // Sync from Netlify
+        // Sync from Netlify (empty data protection is built into syncFromNetlify)
         await this.syncAllFromNetlify();
         
         // Mark sync time

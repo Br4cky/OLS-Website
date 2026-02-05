@@ -44,55 +44,42 @@ class AdminNewsManager {
         }
 
         try {
-            // 1. IMMEDIATE localStorage update (preserves existing UX)
+            const isEditing = this.adminSystem.currentEditIndex !== null;
+
+            // 1. CLOUD-FIRST: Save to cloud storage first
+            if (window.netlifyDataManager) {
+                const result = await window.netlifyDataManager.createNews(newsData);
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Cloud save failed');
+                }
+                console.log('News article successfully synced to cloud storage');
+            }
+
+            // 2. Only update localStorage AFTER cloud succeeds
             let existingNews = this.adminSystem.getData('news');
-            
-            if (this.adminSystem.currentEditIndex !== null) {
-                existingNews[this.adminSystem.currentEditIndex] = newsData;
+
+            if (isEditing) {
+                const localIndex = existingNews.findIndex(n => n.id === newsData.id);
+                if (localIndex !== -1) {
+                    existingNews[localIndex] = newsData;
+                }
             } else {
                 existingNews.unshift(newsData);
             }
-            
+
             this.adminSystem.saveData('news', existingNews);
             this.adminSystem.loadNews();
             this.adminSystem.updateStats();
-            
-            const action = this.adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+
+            const action = isEditing ? 'updated' : 'created';
             this.adminSystem.showAlert('news', `News article ${action} successfully!`, 'success');
-            
-            // 2. BACKGROUND cloud storage
-            if (window.netlifyDataManager) {
-                try {
-                    const result = await window.netlifyDataManager.createNews(newsData);
-                    
-                    if (result.success) {
-                        console.log('News article successfully synced to cloud storage');
-                        setTimeout(() => {
-                            this.adminSystem.showAlert('news', 'Article synced to cloud storage ✓', 'success');
-                        }, 1000);
-                    } else {
-                        throw new Error(result.error);
-                    }
-                    
-                } catch (cloudError) {
-                    console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
-                    this.adminSystem.showAlert('news', 'Article saved locally (cloud sync failed - will retry)', 'warning');
-                    
-                    // Store for retry when network available
-                    let pendingSync = JSON.parse(localStorage.getItem('olrfc_pending_sync') || '{}');
-                    if (!pendingSync.news) pendingSync.news = [];
-                    pendingSync.news.push(newsData);
-                    localStorage.setItem('olrfc_pending_sync', JSON.stringify(pendingSync));
-                }
-            } else {
-                console.log('Netlify data manager not available, localStorage only');
-            }
-            
+
             // Close modal and reset form
             closeModal('newsModal');
             document.getElementById('newsForm').reset();
             this.adminSystem.currentEditIndex = null;
-            
+
         } catch (error) {
             console.error('Error saving news article:', error);
             this.adminSystem.showAlert('news', 'Error saving news article: ' + error.message, 'danger');
@@ -128,35 +115,38 @@ class AdminNewsManager {
     async deleteNews(index) {
     const news = this.adminSystem.getData('news');
     const article = news[index];
-    
+
     if (!article) {
         console.error('Article not found at index:', index);
         return;
     }
-    
+
     if (confirm(`Are you sure you want to delete "${article.title}"?`)) {
         try {
-            // 1. Delete from localStorage (immediate UI update)
-            news.splice(index, 1);
-            this.adminSystem.saveData('news', news);
-            
-            // 2. Delete from Netlify Blobs (cloud persistence)
+            // 1. CLOUD-FIRST: Delete from Netlify Blobs first
             if (window.netlifyDataManager) {
                 const result = await window.netlifyDataManager.deleteNews(article.id);
-                
-                if (result.success) {
-                    console.log('✅ News article deleted from cloud storage');
-                } else {
-                    console.warn('⚠️ Cloud delete failed, but localStorage deleted');
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Cloud deletion failed');
                 }
+                console.log('News article deleted from cloud storage');
             }
-            
+
+            // 2. Only delete from localStorage AFTER cloud succeeds
+            const freshNews = this.adminSystem.getData('news');
+            const localIndex = freshNews.findIndex(n => n.id === article.id);
+            if (localIndex !== -1) {
+                freshNews.splice(localIndex, 1);
+                this.adminSystem.saveData('news', freshNews);
+            }
+
             // Update UI
             this.adminSystem.loadNews();
             this.adminSystem.updateStats();
-            
+
             this.adminSystem.showAlert('news', 'News article deleted successfully', 'success');
-            
+
         } catch (error) {
             console.error('Error deleting news:', error);
             this.adminSystem.showAlert('news', 'Error deleting news: ' + error.message, 'danger');

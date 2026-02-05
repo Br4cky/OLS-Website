@@ -43,46 +43,41 @@ class AdminPlayersManager {
         }
 
         try {
-            // 1. IMMEDIATE localStorage update
+            const isEditing = this.adminSystem.currentEditIndex !== null;
+
+            // 1. CLOUD-FIRST: Save to cloud storage first
+            if (window.netlifyDataManager) {
+                const result = await window.netlifyDataManager.createPlayer(playerData);
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Cloud save failed');
+                }
+                console.log('Player successfully synced to cloud storage');
+            }
+
+            // 2. Only update localStorage AFTER cloud succeeds
             let existingPlayers = this.adminSystem.getData('players');
-            
-            if (this.adminSystem.currentEditIndex !== null) {
-                existingPlayers[this.adminSystem.currentEditIndex] = playerData;
+
+            if (isEditing) {
+                const localIndex = existingPlayers.findIndex(p => p.id === playerData.id);
+                if (localIndex !== -1) {
+                    existingPlayers[localIndex] = playerData;
+                }
             } else {
                 existingPlayers.unshift(playerData);
             }
-            
+
             this.adminSystem.saveData('players', existingPlayers);
             this.adminSystem.loadPlayers();
             this.adminSystem.updateStats();
-            
-            const action = this.adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+
+            const action = isEditing ? 'updated' : 'created';
             this.adminSystem.showAlert('players', `Player ${action} successfully!`, 'success');
-            
-            // 2. BACKGROUND cloud storage
-            if (window.netlifyDataManager) {
-                try {
-                    const result = await window.netlifyDataManager.createPlayer(playerData);
-                    
-                    if (result.success) {
-                        console.log('Player successfully synced to cloud storage');
-                        setTimeout(() => {
-                            this.adminSystem.showAlert('players', 'Player synced to cloud storage ✓', 'success');
-                        }, 1000);
-                    } else {
-                        throw new Error(result.error);
-                    }
-                    
-                } catch (cloudError) {
-                    console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
-                    this.adminSystem.showAlert('players', 'Player saved locally (cloud sync failed)', 'warning');
-                }
-            }
-            
+
             closeModal('playerModal');
             document.getElementById('playerForm').reset();
             this.adminSystem.currentEditIndex = null;
-            
+
         } catch (error) {
             console.error('Error saving player:', error);
             this.adminSystem.showAlert('players', 'Error saving player: ' + error.message, 'danger');
@@ -115,19 +110,35 @@ class AdminPlayersManager {
         openModal('playerModal');
     }
 
-    deletePlayer(index) {
+    async deletePlayer(index) {
         const players = this.adminSystem.getData('players');
         const player = players[index];
-        
+
         if (!player) {
             console.error('Player not found at index:', index);
             return;
         }
-        
+
         if (confirm(`Are you sure you want to delete ${player.name}?`)) {
             try {
-                players.splice(index, 1);
-                this.adminSystem.saveData('players', players);
+                // 1. CLOUD-FIRST: Delete from Netlify Blobs first
+                if (window.netlifyDataManager) {
+                    const result = await window.netlifyDataManager.deletePlayer(player.id);
+
+                    if (!result.success) {
+                        throw new Error(result.error || 'Cloud deletion failed');
+                    }
+                    console.log('Player deleted from cloud storage');
+                }
+
+                // 2. Only delete from localStorage AFTER cloud succeeds
+                const freshPlayers = this.adminSystem.getData('players');
+                const localIndex = freshPlayers.findIndex(p => p.id === player.id);
+                if (localIndex !== -1) {
+                    freshPlayers.splice(localIndex, 1);
+                    this.adminSystem.saveData('players', freshPlayers);
+                }
+
                 this.adminSystem.loadPlayers();
                 this.adminSystem.updateStats();
                 this.adminSystem.showAlert('players', 'Player deleted successfully', 'success');

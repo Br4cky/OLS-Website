@@ -271,22 +271,41 @@ class ContactsManager {
   async deleteContact(contactId) {
     try {
       const index = this.contacts.findIndex(c => c.id === contactId);
-      
+
       if (index === -1) {
         throw new Error('Contact not found: ' + contactId);
       }
 
-      // Remove from array
-      const deletedContact = this.contacts.splice(index, 1)[0];
+      const deletedContact = this.contacts[index];
 
-      // Save to localStorage AND Netlify Blobs
-      await this.saveContacts();
+      // 1. CLOUD-FIRST: Build array without the deleted contact and sync to cloud
+      const contactsWithoutDeleted = this.contacts.filter(c => c.id !== contactId);
 
-      console.log('✅ Contact deleted:', contactId);
+      const response = await fetch('/.netlify/functions/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: contactsWithoutDeleted })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Cloud deletion failed: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Cloud deletion failed');
+      }
+
+      // 2. Only update local data AFTER cloud succeeds
+      this.contacts = contactsWithoutDeleted;
+      localStorage.setItem(this.storageKey, JSON.stringify(this.contacts));
+
+      console.log('Contact deleted:', contactId);
       return { success: true, deletedContact };
 
     } catch (error) {
-      console.error('❌ Error deleting contact:', error);
+      console.error('Error deleting contact:', error);
       throw error;
     }
   }

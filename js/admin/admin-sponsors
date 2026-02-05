@@ -49,40 +49,38 @@ class AdminSponsorsManager {
         }
 
         try {
-            // Save to localStorage first
+            const isEditing = this.adminSystem.currentEditIndex !== null;
             const sponsor = {
-                id: this.adminSystem.currentEditIndex !== null 
-                    ? sponsors[this.adminSystem.currentEditIndex].id 
-                    : Date.now(),
+                id: isEditing ? sponsors[this.adminSystem.currentEditIndex].id : Date.now(),
                 ...sponsorData,
-                dateAdded: this.adminSystem.currentEditIndex !== null 
-                    ? sponsors[this.adminSystem.currentEditIndex].dateAdded 
-                    : new Date().toISOString()
+                dateAdded: isEditing ? sponsors[this.adminSystem.currentEditIndex].dateAdded : new Date().toISOString()
             };
 
-            if (this.adminSystem.currentEditIndex !== null) {
-                sponsors[this.adminSystem.currentEditIndex] = sponsor;
+            // 1. CLOUD-FIRST: Save to cloud storage first
+            if (window.netlifyDataManager) {
+                const result = await window.netlifyDataManager.createSponsor(sponsorData);
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Cloud save failed');
+                }
+                console.log('Sponsor saved to cloud successfully');
+            }
+
+            // 2. Only update localStorage AFTER cloud succeeds
+            if (isEditing) {
+                const localIndex = sponsors.findIndex(s => s.id === sponsor.id);
+                if (localIndex !== -1) {
+                    sponsors[localIndex] = sponsor;
+                }
             } else {
                 sponsors.push(sponsor);
             }
 
             this.adminSystem.saveData('sponsors', sponsors);
+            this.adminSystem.loadSponsors();
+            this.adminSystem.updateStats();
 
-            // Submit to Netlify Forms
-            if (window.netlifyDataManager) {
-                const result = await window.netlifyDataManager.createSponsor(sponsorData);
-                if (result.success) {
-                    console.log('Sponsor saved to Netlify Forms successfully');
-                    setTimeout(() => {
-                        this.adminSystem.showAlert('sponsors', 'Sponsor synced to cloud storage ✓', 'success');
-                    }, 1000);
-                } else {
-                    console.warn('Netlify Forms submission failed:', result.error);
-                    this.adminSystem.showAlert('sponsors', 'Sponsor saved locally (cloud sync failed)', 'warning');
-                }
-            }
-
-            const action = this.adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+            const action = isEditing ? 'updated' : 'created';
             this.adminSystem.showAlert('sponsors', `Sponsor ${action} successfully!`, 'success');
 
             closeModal('sponsorModal');
@@ -135,19 +133,42 @@ class AdminSponsorsManager {
         openModal('sponsorModal');
     }
 
-    deleteSponsor(index) {
+    async deleteSponsor(index) {
         const sponsors = this.adminSystem.getData('sponsors');
         const sponsor = sponsors[index];
-        
+
         if (!sponsor) {
             console.error('Sponsor not found at index:', index);
             return;
         }
-        
+
         if (confirm(`Are you sure you want to delete ${sponsor.name}?`)) {
-            sponsors.splice(index, 1);
-            this.adminSystem.saveData('sponsors', sponsors);
-            this.adminSystem.showAlert('sponsors', 'Sponsor deleted successfully', 'success');
+            try {
+                // 1. CLOUD-FIRST: Delete from Netlify Blobs first
+                if (window.netlifyDataManager) {
+                    const result = await window.netlifyDataManager.deleteSponsor(sponsor.id);
+
+                    if (!result.success) {
+                        throw new Error(result.error || 'Cloud deletion failed');
+                    }
+                    console.log('Sponsor deleted from cloud storage');
+                }
+
+                // 2. Only delete from localStorage AFTER cloud succeeds
+                const freshSponsors = this.adminSystem.getData('sponsors');
+                const localIndex = freshSponsors.findIndex(s => s.id === sponsor.id);
+                if (localIndex !== -1) {
+                    freshSponsors.splice(localIndex, 1);
+                    this.adminSystem.saveData('sponsors', freshSponsors);
+                }
+
+                this.adminSystem.loadSponsors();
+                this.adminSystem.updateStats();
+                this.adminSystem.showAlert('sponsors', 'Sponsor deleted successfully', 'success');
+            } catch (error) {
+                console.error('Error deleting sponsor:', error);
+                this.adminSystem.showAlert('sponsors', 'Error deleting sponsor: ' + error.message, 'danger');
+            }
         }
     }
 

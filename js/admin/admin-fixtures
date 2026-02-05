@@ -45,46 +45,41 @@ class AdminFixturesManager {
         }
 
         try {
-            // 1. IMMEDIATE localStorage update
+            const isEditing = this.adminSystem.currentEditIndex !== null;
+
+            // 1. CLOUD-FIRST: Save to cloud storage first
+            if (window.netlifyDataManager) {
+                const result = await window.netlifyDataManager.createFixture(fixtureData);
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Cloud save failed');
+                }
+                console.log('Fixture successfully synced to cloud storage');
+            }
+
+            // 2. Only update localStorage AFTER cloud succeeds
             let existingFixtures = this.adminSystem.getData('fixtures');
-            
-            if (this.adminSystem.currentEditIndex !== null) {
-                existingFixtures[this.adminSystem.currentEditIndex] = fixtureData;
+
+            if (isEditing) {
+                const localIndex = existingFixtures.findIndex(f => f.id === fixtureData.id);
+                if (localIndex !== -1) {
+                    existingFixtures[localIndex] = fixtureData;
+                }
             } else {
                 existingFixtures.unshift(fixtureData);
             }
-            
+
             this.adminSystem.saveData('fixtures', existingFixtures);
             this.adminSystem.loadFixtures();
             this.adminSystem.updateStats();
-            
-            const action = this.adminSystem.currentEditIndex !== null ? 'updated' : 'created';
+
+            const action = isEditing ? 'updated' : 'created';
             this.adminSystem.showAlert('fixtures', `Fixture ${action} successfully!`, 'success');
-            
-            // 2. BACKGROUND cloud storage
-            if (window.netlifyDataManager) {
-                try {
-                    const result = await window.netlifyDataManager.createFixture(fixtureData);
-                    
-                    if (result.success) {
-                        console.log('Fixture successfully synced to cloud storage');
-                        setTimeout(() => {
-                            this.adminSystem.showAlert('fixtures', 'Fixture synced to cloud storage ✓', 'success');
-                        }, 1000);
-                    } else {
-                        throw new Error(result.error);
-                    }
-                    
-                } catch (cloudError) {
-                    console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
-                    this.adminSystem.showAlert('fixtures', 'Fixture saved locally (cloud sync failed)', 'warning');
-                }
-            }
-            
+
             closeModal('fixtureModal');
             document.getElementById('fixtureForm').reset();
             this.adminSystem.currentEditIndex = null;
-            
+
         } catch (error) {
             console.error('Error saving fixture:', error);
             this.adminSystem.showAlert('fixtures', 'Error saving fixture: ' + error.message, 'danger');
@@ -123,46 +118,43 @@ class AdminFixturesManager {
     async deleteFixture(index) {
         const fixtures = this.adminSystem.getData('fixtures');
         const fixture = fixtures[index];
-        
+
         if (!fixture) {
             console.error('Fixture not found at index:', index);
             return;
         }
-        
+
         if (!confirm(`Are you sure you want to delete the fixture against ${fixture.opponent}?`)) {
             return;
         }
-        
+
         try {
-            // 1. IMMEDIATE localStorage deletion for instant UI feedback
-            fixtures.splice(index, 1);
-            this.adminSystem.saveData('fixtures', fixtures);
-            this.adminSystem.loadFixtures();
-            this.adminSystem.updateStats();
-            this.adminSystem.showAlert('fixtures', 'Fixture deleted successfully', 'success');
-            
-            // 2. BACKGROUND cloud deletion via Netlify Blobs
-            try {
+            // 1. CLOUD-FIRST: Delete from Netlify Blobs first
+            if (window.netlifyDataManager) {
                 const response = await fetch(`/.netlify/functions/fixtures?id=${fixture.id}`, {
                     method: 'DELETE'
                 });
-                
+
                 const result = await response.json();
-                
-                if (response.ok && result.success) {
-                    console.log('Fixture deleted from cloud storage:', fixture.id);
-                    setTimeout(() => {
-                        this.adminSystem.showAlert('fixtures', 'Fixture deleted from cloud storage ✓', 'success');
-                    }, 1000);
-                } else {
+
+                if (!response.ok || !result.success) {
                     throw new Error(result.error || 'Cloud deletion failed');
                 }
-                
-            } catch (cloudError) {
-                console.warn('Cloud deletion failed, but localStorage deletion succeeded:', cloudError);
-                this.adminSystem.showAlert('fixtures', 'Fixture deleted locally (cloud sync failed)', 'warning');
+                console.log('Fixture deleted from cloud storage:', fixture.id);
             }
-            
+
+            // 2. Only delete from localStorage AFTER cloud succeeds
+            const freshFixtures = this.adminSystem.getData('fixtures');
+            const localIndex = freshFixtures.findIndex(f => f.id === fixture.id);
+            if (localIndex !== -1) {
+                freshFixtures.splice(localIndex, 1);
+                this.adminSystem.saveData('fixtures', freshFixtures);
+            }
+
+            this.adminSystem.loadFixtures();
+            this.adminSystem.updateStats();
+            this.adminSystem.showAlert('fixtures', 'Fixture deleted successfully', 'success');
+
         } catch (error) {
             console.error('Error deleting fixture:', error);
             this.adminSystem.showAlert('fixtures', 'Error deleting fixture: ' + error.message, 'danger');

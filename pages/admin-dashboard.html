@@ -8468,7 +8468,12 @@ if (sectionId === 'news') {
         function editSponsor(index) {
             const sponsors = adminSystem.getData('sponsors');
             const sponsor = sponsors[index];
-            
+
+            if (!sponsor) {
+                console.error('Sponsor not found at index:', index);
+                return;
+            }
+
             adminSystem.currentEditIndex = index;
             adminSystem.currentSection = 'sponsors';
             
@@ -8493,16 +8498,17 @@ if (sectionId === 'news') {
         async function deleteSponsor(index) {
             const sponsors = adminSystem.getData('sponsors');
             const sponsor = sponsors[index];
-            
+
+            if (!sponsor) {
+                console.error('Sponsor not found at index:', index);
+                return;
+            }
+
             if (confirm(`Are you sure you want to delete ${sponsor.name}?`)) {
                 showLoading('Deleting sponsor...');
-                
+
                 try {
-                    // Remove from localStorage immediately for instant UI update
-                    sponsors.splice(index, 1);
-                    adminSystem.saveData('sponsors', sponsors);
-                    
-                    // Also delete from Netlify Blobs
+                    // 1. CLOUD-FIRST: Delete from Netlify Blobs first
                     const response = await fetch('/.netlify/functions/sponsors', {
                         method: 'DELETE',
                         headers: {
@@ -8510,19 +8516,28 @@ if (sectionId === 'news') {
                         },
                         body: JSON.stringify({ id: sponsor.id })
                     });
-                    
+
                     const result = await response.json();
-                    
-                    if (result.success) {
-                        console.log('✅ Sponsor deleted from cloud storage');
-                        showLoadingSuccess('Sponsor deleted!');
-                    } else {
-                        console.error('❌ Failed to delete sponsor from cloud:', result.error);
-                        showLoadingError('Deleted locally (cloud sync failed)');
+
+                    if (!result.success) {
+                        throw new Error(result.error || 'Cloud deletion failed');
                     }
+                    console.log('Sponsor deleted from cloud storage');
+
+                    // 2. Only delete from localStorage AFTER cloud succeeds
+                    const freshSponsors = adminSystem.getData('sponsors');
+                    const localIndex = freshSponsors.findIndex(s => s.id === sponsor.id);
+                    if (localIndex !== -1) {
+                        freshSponsors.splice(localIndex, 1);
+                        adminSystem.saveData('sponsors', freshSponsors);
+                    }
+
+                    adminSystem.loadSponsors();
+                    adminSystem.updateStats();
+                    showLoadingSuccess('Sponsor deleted!');
                 } catch (error) {
-                    console.error('❌ Error deleting sponsor:', error);
-                    showLoadingError('Deleted locally (cloud sync failed)');
+                    console.error('Error deleting sponsor:', error);
+                    showLoadingError('Failed to delete sponsor: ' + error.message);
                 }
             }
         }
@@ -8615,79 +8630,64 @@ if (sectionId === 'news') {
             lastUpdated: new Date().toISOString()
         };
 
-        let cloudSyncSuccess = false;
-
-        // ✅ Cloud sync - use appropriate method for create vs update
+        // 1. CLOUD-FIRST: Save to cloud storage first
         if (window.netlifyDataManager) {
             if (isEditing) {
-                console.log('☁️ Updating existing sponsor in cloud...');
-                
-                // Check if updateSponsor method exists
+                console.log('Updating existing sponsor in cloud...');
+
                 if (typeof window.netlifyDataManager.updateSponsor === 'function') {
-                    // Pass complete sponsor data (without id, as that's the first param)
                     const { id, ...updateData } = sponsor;
                     const result = await window.netlifyDataManager.updateSponsor(sponsor.id, updateData);
-                    if (result.success) {
-                        console.log('✅ Sponsor updated in cloud successfully');
-                        cloudSyncSuccess = true;
-                    } else {
-                        console.warn('⚠️ Cloud update failed:', result.error);
+                    if (!result.success) {
+                        throw new Error(result.error || 'Cloud update failed');
                     }
-                } else {
-                    console.log('⚠️ No updateSponsor method - localStorage only');
+                    console.log('Sponsor updated in cloud successfully');
                 }
             } else {
-                console.log('☁️ Creating NEW sponsor in cloud...');
-                
+                console.log('Creating new sponsor in cloud...');
+
                 const result = await window.netlifyDataManager.createSponsor(sponsorData);
-                
-                if (result.success) {
-                    console.log('✅ New sponsor saved to cloud successfully');
-                    cloudSyncSuccess = true;
-                } else {
-                    console.warn('⚠️ Cloud sync failed:', result.error);
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Cloud save failed');
                 }
+                console.log('New sponsor saved to cloud successfully');
             }
         }
 
-        // Update localStorage
+        // 2. Only update localStorage AFTER cloud succeeds
         if (isEditing) {
-            console.log(`✏️ Editing sponsor at index ${adminSystem.currentEditIndex}:`, sponsor.name);
-            sponsors[adminSystem.currentEditIndex] = sponsor;
+            const localIndex = sponsors.findIndex(s => s.id === sponsor.id);
+            if (localIndex !== -1) {
+                sponsors[localIndex] = sponsor;
+            }
         } else {
-            console.log('➕ Creating new sponsor:', sponsor.name);
             sponsors.push(sponsor);
         }
 
         adminSystem.saveData('sponsors', sponsors);
 
-        // Show appropriate success message
-        if (cloudSyncSuccess || !window.netlifyDataManager) {
-            const successText = isEditing ? 'Sponsor updated!' : 'Sponsor created!';
-            showLoadingSuccess(successText);
-        } else {
-            showLoadingError('Saved locally (cloud sync failed)');
-        }
+        const successText = isEditing ? 'Sponsor updated!' : 'Sponsor created!';
+        showLoadingSuccess(successText);
 
         // Clean up and close
         closeModal('sponsorModal');
         document.getElementById('sponsorForm').reset();
         const logoPreview = document.getElementById('logoPreview');
-        const logoPreviewImg = document.getElementById('logoPreviewImg');
+        const logoPreviewImg2 = document.getElementById('logoPreviewImg');
         logoPreview.style.display = 'none';
-        logoPreviewImg.src = '';
-        if (logoPreviewImg.dataset) {
-            delete logoPreviewImg.dataset.cloudinaryUrl;
+        logoPreviewImg2.src = '';
+        if (logoPreviewImg2.dataset) {
+            delete logoPreviewImg2.dataset.cloudinaryUrl;
         }
-        
-        // ✅ CRITICAL: Clear the edit index
+
         adminSystem.currentEditIndex = null;
-        
+
         // Reload the sponsor list
         adminSystem.loadSponsors();
 
     } catch (error) {
-        console.error('❌ Error saving sponsor:', error);
+        console.error('Error saving sponsor:', error);
         showLoadingError('Failed to save sponsor');
         adminSystem.showAlert('sponsors', 'Error saving sponsor: ' + error.message, 'danger');
     }
@@ -8759,53 +8759,48 @@ document.getElementById('newsForm').addEventListener('submit', async function(e)
     showLoading(actionText);
 
     try {
-        // 1. IMMEDIATE localStorage update
+        // 1. CLOUD-FIRST: Save to cloud storage first
+        if (window.netlifyDataManager) {
+            let result;
+
+            if (isEditing && typeof window.netlifyDataManager.updateNews === 'function') {
+                console.log('Updating news article in cloud...');
+                result = await window.netlifyDataManager.updateNews(newsData.id, newsData);
+            } else {
+                console.log('Creating new news article in cloud...');
+                result = await window.netlifyDataManager.createNews(newsData);
+            }
+
+            if (!result.success) {
+                throw new Error(result.error || 'Cloud save failed');
+            }
+            console.log('News article successfully synced to cloud storage');
+        }
+
+        // 2. Only update localStorage AFTER cloud succeeds
         let existingNews = adminSystem.getData('news');
-        
-        if (adminSystem.currentEditIndex !== null) {
-            existingNews[adminSystem.currentEditIndex] = newsData;
+
+        if (isEditing) {
+            const localIndex = existingNews.findIndex(n => n.id === newsData.id);
+            if (localIndex !== -1) {
+                existingNews[localIndex] = newsData;
+            }
         } else {
             existingNews.unshift(newsData);
         }
-        
+
         adminSystem.saveData('news', existingNews);
         adminSystem.loadNews();
         adminSystem.updateStats();
-        
-        // 2. BACKGROUND cloud storage
-        if (window.netlifyDataManager) {
-            try {
-                let result;
-                
-                if (isEditing && typeof window.netlifyDataManager.updateNews === 'function') {
-                    console.log('☁️ Updating news article in cloud...');
-                    result = await window.netlifyDataManager.updateNews(newsData.id, newsData);
-                } else {
-                    console.log('☁️ Creating new news article in cloud...');
-                    result = await window.netlifyDataManager.createNews(newsData);
-                }
-                
-                if (result.success) {
-                    console.log('News article successfully synced to cloud storage');
-                    const successText = isEditing ? 'Article updated!' : 'Article created!';
-                    showLoadingSuccess(successText);
-                } else {
-                    throw new Error(result.error);
-                }
-            } catch (cloudError) {
-                console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
-                showLoadingError('Saved locally (cloud sync failed)');
-            }
-        } else {
-            const successText = isEditing ? 'Article updated!' : 'Article created!';
-            showLoadingSuccess(successText);
-        }
-        
+
+        const successText = isEditing ? 'Article updated!' : 'Article created!';
+        showLoadingSuccess(successText);
+
         closeModal('newsModal');
         document.getElementById('newsForm').reset();
-        document.getElementById('newsImagePreview').style.display = 'none'; // 🎯 NEW: Hide preview
+        document.getElementById('newsImagePreview').style.display = 'none';
         adminSystem.currentEditIndex = null;
-        
+
     } catch (error) {
         console.error('Error saving news article:', error);
         showLoadingError('Failed to save article');
@@ -8814,36 +8809,6 @@ document.getElementById('newsForm').addEventListener('submit', async function(e)
 });
 
 // Enhanced news editing function (replace the existing placeholder)
-function editNews(index) {
-    const news = adminSystem.getData('news');
-    const article = news[index];
-    
-    adminSystem.currentEditIndex = index;
-    adminSystem.currentSection = 'news';
-    
-    // Populate form with existing data
-    document.getElementById('newsTitle').value = article.title;
-    document.getElementById('newsContent').value = article.content;
-    document.getElementById('newsCategory').value = article.category;
-    document.getElementById('newsAuthor').value = article.author;
-    
-    // OLS 130: Populate and set club section
-    populateNewsClubSectionDropdown();
-    document.getElementById('newsClubSection').value = article.clubSection || 'all';
-    
-    openModal('newsModal');
-    
-    // OLS 122: Handle fixture dropdown after modal opens
-    setTimeout(() => {
-        toggleNewsFixtureDropdown();
-        // Set the fixture value if it exists
-        if (article.fixtureId) {
-            document.getElementById('newsFixture').value = article.fixtureId;
-        }
-    }, 50);
-}
-
-
 // PLAYERS FORM SUBMISSION - Add this after the fixtures form handler
 document.getElementById('playerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -8897,49 +8862,43 @@ document.getElementById('playerForm').addEventListener('submit', async function(
         const actionText = isEditing ? 'Updating player...' : 'Creating player...';
         showLoading(actionText);
         
-        // 1. IMMEDIATE localStorage update
+        // 1. CLOUD-FIRST: Save to cloud storage first
+        if (window.netlifyDataManager) {
+            let result;
+
+            if (isEditing && typeof window.netlifyDataManager.updatePlayer === 'function') {
+                console.log('Updating player in cloud...');
+                result = await window.netlifyDataManager.updatePlayer(playerData.id, playerData);
+            } else {
+                console.log('Creating new player in cloud...');
+                result = await window.netlifyDataManager.createPlayer(playerData);
+            }
+
+            if (!result.success) {
+                throw new Error(result.error || 'Cloud save failed');
+            }
+            console.log('Player successfully synced to cloud storage');
+        }
+
+        // 2. Only update localStorage AFTER cloud succeeds
         let existingPlayers = adminSystem.getData('players');
-        
-        if (adminSystem.currentEditIndex !== null) {
-            existingPlayers[adminSystem.currentEditIndex] = playerData;
+
+        if (isEditing) {
+            const localIndex = existingPlayers.findIndex(p => p.id === playerData.id);
+            if (localIndex !== -1) {
+                existingPlayers[localIndex] = playerData;
+            }
         } else {
             existingPlayers.unshift(playerData);
         }
-        
+
         adminSystem.saveData('players', existingPlayers);
         adminSystem.loadPlayers();
         adminSystem.updateStats();
-        
-        // 2. BACKGROUND cloud storage
-        if (window.netlifyDataManager) {
-            try {
-                let result;
-                
-                if (isEditing && typeof window.netlifyDataManager.updatePlayer === 'function') {
-                    console.log('☁️ Updating player in cloud...');
-                    result = await window.netlifyDataManager.updatePlayer(playerData.id, playerData);
-                } else {
-                    console.log('☁️ Creating new player in cloud...');
-                    result = await window.netlifyDataManager.createPlayer(playerData);
-                }
-                
-                if (result.success) {
-                    console.log('Player successfully synced to cloud storage');
-                    const successText = isEditing ? 'Player updated!' : 'Player created!';
-                    showLoadingSuccess(successText);
-                } else {
-                    throw new Error(result.error);
-                }
-                
-            } catch (cloudError) {
-                console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
-                showLoadingError('Saved locally (cloud sync failed)');
-            }
-        } else {
-            const successText = isEditing ? 'Player updated!' : 'Player created!';
-            showLoadingSuccess(successText);
-        }
-        
+
+        const successText = isEditing ? 'Player updated!' : 'Player created!';
+        showLoadingSuccess(successText);
+
         closeModal('playerModal');
         document.getElementById('playerForm').reset();
         adminSystem.currentEditIndex = null;
@@ -9559,54 +9518,48 @@ document.getElementById('galleryForm').addEventListener('submit', async function
         showLoading(actionText);
 
         try {
-            // 1. IMMEDIATE localStorage update
+            // 1. CLOUD-FIRST: Save to cloud storage first
+            if (window.netlifyDataManager) {
+                let result;
+
+                if (isEditing && typeof window.netlifyDataManager.updateFixture === 'function') {
+                    console.log('Updating fixture in cloud...');
+                    result = await window.netlifyDataManager.updateFixture(fixtureData.id, fixtureData);
+                } else {
+                    console.log('Creating new fixture in cloud...');
+                    result = await window.netlifyDataManager.createFixture(fixtureData);
+                }
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Cloud save failed');
+                }
+                console.log('Fixture successfully synced to cloud storage');
+            }
+
+            // 2. Only update localStorage AFTER cloud succeeds
             let existingFixtures = adminSystem.getData('fixtures');
-            
-            if (adminSystem.currentEditIndex !== null) {
-                existingFixtures[adminSystem.currentEditIndex] = fixtureData;
+
+            if (isEditing) {
+                const localIndex = existingFixtures.findIndex(f => f.id === fixtureData.id);
+                if (localIndex !== -1) {
+                    existingFixtures[localIndex] = fixtureData;
+                }
             } else {
                 existingFixtures.unshift(fixtureData);
             }
-            
+
             adminSystem.saveData('fixtures', existingFixtures);
             const currentFilter = document.getElementById('admin-team-filter')?.value || 'all';
             adminSystem.loadFixtures(currentFilter, currentFixtureTimeFilter);
             adminSystem.updateStats();
-            
-            // 2. BACKGROUND cloud storage
-            if (window.netlifyDataManager) {
-                try {
-                    let result;
-                    
-                    if (isEditing && typeof window.netlifyDataManager.updateFixture === 'function') {
-                        console.log('☁️ Updating fixture in cloud...');
-                        result = await window.netlifyDataManager.updateFixture(fixtureData.id, fixtureData);
-                    } else {
-                        console.log('☁️ Creating new fixture in cloud...');
-                        result = await window.netlifyDataManager.createFixture(fixtureData);
-                    }
-                    
-                    if (result.success) {
-                        console.log('Fixture successfully synced to cloud storage');
-                        const successText = isEditing ? 'Fixture updated!' : 'Fixture created!';
-                        showLoadingSuccess(successText);
-                    } else {
-                        throw new Error(result.error);
-                    }
-                    
-                } catch (cloudError) {
-                    console.warn('Cloud storage failed, but localStorage succeeded:', cloudError);
-                    showLoadingError('Saved locally (cloud sync failed)');
-                }
-            } else {
-                const successText = isEditing ? 'Fixture updated!' : 'Fixture created!';
-                showLoadingSuccess(successText);
-            }
-            
+
+            const successText = isEditing ? 'Fixture updated!' : 'Fixture created!';
+            showLoadingSuccess(successText);
+
             closeModal('fixtureModal');
             document.getElementById('fixtureForm').reset();
             adminSystem.currentEditIndex = null;
-            
+
         } catch (error) {
             console.error('Error saving fixture:', error);
             showLoadingError('Failed to save fixture');
@@ -9918,7 +9871,12 @@ function initializeSampleData() {
         function editNews(index) {
     const news = adminSystem.getData('news');
     const article = news[index];
-    
+
+    if (!article) {
+        console.error('Article not found at index:', index);
+        return;
+    }
+
     adminSystem.currentEditIndex = index;
     adminSystem.currentSection = 'news';
     
@@ -9976,34 +9934,39 @@ function initializeSampleData() {
 async function deleteNews(index) {
     const news = adminSystem.getData('news');
     const article = news[index];
-    
+
+    if (!article) {
+        console.error('Article not found at index:', index);
+        return;
+    }
+
     if (confirm(`Are you sure you want to delete "${article.title}"?`)) {
         showLoading('Deleting article...');
-        
+
         try {
-            // 1. Delete from localStorage (immediate UI update)
-            news.splice(index, 1);
-            adminSystem.saveData('news', news);
-            
-            // 2. Delete from Netlify Blobs (cloud persistence)
+            // 1. CLOUD-FIRST: Delete from Netlify Blobs first
             if (window.netlifyDataManager) {
                 const result = await window.netlifyDataManager.deleteNews(article.id);
-                
-                if (result.success) {
-                    console.log('✅ News article deleted from cloud storage');
-                    showLoadingSuccess('Article deleted!');
-                } else {
-                    console.warn('⚠️ Cloud delete failed, but localStorage deleted');
-                    showLoadingError('Deleted locally (cloud sync failed)');
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Cloud deletion failed');
                 }
-            } else {
-                showLoadingSuccess('Article deleted!');
+                console.log('News article deleted from cloud storage');
             }
-            
+
+            // 2. Only delete from localStorage AFTER cloud succeeds
+            const freshNews = adminSystem.getData('news');
+            const localIndex = freshNews.findIndex(n => n.id === article.id);
+            if (localIndex !== -1) {
+                freshNews.splice(localIndex, 1);
+                adminSystem.saveData('news', freshNews);
+            }
+
             // Update UI
             adminSystem.loadNews();
             adminSystem.updateStats();
-            
+            showLoadingSuccess('Article deleted!');
+
         } catch (error) {
             console.error('Error deleting news:', error);
             showLoadingError('Failed to delete article');
@@ -10182,7 +10145,12 @@ function switchFixtureTimeTab(timeFilter) {
         function editFixture(index) {
     const fixtures = adminSystem.getData('fixtures');
     const fixture = fixtures[index];
-    
+
+    if (!fixture) {
+        console.error('Fixture not found at index:', index);
+        return;
+    }
+
     adminSystem.currentEditIndex = index;
     adminSystem.currentSection = 'fixtures';
     
@@ -10222,37 +10190,39 @@ function switchFixtureTimeTab(timeFilter) {
 async function deleteFixture(index) {
     const fixtures = adminSystem.getData('fixtures');
     const fixture = fixtures[index];
-    
+
+    if (!fixture) {
+        console.error('Fixture not found at index:', index);
+        return;
+    }
+
     if (confirm(`Are you sure you want to delete the fixture against ${fixture.opponent}?`)) {
         showLoading('Deleting fixture...');
-        
+
         try {
-            // 1. Remove from localStorage
-            fixtures.splice(index, 1);
-            adminSystem.saveData('fixtures', fixtures);
+            // 1. CLOUD-FIRST: Delete from Netlify Blobs and Google Calendar first
+            if (window.netlifyDataManager) {
+                const result = await window.netlifyDataManager.deleteFixture(fixture);
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Cloud deletion failed');
+                }
+                console.log('Fixture successfully deleted from cloud');
+            }
+
+            // 2. Only delete from localStorage AFTER cloud succeeds
+            const freshFixtures = adminSystem.getData('fixtures');
+            const localIndex = freshFixtures.findIndex(f => f.id === fixture.id);
+            if (localIndex !== -1) {
+                freshFixtures.splice(localIndex, 1);
+                adminSystem.saveData('fixtures', freshFixtures);
+            }
+
             const currentFilter = document.getElementById('admin-team-filter')?.value || 'all';
             adminSystem.loadFixtures(currentFilter, currentFixtureTimeFilter);
             adminSystem.updateStats();
-            
-            // 2. Delete from Netlify Blobs and Google Calendar
-            if (window.netlifyDataManager) {
-                try {
-                    const result = await window.netlifyDataManager.deleteFixture(fixture);
-                    
-                    if (result.success) {
-                        console.log('Fixture successfully deleted from cloud');
-                        showLoadingSuccess('Fixture deleted!');
-                    } else {
-                        showLoadingError('Deleted locally (cloud sync failed)');
-                    }
-                } catch (cloudError) {
-                    console.warn('Cloud deletion failed:', cloudError);
-                    showLoadingError('Deleted locally (cloud sync failed)');
-                }
-            } else {
-                showLoadingSuccess('Fixture deleted!');
-            }
-            
+            showLoadingSuccess('Fixture deleted!');
+
         } catch (error) {
             console.error('Error deleting fixture:', error);
             showLoadingError('Failed to delete fixture');
@@ -12116,7 +12086,12 @@ async function saveBulkEditPlayers() {
         function editPlayer(index) {
     const players = adminSystem.getData('players');
     const player = players[index];
-    
+
+    if (!player) {
+        console.error('Player not found at index:', index);
+        return;
+    }
+
     adminSystem.currentEditIndex = index;
     adminSystem.currentSection = 'players';
     
@@ -12145,34 +12120,39 @@ async function saveBulkEditPlayers() {
 async function deletePlayer(index) {
     const players = adminSystem.getData('players');
     const player = players[index];
-    
+
+    if (!player) {
+        console.error('Player not found at index:', index);
+        return;
+    }
+
     if (confirm(`Are you sure you want to delete ${player.name}?`)) {
         showLoading('Deleting player...');
-        
+
         try {
-            // 1. Delete from localStorage (immediate UI update)
-            players.splice(index, 1);
-            adminSystem.saveData('players', players);
-            
-            // 2. Delete from Netlify Blobs (cloud persistence)
+            // 1. CLOUD-FIRST: Delete from Netlify Blobs first
             if (window.netlifyDataManager) {
                 const result = await window.netlifyDataManager.deletePlayer(player.id);
-                
-                if (result.success) {
-                    console.log('✅ Player deleted from cloud storage');
-                    showLoadingSuccess('Player deleted!');
-                } else {
-                    console.warn('⚠️ Cloud delete failed, but localStorage deleted');
-                    showLoadingError('Deleted locally (cloud sync failed)');
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Cloud deletion failed');
                 }
-            } else {
-                showLoadingSuccess('Player deleted!');
+                console.log('Player deleted from cloud storage');
             }
-            
+
+            // 2. Only delete from localStorage AFTER cloud succeeds
+            const freshPlayers = adminSystem.getData('players');
+            const localIndex = freshPlayers.findIndex(p => p.id === player.id);
+            if (localIndex !== -1) {
+                freshPlayers.splice(localIndex, 1);
+                adminSystem.saveData('players', freshPlayers);
+            }
+
             // Update UI
             adminSystem.loadPlayers();
             adminSystem.updateStats();
-            
+            showLoadingSuccess('Player deleted!');
+
         } catch (error) {
             console.error('Error deleting player:', error);
             showLoadingError('Failed to delete player');
@@ -12816,30 +12796,40 @@ function stopMigration() {
             }, 50); // Slightly longer than openModal's 30ms to ensure dropdown is populated
         }
         
-        function deleteAlbum(index) {
+        async function deleteAlbum(index) {
     const gallery = adminSystem.getData('gallery');
     const album = gallery[index];
-    
+
+    if (!album) {
+        console.error('Album not found at index:', index);
+        return;
+    }
+
     if (confirm(`Are you sure you want to delete "${album.title}"?\n\nThis will:\n✗ Remove the album from your dashboard\n✗ Delete the album from cloud storage\n\n⚠️ Note: Photos will remain in Cloudinary.`)) {
         try {
-            // Remove from localStorage immediately
-            gallery.splice(index, 1);
-            adminSystem.saveData('gallery', gallery);
-            
+            // 1. CLOUD-FIRST: Delete from Netlify Blobs first
+            if (window.netlifyDataManager) {
+                const result = await window.netlifyDataManager.deleteGalleryAlbum(album.id);
+                if (!result.success) {
+                    throw new Error(result.error || 'Cloud deletion failed');
+                }
+                console.log('Album deleted from cloud storage');
+            }
+
+            // 2. Only delete from localStorage AFTER cloud succeeds
+            const freshGallery = adminSystem.getData('gallery');
+            const localIndex = freshGallery.findIndex(a => a.id === album.id);
+            if (localIndex !== -1) {
+                freshGallery.splice(localIndex, 1);
+                adminSystem.saveData('gallery', freshGallery);
+            }
+
             // Update UI
             adminSystem.loadGallery();
             adminSystem.updateStats();
-            
+
             adminSystem.showAlert('gallery', 'Album deleted successfully!', 'success');
-            
-            // Background sync to Netlify Blobs
-            if (window.netlifyDataManager) {
-                window.netlifyDataManager.deleteGalleryAlbum(album.id).catch(err => {
-                    console.warn('⚠️ Background Netlify deletion failed:', err);
-                    adminSystem.showAlert('gallery', 'Album deleted locally but cloud sync failed', 'warning');
-                });
-            }
-            
+
         } catch (error) {
             console.error('Error deleting album:', error);
             adminSystem.showAlert('gallery', 'Error deleting album: ' + error.message, 'danger');
