@@ -48,6 +48,9 @@ function getAccessibleSections(session) {
         teams: 'Teams',
         shop: 'Shop',
         sponsors: 'Sponsors',
+        contacts: 'Contacts',
+        events: 'Events & Enquiries',
+        'vp-wall': 'VP Wall',
         settings: 'Site Settings',
         users: 'Admin Management'
     };
@@ -61,58 +64,5 @@ function getAccessibleSections(session) {
     return sections;
 }
 
-/**
- * Enhanced login function
- * Use this instead of the basic login function
- */
-async function performLogin(email, password) {
-    try {
-        console.log('🔑 Attempting login for:', email);
-        
-        // Call backend login
-        const response = await window.netlifyDataManager.loginAdminUser(email, password);
-        
-        if (response.success && response.user) {
-            console.log('✅ Login successful');
-            console.log('👤 User role:', response.user.role);
-            console.log('🔐 User permissions:', response.user.permissions);
-            
-            // Create session with full user data (INCLUDING permissions)
-            const session = createAdminSession(response.user);
-            
-            // Store full user data in localStorage too (for admin management page)
-            const adminUsers = JSON.parse(localStorage.getItem('olrfc_admin_users') || '[]');
-            const userIndex = adminUsers.findIndex(u => u.id === response.user.id);
-            
-            if (userIndex >= 0) {
-                // Update existing user data
-                adminUsers[userIndex] = { ...adminUsers[userIndex], ...response.user };
-                localStorage.setItem('olrfc_admin_users', JSON.stringify(adminUsers));
-            }
-            
-            // Redirect to dashboard
-            console.log('↗️ Redirecting to dashboard...');
-            window.location.href = '/admin/admin-dashboard.html';
-            
-            return true;
-        } else {
-            throw new Error(response.error || 'Login failed');
-        }
-    } catch (error) {
-        console.error('❌ Login error:', error);
-        alert('Login failed: ' + error.message);
-        return false;
-    }
-}
-
-// Example usage in your login form:
-/*
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    
-    await performLogin(email, password);
-});
-*/
+// createAdminSession() and getAccessibleSections() are used by admin-login.html
+// The login page's AdminAuth class handles the full login flow directly

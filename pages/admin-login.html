@@ -153,10 +153,10 @@
             color: #856404;
         }
 
-        .demo-credentials {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
+        .rate-limit-message {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
             padding: 1rem;
             border-radius: 8px;
             margin-top: 1rem;
@@ -246,8 +246,8 @@
                 
                 <form id="adminLoginForm">
                     <div class="form-group">
-                        <label for="username">Username:</label>
-                        <input type="text" id="username" name="username" required autocomplete="username">
+                        <label for="email">Email:</label>
+                        <input type="email" id="email" name="email" required autocomplete="email" placeholder="your@email.com">
                     </div>
                     
                     <div class="form-group">
@@ -270,14 +270,12 @@
 
                 <!-- Error Message -->
                 <div id="errorMessage" class="error-message">
-                    ❌ Invalid credentials. Please check your username and password.
+                    ❌ Invalid credentials. Please check your email and password.
                 </div>
 
-                <!-- Demo Credentials -->
-                <div class="demo-credentials">
-                    <strong>Demo Credentials:</strong><br>
-                    Username: <code>admin</code><br>
-                    Password: <code>olrfc2025</code>
+                <!-- Rate limit warning -->
+                <div id="rateLimitMessage" class="error-message" style="display: none;">
+                    Account temporarily locked due to too many failed attempts. Please try again later.
                 </div>
                 
                 <div class="admin-features">
@@ -318,60 +316,69 @@
             </div>
             
             <div class="login-note">
-                <strong>Note:</strong> This is a frontend-only admin system that stores data in your browser's local storage. 
-                Perfect for GitHub Pages hosting! All changes are saved locally and can be exported for backup.
+                <strong>Note:</strong> Contact a super-admin if you need access to the admin dashboard.
             </div>
         </div>
     </main>
 
+    <!-- Load Netlify data manager for backend API calls -->
+    <script src="../js/olrfc-netlify-data.js"></script>
+    <!-- Load login session helper (creates proper session with permissions) -->
+    <script src="../js/admin-login-helper.js"></script>
+
     <script>
-        // Admin Authentication System
+        // Admin Authentication System - Backend Authenticated
         class AdminAuth {
             constructor() {
                 this.form = document.getElementById('adminLoginForm');
-                this.usernameField = document.getElementById('username');
+                this.emailField = document.getElementById('email');
                 this.passwordField = document.getElementById('password');
                 this.loginButton = document.getElementById('loginButton');
                 this.loadingSpinner = document.getElementById('loadingSpinner');
                 this.successMessage = document.getElementById('successMessage');
                 this.errorMessage = document.getElementById('errorMessage');
-                
+                this.rateLimitMessage = document.getElementById('rateLimitMessage');
+
                 this.initializeEventListeners();
                 this.checkExistingSession();
             }
 
             initializeEventListeners() {
                 this.form.addEventListener('submit', (e) => this.handleLogin(e));
-                
-                // Clear error message when user starts typing
-                this.usernameField.addEventListener('input', () => this.clearMessages());
-                this.passwordField.addEventListener('input', () => this.clearMessages());
 
-                // Enter key handling
-                this.form.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        this.handleLogin(e);
-                    }
-                });
+                // Clear error message when user starts typing
+                this.emailField.addEventListener('input', () => this.clearMessages());
+                this.passwordField.addEventListener('input', () => this.clearMessages());
             }
 
             checkExistingSession() {
-                // Check if user is already logged in
                 const adminSession = localStorage.getItem('olrfc_admin_session');
                 if (adminSession) {
-                    const session = JSON.parse(adminSession);
-                    const now = new Date().getTime();
-                    
-                    // Check if session is still valid (24 hours)
-                    if (now - session.timestamp < 24 * 60 * 60 * 1000) {
-                        this.showSuccess('Existing session found. Redirecting...');
-                        setTimeout(() => {
-                            window.location.href = 'admin-dashboard.html';
-                        }, 1000);
-                        return;
-                    } else {
-                        // Clear expired session
+                    try {
+                        const session = JSON.parse(adminSession);
+
+                        // Validate session has required fields (from backend login)
+                        if (!session.userId || !session.email || !session.role) {
+                            // Old-format session without proper user data - clear it
+                            localStorage.removeItem('olrfc_admin_session');
+                            return;
+                        }
+
+                        // Check if session is still valid (24 hours)
+                        const createdAt = new Date(session.createdAt).getTime();
+                        const now = new Date().getTime();
+
+                        if (now - createdAt < 24 * 60 * 60 * 1000) {
+                            this.showSuccess('Existing session found. Redirecting...');
+                            setTimeout(() => {
+                                window.location.href = 'admin-dashboard.html';
+                            }, 1000);
+                            return;
+                        } else {
+                            // Clear expired session
+                            localStorage.removeItem('olrfc_admin_session');
+                        }
+                    } catch (e) {
                         localStorage.removeItem('olrfc_admin_session');
                     }
                 }
@@ -379,87 +386,67 @@
 
             async handleLogin(e) {
                 e.preventDefault();
-                
-                const username = this.usernameField.value.trim();
+
+                const email = this.emailField.value.trim();
                 const password = this.passwordField.value.trim();
-                
+
                 // Basic validation
-                if (!username || !password) {
-                    this.showError('Please enter both username and password.');
+                if (!email || !password) {
+                    this.showError('Please enter both email and password.');
                     return;
                 }
 
                 this.setLoading(true);
                 this.clearMessages();
 
-                // Simulate API call delay for better UX
-                await this.delay(1000);
+                try {
+                    // Call backend authentication via netlifyDataManager
+                    const response = await window.netlifyDataManager.loginAdminUser(email, password);
 
-                // Authentication logic
-                if (this.authenticate(username, password)) {
-                    this.loginSuccess(username);
-                } else {
-                    this.loginFailure();
+                    if (response.success && response.user) {
+                        // Create proper session with userId, email, role, permissions
+                        createAdminSession(response.user);
+
+                        this.setLoading(false);
+                        this.showSuccess('Login successful! Redirecting to admin dashboard...');
+
+                        // Redirect to admin dashboard
+                        setTimeout(() => {
+                            window.location.href = 'admin-dashboard.html';
+                        }, 1500);
+                    } else {
+                        throw new Error(response.error || 'Login failed');
+                    }
+                } catch (error) {
+                    this.setLoading(false);
+
+                    const errorMsg = error.message || 'Login failed';
+
+                    // Check for rate limiting
+                    if (errorMsg.includes('Too many failed') || errorMsg.includes('temporarily locked')) {
+                        this.rateLimitMessage.textContent = errorMsg;
+                        this.rateLimitMessage.style.display = 'block';
+                    } else {
+                        this.showError(errorMsg);
+                    }
+
+                    // Clear password field
+                    this.passwordField.value = '';
+                    this.passwordField.focus();
+
+                    // Shake animation
+                    this.form.style.animation = 'shake 0.5s';
+                    setTimeout(() => {
+                        this.form.style.animation = '';
+                    }, 500);
                 }
-            }
-
-            authenticate(username, password) {
-                // Admin credentials (in production, this would be server-side)
-                const validCredentials = [
-                    { username: 'admin', password: 'olrfc2025' },
-                    { username: 'clubadmin', password: 'rugby2025' },
-                    { username: 'olrfc', password: 'admin123' }
-                ];
-
-                return validCredentials.some(cred => 
-                    cred.username === username && cred.password === password
-                );
-            }
-
-            loginSuccess(username) {
-                this.setLoading(false);
-                this.showSuccess('Login successful! Redirecting to admin dashboard...');
-                
-                // Create admin session
-                const session = {
-                    username: username,
-                    timestamp: new Date().getTime(),
-                    loginTime: new Date().toISOString()
-                };
-                localStorage.setItem('olrfc_admin_session', JSON.stringify(session));
-
-                // Log the login attempt
-                this.logLoginAttempt(username, true);
-
-                // Redirect to admin dashboard
-                setTimeout(() => {
-                    window.location.href = 'admin-dashboard.html';
-                }, 1500);
-            }
-
-            loginFailure() {
-                this.setLoading(false);
-                this.showError('Invalid credentials. Please check your username and password.');
-                
-                // Log failed attempt
-                this.logLoginAttempt(this.usernameField.value, false);
-                
-                // Clear password field
-                this.passwordField.value = '';
-                this.passwordField.focus();
-
-                // Add shake animation to form
-                this.form.style.animation = 'shake 0.5s';
-                setTimeout(() => {
-                    this.form.style.animation = '';
-                }, 500);
             }
 
             setLoading(isLoading) {
                 this.loginButton.disabled = isLoading;
                 this.loadingSpinner.style.display = isLoading ? 'inline-block' : 'none';
                 this.loginButton.textContent = isLoading ? 'Logging in...' : 'Login to Admin Panel';
-                
+
                 if (isLoading) {
                     this.loginButton.appendChild(this.loadingSpinner);
                 }
@@ -469,38 +456,20 @@
                 this.successMessage.textContent = message;
                 this.successMessage.style.display = 'block';
                 this.errorMessage.style.display = 'none';
+                if (this.rateLimitMessage) this.rateLimitMessage.style.display = 'none';
             }
 
             showError(message) {
                 this.errorMessage.textContent = message;
                 this.errorMessage.style.display = 'block';
                 this.successMessage.style.display = 'none';
+                if (this.rateLimitMessage) this.rateLimitMessage.style.display = 'none';
             }
 
             clearMessages() {
                 this.successMessage.style.display = 'none';
                 this.errorMessage.style.display = 'none';
-            }
-
-            logLoginAttempt(username, success) {
-                const attempts = JSON.parse(localStorage.getItem('olrfc_login_attempts') || '[]');
-                attempts.push({
-                    username: username,
-                    success: success,
-                    timestamp: new Date().toISOString(),
-                    userAgent: navigator.userAgent
-                });
-                
-                // Keep only last 50 attempts
-                if (attempts.length > 50) {
-                    attempts.splice(0, attempts.length - 50);
-                }
-                
-                localStorage.setItem('olrfc_login_attempts', JSON.stringify(attempts));
-            }
-
-            delay(ms) {
-                return new Promise(resolve => setTimeout(resolve, ms));
+                if (this.rateLimitMessage) this.rateLimitMessage.style.display = 'none';
             }
         }
 
@@ -533,22 +502,38 @@
                 window.location.href = 'admin-login.html';
                 return false;
             }
-            
-            const sessionData = JSON.parse(session);
-            const now = new Date().getTime();
-            
-            if (now - sessionData.timestamp > 24 * 60 * 60 * 1000) {
+
+            try {
+                const sessionData = JSON.parse(session);
+
+                // Validate session has required fields
+                if (!sessionData.userId || !sessionData.email || !sessionData.role) {
+                    localStorage.removeItem('olrfc_admin_session');
+                    window.location.href = 'admin-login.html';
+                    return false;
+                }
+
+                // Check 24-hour expiry
+                const createdAt = new Date(sessionData.createdAt).getTime();
+                const now = new Date().getTime();
+
+                if (now - createdAt > 24 * 60 * 60 * 1000) {
+                    localStorage.removeItem('olrfc_admin_session');
+                    window.location.href = 'admin-login.html';
+                    return false;
+                }
+
+                return sessionData;
+            } catch (e) {
                 localStorage.removeItem('olrfc_admin_session');
                 window.location.href = 'admin-login.html';
                 return false;
             }
-            
-            return sessionData;
         }
 
         // Make functions available globally
         window.adminLogout = adminLogout;
         window.checkAdminSession = checkAdminSession;
     </script>
-</body
+</body>
 </html>

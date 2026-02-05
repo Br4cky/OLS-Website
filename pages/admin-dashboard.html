@@ -18742,6 +18742,18 @@ showSection = function(sectionId) {
                                 <input type="checkbox" name="perm_settings" style="width: 18px; height: 18px; cursor: pointer;">
                                 <span style="font-size: 15px; color: var(--text-dark);">⚙️ Site Settings</span>
                             </label>
+                            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.5rem 0;">
+                                <input type="checkbox" name="perm_contacts" checked style="width: 18px; height: 18px; cursor: pointer;">
+                                <span style="font-size: 15px; color: var(--text-dark);">📞 Contacts</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.5rem 0;">
+                                <input type="checkbox" name="perm_events" checked style="width: 18px; height: 18px; cursor: pointer;">
+                                <span style="font-size: 15px; color: var(--text-dark);">📅 Events & Enquiries</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.5rem 0;">
+                                <input type="checkbox" name="perm_vp_wall" checked style="width: 18px; height: 18px; cursor: pointer;">
+                                <span style="font-size: 15px; color: var(--text-dark);">🏛️ VP Wall</span>
+                            </label>
                         </div>
                     </div>
                     <small id="permissionsNote" style="display: block; margin-top: 0.75rem; color: var(--text-light);">Super Admins have all permissions automatically</small>
@@ -18951,9 +18963,14 @@ function displayAdminUsers(users) {
     for (var i = 0; i < users.length; i++) {
         var user = users[i];
         var permCount = 0;
+        var permLabels = { news: 'News', fixtures: 'Fixtures', players: 'Players', sponsors: 'Sponsors', gallery: 'Gallery', shop: 'Shop', teams: 'Teams', contacts: 'Contacts', events: 'Events', 'vp-wall': 'VP Wall', settings: 'Settings', users: 'Users' };
+        var enabledPerms = [];
         if (user.permissions) {
             for (var key in user.permissions) {
-                if (user.permissions[key] === true) permCount++;
+                if (user.permissions[key] === true) {
+                    permCount++;
+                    if (permLabels[key]) enabledPerms.push(permLabels[key]);
+                }
             }
         }
         
@@ -18968,7 +18985,7 @@ function displayAdminUsers(users) {
         html += '<div class="admin-user-details">';
         html += '<div class="detail-item"><label>Created</label><value>' + (user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A') + '</value></div>';
         html += '<div class="detail-item"><label>Last Login</label><value>' + (user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never') + '</value></div>';
-        html += '<div class="detail-item"><label>Permissions</label><value>' + permCount + ' enabled</value></div>';
+        html += '<div class="detail-item"><label>Permissions</label><value title="' + enabledPerms.join(', ') + '">' + permCount + ' enabled (' + enabledPerms.join(', ') + ')</value></div>';
         html += '</div>';
         html += '<div class="admin-user-actions">';
         html += '<button class="btn btn-secondary" onclick=\'editAdminUser(' + JSON.stringify(user).replace(/'/g, "\\'") + ')\'>✏️ Edit</button>';
@@ -19021,6 +19038,9 @@ function editAdminUser(user) {
     document.querySelector('[name="perm_shop"]').checked = perms.shop !== false;
     document.querySelector('[name="perm_teams"]').checked = perms.teams !== false;
     document.querySelector('[name="perm_settings"]').checked = perms.settings === true;
+    document.querySelector('[name="perm_contacts"]').checked = perms.contacts !== false;
+    document.querySelector('[name="perm_events"]').checked = perms.events !== false;
+    document.querySelector('[name="perm_vp_wall"]').checked = perms['vp-wall'] !== false;
     
     updatePermissionsUI();
     document.getElementById('adminUserModal').style.display = 'flex';
@@ -19074,6 +19094,9 @@ async function saveAdminUser(event) {
             shop: document.querySelector('[name="perm_shop"]').checked,
             teams: document.querySelector('[name="perm_teams"]').checked,
             settings: document.querySelector('[name="perm_settings"]').checked,
+            contacts: document.querySelector('[name="perm_contacts"]').checked,
+            events: document.querySelector('[name="perm_events"]').checked,
+            'vp-wall': document.querySelector('[name="perm_vp_wall"]').checked,
             users: document.getElementById('adminUserRole').value === 'super-admin'
         }
     };

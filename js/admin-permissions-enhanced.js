@@ -5,7 +5,7 @@ class AdminPermissions {
     constructor() {
         this.currentUser = null;
         
-        // Map permission keys to section IDs
+        // Map permission keys to their primary section IDs
         this.permissionToSectionMap = {
             'news': 'news',
             'fixtures': 'fixtures',
@@ -14,10 +14,24 @@ class AdminPermissions {
             'gallery': 'gallery',
             'shop': 'shop',
             'teams': 'teams',
+            'contacts': 'contacts',
+            'events': 'events-enquiry',
+            'vp-wall': 'vp-wall',
             'settings': 'site-customization',
             'users': 'admin-management'
         };
-        
+
+        // Map sub-sections to their parent permission key
+        // These sections inherit access from the parent permission
+        this.subSectionMap = {
+            'news-categories': 'news',
+            'league-tables': 'fixtures',
+            'club-sections': 'teams',
+            'filters': 'settings',
+            'content-management': 'settings',
+            'data-migration': 'super-admin-only'
+        };
+
         // Default permission templates by role (used as fallback if user has no custom permissions)
         this.defaultPermissionsByRole = {
             'super-admin': {
@@ -28,9 +42,11 @@ class AdminPermissions {
                 gallery: true,
                 shop: true,
                 teams: true,
+                contacts: true,
+                events: true,
+                'vp-wall': true,
                 settings: true,
-                users: true,
-                contacts: true
+                users: true
             },
             'admin': {
                 news: true,
@@ -40,9 +56,11 @@ class AdminPermissions {
                 gallery: true,
                 shop: true,
                 teams: true,
+                contacts: true,
+                events: true,
+                'vp-wall': true,
                 settings: true,
-                users: false, // Admins cannot manage users
-                contacts: true
+                users: false // Admins cannot manage users
             },
             'editor': {
                 news: true,
@@ -52,9 +70,11 @@ class AdminPermissions {
                 gallery: true,
                 shop: false,
                 teams: false,
+                contacts: false,
+                events: false,
+                'vp-wall': false,
                 settings: false,
-                users: false,
-                contacts: false
+                users: false
             }
         };
     }
@@ -163,38 +183,34 @@ class AdminPermissions {
      */
     canAccessSection(sectionId) {
         if (!this.currentUser) return false;
-        
+
         // Dashboard is always accessible
         if (sectionId === 'dashboard') return true;
-        
-        // OLS 104: Activity log is super-admin only
+
+        // Activity log is super-admin only
         if (sectionId === 'activity-log') {
             return this.currentUser.role === 'super-admin';
         }
-        
-        // Map section ID to permission key
-        // Look for a permission key that maps to this section
+
+        // Check if this is a sub-section that inherits from a parent permission
+        if (this.subSectionMap[sectionId]) {
+            const parentPerm = this.subSectionMap[sectionId];
+            // data-migration is super-admin only
+            if (parentPerm === 'super-admin-only') {
+                return this.currentUser.role === 'super-admin';
+            }
+            return this.hasPermission(parentPerm);
+        }
+
+        // Check direct permission-to-section mapping
         for (const [permKey, mappedSection] of Object.entries(this.permissionToSectionMap)) {
             if (mappedSection === sectionId) {
                 return this.hasPermission(permKey);
             }
         }
-        
-        // Special case: contacts section (add to map if needed)
-        if (sectionId === 'contacts') {
-            return this.hasPermission('contacts');
-        }
-        
-        // If no mapping found, check role defaults as fallback
-        // This handles any sections not explicitly mapped
-        if (this.currentUser.role === 'super-admin') {
-            return true;
-        } else if (this.currentUser.role === 'admin') {
-            return sectionId !== 'admin-management';
-        } else if (this.currentUser.role === 'editor') {
-            return ['news', 'fixtures', 'gallery'].includes(sectionId);
-        }
-        
+
+        // Unknown section - deny by default
+        console.log(`🔍 Unknown section: ${sectionId} - denying access`);
         return false;
     }
 
@@ -234,46 +250,41 @@ class AdminPermissions {
     applyUIRestrictions() {
         console.log('🎨 Applying UI restrictions based on custom permissions...');
         
-        // Map dashboard cards to section IDs
-        const dashboardCardMapping = {
-            'news': 'news',
-            'fixtures': 'fixtures',
-            'gallery': 'gallery',
-            'players': 'players',
-            'teams': 'teams',
-            'shop': 'shop',
-            'sponsors': 'sponsors',
-            'contacts': 'contacts',
-            'admin-management': 'admin-management',
-            'site-customization': 'site-customization'
-        };
-
         // Hide unauthorized dashboard cards
         document.querySelectorAll('.dashboard-card').forEach(card => {
             const onclickAttr = card.getAttribute('onclick');
             if (onclickAttr) {
-                // Extract section name from onclick="showSection('xxx')"
                 const match = onclickAttr.match(/showSection\('([^']+)'\)/);
                 if (match) {
                     const sectionId = match[1];
-                    
                     if (!this.canAccessSection(sectionId)) {
                         card.style.display = 'none';
                         console.log(`🚫 Hidden card: ${sectionId}`);
-                    } else {
-                        console.log(`✅ Showing card: ${sectionId}`);
                     }
                 }
             }
         });
 
-        // Hide unauthorized sections
+        // Hide unauthorized sections (includes sub-sections)
         document.querySelectorAll('.admin-section').forEach(section => {
             const sectionId = section.id;
-            
             if (sectionId && sectionId !== 'dashboard' && !this.canAccessSection(sectionId)) {
                 section.style.display = 'none';
                 console.log(`🚫 Hidden section: ${sectionId}`);
+            }
+        });
+
+        // Hide unauthorized sidebar nav links
+        document.querySelectorAll('.admin-nav a, .sidebar a, [data-section]').forEach(link => {
+            const onclickAttr = link.getAttribute('onclick');
+            if (onclickAttr) {
+                const match = onclickAttr.match(/showSection\('([^']+)'\)/);
+                if (match) {
+                    const sectionId = match[1];
+                    if (sectionId !== 'dashboard' && !this.canAccessSection(sectionId)) {
+                        link.style.display = 'none';
+                    }
+                }
             }
         });
 

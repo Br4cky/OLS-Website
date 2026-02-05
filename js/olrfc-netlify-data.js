@@ -1351,8 +1351,21 @@ async deletePlayers(playerIds) {
      */
     async getAdminUsers() {
         try {
-            const response = await fetch('/.netlify/functions/admin-users');
-            
+            // Build auth token from session
+            const session = JSON.parse(localStorage.getItem('olrfc_admin_session') || '{}');
+            const authToken = btoa(JSON.stringify({
+                userId: session.userId,
+                email: session.email,
+                role: session.role,
+                timestamp: Date.now()
+            }));
+
+            const response = await fetch('/.netlify/functions/admin-users', {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }

@@ -9,7 +9,7 @@ exports.handler = async (event) => {
     // Enable CORS
     const headers = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
     };
 
@@ -29,7 +29,7 @@ exports.handler = async (event) => {
 
         switch (method) {
             case 'GET':
-                return await getAdminUsers(store, headers);
+                return await getAdminUsers(store, event.headers, headers);
             
             case 'POST':
                 // POST can be used for login OR creating/updating all users OR resetting password
@@ -72,10 +72,20 @@ exports.handler = async (event) => {
 };
 
 // Get all admin users from Blobs
-async function getAdminUsers(store, headers) {
+async function getAdminUsers(store, requestHeaders, headers) {
     try {
+        // Require authenticated session to list admin users
+        const sessionUser = await verifySessionToken(store, requestHeaders);
+        if (!sessionUser) {
+            return {
+                statusCode: 401,
+                headers,
+                body: JSON.stringify({ error: 'Authentication required to view admin users' })
+            };
+        }
+
         const users = await store.get('all-admin-users', { type: 'json' });
-        
+
         // Never send passwords to frontend - strip them out
         const safeUsers = (users || []).map(user => {
             const { password, ...safeUser } = user;
@@ -96,9 +106,9 @@ async function getAdminUsers(store, headers) {
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 error: 'Failed to fetch admin users',
-                message: error.message 
+                message: error.message
             })
         };
     }
