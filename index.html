@@ -545,6 +545,16 @@
             border-left: 4px solid var(--primary-green);
         }
 
+        .fixture-timeline-card.cancelled-match {
+            border-left: 4px solid #6c757d;
+            opacity: 0.65;
+        }
+
+        .fixture-timeline-card.postponed-match {
+            border-left: 4px solid #ff9800;
+            opacity: 0.65;
+        }
+
         .match-status {
             position: absolute;
             top: -10px;
@@ -565,6 +575,15 @@
 
         .match-status.upcoming {
             background: var(--primary-maroon);
+        }
+
+        .match-status.cancelled {
+            background: #6c757d;
+        }
+
+        .match-status.postponed {
+            background: #ff9800;
+            color: white;
         }
 
         .match-teams-timeline {
@@ -3526,6 +3545,7 @@ function filterCalendar(type) {
                         venue: dynFixture.venue === 'home' ? 'Home Ground' : 'Away',
                         competition: dynFixture.competition || 'Friendly',
                         time: new Date(dynFixture.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                        matchStatus: dynFixture.matchStatus || 'played',
                         teamsheetUrl: dynFixture.teamsheetUrl || null // 🎯 OLS 129: Include teamsheet URL
                     });
                 });
@@ -3544,21 +3564,45 @@ function filterCalendar(type) {
                     const isPast = hasDateTimePassed && match.isResult;
                     const isFuture = !hasDateTimePassed;  // DateTime hasn't passed yet
                     
-                    card.className = `fixture-timeline-card ${isCurrent ? 'current-match' : ''} ${isPast ? 'past-match' : ''} ${isFuture ? 'future-match' : ''}`;
-                    
+                    const isCancelled = match.matchStatus === 'cancelled';
+                    const isPostponed = match.matchStatus === 'postponed';
+                    const isNotPlayed = isCancelled || isPostponed;
+
+                    card.className = `fixture-timeline-card ${isCancelled ? 'cancelled-match' : ''} ${isPostponed ? 'postponed-match' : ''} ${!isNotPlayed && isCurrent ? 'current-match' : ''} ${!isNotPlayed && isPast ? 'past-match' : ''} ${!isNotPlayed && isFuture ? 'future-match' : ''}`;
+
                     let statusText = 'Upcoming';
                     let statusClass = 'upcoming';
-                    
+
+                    if (isCancelled) {
+                        statusText = 'Cancelled';
+                        statusClass = 'cancelled';
+                    } else if (isPostponed) {
+                        statusText = 'Postponed';
+                        statusClass = 'postponed';
                     // Only show as result/pending if the DATETIME has actually passed
-                    if (hasDateTimePassed && match.isResult) {
+                    } else if (hasDateTimePassed && match.isResult) {
                         statusText = isCurrent ? 'Latest Result' : 'Past Result';
                         statusClass = isCurrent ? 'current' : 'past';
                     } else if (hasDateTimePassed && !match.isResult) {
                         statusText = 'Result Pending';
                         statusClass = 'upcoming';
                     }
-                    
-                    if (match.isResult && hasDateTimePassed) {
+
+                    if (isNotPlayed) {
+                        const teamDisplay = this.getTeamName(match.team);
+                        const statusLabel = isCancelled ? 'Cancelled' : 'Postponed';
+                        card.innerHTML = `
+                            <div class="match-status ${statusClass}">${statusText}</div>
+                            <div class="match-teams-timeline" style="text-decoration: line-through; opacity: 0.6;">${teamDisplay} vs ${match.opponent}</div>
+                            <div class="match-score-timeline" style="font-size: 1.2rem; color: ${isCancelled ? '#6c757d' : '#ff9800'};">Match ${statusLabel}</div>
+                            <div class="match-date-timeline">${this.formatDate(match.date)}</div>
+                            <div class="match-details-timeline">
+                                ${match.venue}<br>
+                                <strong>${statusLabel}</strong>
+                            </div>
+                            <div class="match-competition-timeline">${match.competition || 'Friendly'}</div>
+                        `;
+                    } else if (match.isResult && hasDateTimePassed) {
                         const isWin = parseInt(match.ourScore) > parseInt(match.theirScore);
                         const isDraw = parseInt(match.ourScore) === parseInt(match.theirScore);
                         const resultText = isWin ? 'Victory' : isDraw ? 'Draw' : 'Defeat';
