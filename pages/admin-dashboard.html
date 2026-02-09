@@ -7578,18 +7578,20 @@ forceStatsRefresh() {
                     
                     const item = document.createElement('div');
                     item.className = 'content-item';
-                    const isPlayed = fixture.ourScore !== null && fixture.theirScore !== null;
+                    const hasScore = fixture.ourScore !== null && fixture.ourScore !== undefined && fixture.ourScore !== '' &&
+                                     fixture.theirScore !== null && fixture.theirScore !== undefined && fixture.theirScore !== '';
                     const fixtureDate = new Date(fixture.dateTime);
                     const isPast = fixtureDate < now;
-                    
-                    // OLS 100: Check if past fixture is missing scores
-                    const needsScore = isPast && !isPlayed;
+                    const isCancelledOrPostponed = fixture.matchStatus === 'cancelled' || fixture.matchStatus === 'postponed';
+
+                    // OLS 100: Check if past fixture is missing scores (skip cancelled/postponed)
+                    const needsScore = isPast && !hasScore && !isCancelledOrPostponed;
                     if (needsScore) {
                         item.classList.add('missing-score');
                     }
                     
-                    const result = isPlayed ? `${fixture.ourScore} - ${fixture.theirScore}` : 'Upcoming';
-                    const resultIcon = isPlayed ? '🏆' : '📅';
+                    const result = isCancelledOrPostponed ? (fixture.matchStatus === 'cancelled' ? 'Cancelled' : 'Postponed') : hasScore ? `${fixture.ourScore} - ${fixture.theirScore}` : 'Upcoming';
+                    const resultIcon = isCancelledOrPostponed ? (fixture.matchStatus === 'cancelled' ? '❌' : '⏸️') : hasScore ? '🏆' : '📅';
                     
                     // OLS 100: Add warning badge for past fixtures without scores
                     const scoreWarning = needsScore ? '<div class="missing-score-warning">Score needs updating</div>' : '';
@@ -9618,8 +9620,8 @@ document.getElementById('galleryForm').addEventListener('submit', async function
             dateTime: document.getElementById('fixtureDateTime').value,
             venue: document.getElementById('fixtureVenue').value,
             competition: document.getElementById('fixtureCompetition').value.trim(),
-            ourScore: document.getElementById('fixtureOurScore').value || null,
-            theirScore: document.getElementById('fixtureTheirScore').value || null,
+            ourScore: document.getElementById('fixtureOurScore').value !== '' ? parseInt(document.getElementById('fixtureOurScore').value) : null,
+            theirScore: document.getElementById('fixtureTheirScore').value !== '' ? parseInt(document.getElementById('fixtureTheirScore').value) : null,
             matchStatus: document.getElementById('fixtureMatchStatus').value || 'played',
             // OLS 122: Teamsheet URL
             teamsheetUrl: teamsheetUrl
@@ -10318,8 +10320,8 @@ function switchFixtureTimeTab(timeFilter) {
         document.getElementById('fixtureDateTime').value = fixture.dateTime;
         document.getElementById('fixtureVenue').value = fixture.venue;
         document.getElementById('fixtureCompetition').value = fixture.competition || '';
-        document.getElementById('fixtureOurScore').value = fixture.ourScore || '';
-        document.getElementById('fixtureTheirScore').value = fixture.theirScore || '';
+        document.getElementById('fixtureOurScore').value = fixture.ourScore !== null && fixture.ourScore !== undefined ? fixture.ourScore : '';
+        document.getElementById('fixtureTheirScore').value = fixture.theirScore !== null && fixture.theirScore !== undefined ? fixture.theirScore : '';
 
         // Set match status and toggle score fields visibility
         document.getElementById('fixtureMatchStatus').value = fixture.matchStatus || 'played';
