@@ -6194,13 +6194,24 @@ async function loadAdminFilterOptions() {
                     <input type="text" id="fixtureCompetition" placeholder="e.g., Regional Championship">
                 </div>
                 <!-- OLS 122: Removed match report dropdown - tagging now done from news form -->
+                <!-- Match Status dropdown -->
                 <div class="form-group">
-                    <label>Our Score (if played):</label>
-                    <input type="number" id="fixtureOurScore" min="0" placeholder="Leave empty if not played">
+                    <label>Match Status:</label>
+                    <select id="fixtureMatchStatus" onchange="toggleFixtureScoreFields()">
+                        <option value="played">✅ Played</option>
+                        <option value="cancelled">❌ Cancelled</option>
+                        <option value="postponed">⏸️ Postponed</option>
+                    </select>
                 </div>
-                <div class="form-group">
-                    <label>Their Score (if played):</label>
-                    <input type="number" id="fixtureTheirScore" min="0" placeholder="Leave empty if not played">
+                <div id="fixtureScoreFields">
+                    <div class="form-group">
+                        <label>Our Score (if played):</label>
+                        <input type="number" id="fixtureOurScore" min="0" placeholder="Leave empty if not played">
+                    </div>
+                    <div class="form-group">
+                        <label>Their Score (if played):</label>
+                        <input type="number" id="fixtureTheirScore" min="0" placeholder="Leave empty if not played">
+                    </div>
                 </div>
                 
                 <!-- OLS 122: Teamsheet Upload -->
@@ -6267,6 +6278,7 @@ async function loadAdminFilterOptions() {
                             <th style="padding: 0.8rem; text-align: left; border: 1px solid #ddd;">Time</th>
                             <th style="padding: 0.8rem; text-align: left; border: 1px solid #ddd;">Venue</th>
                             <th style="padding: 0.8rem; text-align: left; border: 1px solid #ddd;">Competition</th>
+                            <th style="padding: 0.8rem; text-align: left; border: 1px solid #ddd;">Status</th>
                             <th style="padding: 0.8rem; text-align: left; border: 1px solid #ddd;">Our Score</th>
                             <th style="padding: 0.8rem; text-align: left; border: 1px solid #ddd;">Their Score</th>
                             <th style="padding: 0.8rem; text-align: center; border: 1px solid #ddd; width: 60px;">Actions</th>
@@ -9500,6 +9512,7 @@ document.getElementById('galleryForm').addEventListener('submit', async function
             competition: document.getElementById('fixtureCompetition').value.trim(),
             ourScore: document.getElementById('fixtureOurScore').value || null,
             theirScore: document.getElementById('fixtureTheirScore').value || null,
+            matchStatus: document.getElementById('fixtureMatchStatus').value || 'played',
             // OLS 122: Teamsheet URL
             teamsheetUrl: teamsheetUrl
         };
@@ -9555,6 +9568,7 @@ document.getElementById('galleryForm').addEventListener('submit', async function
 
             closeModal('fixtureModal');
             document.getElementById('fixtureForm').reset();
+            document.getElementById('fixtureScoreFields').style.display = '';
             adminSystem.currentEditIndex = null;
 
         } catch (error) {
@@ -10139,6 +10153,40 @@ function switchFixtureTimeTab(timeFilter) {
 // END FIXTURE TIME FILTER
 // ============================================================================
 
+        // Toggle score fields visibility based on match status
+        function toggleFixtureScoreFields() {
+            const status = document.getElementById('fixtureMatchStatus').value;
+            const scoreFields = document.getElementById('fixtureScoreFields');
+            if (status === 'cancelled' || status === 'postponed') {
+                scoreFields.style.display = 'none';
+                document.getElementById('fixtureOurScore').value = '';
+                document.getElementById('fixtureTheirScore').value = '';
+            } else {
+                scoreFields.style.display = '';
+            }
+        }
+
+        // Toggle score inputs in bulk edit row based on match status
+        function toggleBulkEditScoreFields(fixtureId, statusValue) {
+            const row = document.querySelector(`tr[data-fixture-id="${fixtureId}"]`);
+            if (!row) return;
+            const ourScoreInput = row.querySelector('input[data-field="ourScore"]');
+            const theirScoreInput = row.querySelector('input[data-field="theirScore"]');
+            if (statusValue === 'cancelled' || statusValue === 'postponed') {
+                ourScoreInput.disabled = true;
+                theirScoreInput.disabled = true;
+                ourScoreInput.value = '';
+                theirScoreInput.value = '';
+                ourScoreInput.style.opacity = '0.4';
+                theirScoreInput.style.opacity = '0.4';
+            } else {
+                ourScoreInput.disabled = false;
+                theirScoreInput.disabled = false;
+                ourScoreInput.style.opacity = '';
+                theirScoreInput.style.opacity = '';
+            }
+        }
+
         function editFixture(index) {
     const fixtures = adminSystem.getData('fixtures');
     const fixture = fixtures[index];
@@ -10164,7 +10212,11 @@ function switchFixtureTimeTab(timeFilter) {
         document.getElementById('fixtureCompetition').value = fixture.competition || '';
         document.getElementById('fixtureOurScore').value = fixture.ourScore || '';
         document.getElementById('fixtureTheirScore').value = fixture.theirScore || '';
-        
+
+        // Set match status and toggle score fields visibility
+        document.getElementById('fixtureMatchStatus').value = fixture.matchStatus || 'played';
+        toggleFixtureScoreFields();
+
         // OLS 122: Load teamsheet preview if exists
         const teamsheetPreview = document.getElementById('teamsheetPreview');
         const teamsheetPreviewImg = document.getElementById('teamsheetPreviewImg');
@@ -10426,11 +10478,18 @@ function createBulkEditRow(fixture, actualIndex, teamOptionsHTML, isNew = false)
         <td data-field="competition" data-fixture-id="${fixture.id}">
             <input type="text" value="${fixture.competition || ''}" data-field="competition" data-fixture-id="${fixture.id}" oninput="bulkEditTrackChange('${fixture.id}', 'competition', this.value)">
         </td>
+        <td data-field="matchStatus" data-fixture-id="${fixture.id}">
+            <select data-field="matchStatus" data-fixture-id="${fixture.id}" onchange="bulkEditTrackChange('${fixture.id}', 'matchStatus', this.value); toggleBulkEditScoreFields('${fixture.id}', this.value)">
+                <option value="played" ${(!fixture.matchStatus || fixture.matchStatus === 'played') ? 'selected' : ''}>Played</option>
+                <option value="cancelled" ${fixture.matchStatus === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                <option value="postponed" ${fixture.matchStatus === 'postponed' ? 'selected' : ''}>Postponed</option>
+            </select>
+        </td>
         <td data-field="ourScore" data-fixture-id="${fixture.id}">
-            <input type="number" min="0" value="${fixture.ourScore || ''}" placeholder="-" data-field="ourScore" data-fixture-id="${fixture.id}" oninput="bulkEditTrackChange('${fixture.id}', 'ourScore', this.value)">
+            <input type="number" min="0" value="${fixture.ourScore || ''}" placeholder="-" data-field="ourScore" data-fixture-id="${fixture.id}" oninput="bulkEditTrackChange('${fixture.id}', 'ourScore', this.value)"${fixture.matchStatus === 'cancelled' || fixture.matchStatus === 'postponed' ? ' disabled style="opacity: 0.4"' : ''}>
         </td>
         <td data-field="theirScore" data-fixture-id="${fixture.id}">
-            <input type="number" min="0" value="${fixture.theirScore || ''}" placeholder="-" data-field="theirScore" data-fixture-id="${fixture.id}" oninput="bulkEditTrackChange('${fixture.id}', 'theirScore', this.value)">
+            <input type="number" min="0" value="${fixture.theirScore || ''}" placeholder="-" data-field="theirScore" data-fixture-id="${fixture.id}" oninput="bulkEditTrackChange('${fixture.id}', 'theirScore', this.value)"${fixture.matchStatus === 'cancelled' || fixture.matchStatus === 'postponed' ? ' disabled style="opacity: 0.4"' : ''}>
         </td>
         <td style="text-align: center; padding: 0.5rem;">
             ${isNew ? `<button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" onclick="bulkRemoveNewRow('${fixture.id}')">✕</button>` : ''}
@@ -10833,6 +10892,7 @@ async function saveBulkEditFixtures() {
                 const timeInput = row.querySelector('input[data-field="time"]');
                 const venueInput = row.querySelector('select[data-field="venue"]');
                 const competitionInput = row.querySelector('input[data-field="competition"]');
+                const matchStatusInput = row.querySelector('select[data-field="matchStatus"]');
                 const ourScoreInput = row.querySelector('input[data-field="ourScore"]');
                 const theirScoreInput = row.querySelector('input[data-field="theirScore"]');
 
@@ -10848,6 +10908,7 @@ async function saveBulkEditFixtures() {
                     dateTime: `${dateInput.value}T${timeInput.value}:00`,
                     venue: venueInput.value,
                     competition: competitionInput.value.trim(),
+                    matchStatus: matchStatusInput ? matchStatusInput.value : 'played',
                     ourScore: ourScoreInput.value ? parseInt(ourScoreInput.value) : null,
                     theirScore: theirScoreInput.value ? parseInt(theirScoreInput.value) : null
                 });
@@ -10909,6 +10970,7 @@ async function saveBulkEditFixtures() {
                 const timeInput = row.querySelector('input[data-field="time"]');
                 const venueInput = row.querySelector('select[data-field="venue"]');
                 const competitionInput = row.querySelector('input[data-field="competition"]');
+                const matchStatusInput = row.querySelector('select[data-field="matchStatus"]');
                 const ourScoreInput = row.querySelector('input[data-field="ourScore"]');
                 const theirScoreInput = row.querySelector('input[data-field="theirScore"]');
 
@@ -10918,6 +10980,7 @@ async function saveBulkEditFixtures() {
                 fixture.dateTime = `${dateInput.value}T${timeInput.value}:00`;
                 fixture.venue = venueInput.value;
                 fixture.competition = competitionInput.value.trim();
+                fixture.matchStatus = matchStatusInput ? matchStatusInput.value : 'played';
                 fixture.ourScore = ourScoreInput.value ? parseInt(ourScoreInput.value) : null;
                 fixture.theirScore = theirScoreInput.value ? parseInt(theirScoreInput.value) : null;
 

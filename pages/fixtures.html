@@ -602,6 +602,30 @@
             border-left: 4px solid var(--accent-gold);
         }
 
+        /* Cancelled fixture - grey with strikethrough */
+        .fixtures-table tr.fixture-cancelled {
+            background: linear-gradient(90deg, rgba(108, 117, 125, 0.08) 0%, transparent 100%);
+            border-left: 4px solid #6c757d;
+            opacity: 0.7;
+        }
+        .fixtures-table tr.fixture-cancelled td .team-name,
+        .fixtures-table tr.fixture-cancelled td .team-name.our-team {
+            text-decoration: line-through;
+            color: #6c757d;
+        }
+
+        /* Postponed fixture - orange with strikethrough */
+        .fixtures-table tr.fixture-postponed {
+            background: linear-gradient(90deg, rgba(255, 152, 0, 0.1) 0%, transparent 100%);
+            border-left: 4px solid #ff9800;
+            opacity: 0.7;
+        }
+        .fixtures-table tr.fixture-postponed td .team-name,
+        .fixtures-table tr.fixture-postponed td .team-name.our-team {
+            text-decoration: line-through;
+            color: #999;
+        }
+
         /* Current fixture highlight - clean border approach */
         .fixtures-table tr.current-fixture {
             background: linear-gradient(90deg, rgba(var(--accent-gold-rgb, 212, 175, 55), 0.3) 0%, rgba(var(--accent-gold-rgb, 212, 175, 55), 0.1) 100%) !important;
@@ -667,6 +691,20 @@
             color: var(--primary-maroon);
         }
 
+        .score-display.cancelled {
+            color: #6c757d;
+            font-style: italic;
+            font-weight: normal;
+            font-size: 0.9rem;
+        }
+
+        .score-display.postponed {
+            color: #ff9800;
+            font-style: italic;
+            font-weight: normal;
+            font-size: 0.9rem;
+        }
+
         /* Venue badge in table */
         .venue-badge-small {
             padding: 0.2rem 0.6rem;
@@ -702,6 +740,12 @@
         }
         .fixture-action-row.action-upcoming td {
             border-left-color: var(--accent-gold) !important;
+        }
+        .fixture-action-row.action-cancelled td {
+            border-left-color: #6c757d !important;
+        }
+        .fixture-action-row.action-postponed td {
+            border-left-color: #ff9800 !important;
         }
         
         /* Remove bottom border from fixture row when followed by action row */
@@ -1572,6 +1616,7 @@
                         isHome: dynFixture.venue === 'home',
                         matchReportId: dynFixture.matchReport || null,
                         season: season,
+                        matchStatus: dynFixture.matchStatus || 'played',
                         // OLS 122: Teamsheet URL
                         teamsheetUrl: dynFixture.teamsheetUrl || null
                     };
@@ -1994,7 +2039,11 @@
                 
                 // Determine row class
                 let rowClass = '';
-                if (isPast) {
+                if (fixture.matchStatus === 'cancelled') {
+                    rowClass = 'fixture-cancelled';
+                } else if (fixture.matchStatus === 'postponed') {
+                    rowClass = 'fixture-postponed';
+                } else if (isPast) {
                     if (fixture.isResult) {
                         if (fixture.ourScore > fixture.theirScore) {
                             rowClass = 'result-win';
@@ -2020,7 +2069,13 @@
                 // Score display - always show OUR score first, then THEIR score
                 let scoreHtml = '';
                 let scoreClass = '';
-                if (fixture.isResult) {
+                if (fixture.matchStatus === 'cancelled') {
+                    scoreClass = 'cancelled';
+                    scoreHtml = 'Cancelled';
+                } else if (fixture.matchStatus === 'postponed') {
+                    scoreClass = 'postponed';
+                    scoreHtml = 'Postponed';
+                } else if (fixture.isResult) {
                     if (fixture.ourScore > fixture.theirScore) {
                         scoreClass = 'win';
                     } else if (fixture.ourScore < fixture.theirScore) {
@@ -2028,7 +2083,7 @@
                     } else {
                         scoreClass = 'draw';
                     }
-                    
+
                     // Always: Our Score - Their Score
                     scoreHtml = `${fixture.ourScore} - ${fixture.theirScore}`;
                 } else if (isPast) {
@@ -2073,7 +2128,11 @@
                 const isPast = fixtureDate < currentDate;
                 
                 let resultType = 'upcoming';
-                if (isPast) {
+                if (fixture.matchStatus === 'cancelled') {
+                    resultType = 'cancelled';
+                } else if (fixture.matchStatus === 'postponed') {
+                    resultType = 'postponed';
+                } else if (isPast) {
                     if (fixture.isResult) {
                         if (fixture.ourScore > fixture.theirScore) {
                             resultType = 'win';
@@ -2164,14 +2223,39 @@
             createResultCard(result) {
                 const card = document.createElement('div');
                 card.className = 'fixture-card-large result';
-                
-                const hasScores = result.ourScore !== null && 
-                                 result.ourScore !== '' && 
+
+                // Handle cancelled/postponed fixtures
+                if (result.matchStatus === 'cancelled' || result.matchStatus === 'postponed') {
+                    const isCancelled = result.matchStatus === 'cancelled';
+                    const statusLabel = isCancelled ? 'Cancelled' : 'Postponed';
+                    const statusColor = isCancelled ? '#6c757d' : '#ff9800';
+                    card.innerHTML = `
+                        <div class="card-header">
+                            <div class="card-type" style="color: ${statusColor};">${statusLabel}</div>
+                            <div class="card-date">${this.formatDate(result.date)} • ${result.season}</div>
+                        </div>
+                        <div class="card-teams">
+                            <div class="team-matchup" style="text-decoration: line-through; opacity: 0.7;">${result.homeTeam} vs ${result.awayTeam}</div>
+                            <div class="card-score" style="font-size: 1rem; color: ${statusColor};">Match ${statusLabel}</div>
+                        </div>
+                        <div class="card-details">
+                            <div class="card-venue">
+                                <span class="venue-badge venue-${result.venue === 'Home Ground' ? 'home' : 'away'}">${result.venue}</span>
+                            </div>
+                            <div style="font-weight: bold; color: ${statusColor};">${statusLabel}</div>
+                        </div>
+                        <div class="card-competition">${result.competition}</div>
+                    `;
+                    return card;
+                }
+
+                const hasScores = result.ourScore !== null &&
+                                 result.ourScore !== '' &&
                                  result.ourScore !== undefined &&
-                                 result.theirScore !== null && 
-                                 result.theirScore !== '' && 
+                                 result.theirScore !== null &&
+                                 result.theirScore !== '' &&
                                  result.theirScore !== undefined;
-                
+
                 if (hasScores) {
                     const isHome = result.venue === 'Home Ground';
                     const homeScore = isHome ? result.ourScore : result.theirScore;
@@ -2229,7 +2313,32 @@
             createFixtureCard(fixture) {
                 const card = document.createElement('div');
                 card.className = 'fixture-card-large upcoming';
-                
+
+                // Handle cancelled/postponed upcoming fixtures
+                if (fixture.matchStatus === 'cancelled' || fixture.matchStatus === 'postponed') {
+                    const isCancelled = fixture.matchStatus === 'cancelled';
+                    const statusLabel = isCancelled ? 'Cancelled' : 'Postponed';
+                    const statusColor = isCancelled ? '#6c757d' : '#ff9800';
+                    card.innerHTML = `
+                        <div class="card-header">
+                            <div class="card-type" style="color: ${statusColor};">${statusLabel}</div>
+                            <div class="card-date">${this.formatDate(fixture.date)} • ${fixture.season}</div>
+                        </div>
+                        <div class="card-teams">
+                            <div class="team-matchup" style="text-decoration: line-through; opacity: 0.7;">${fixture.homeTeam} vs ${fixture.awayTeam}</div>
+                            <div class="card-score" style="font-size: 1rem; color: ${statusColor};">Match ${statusLabel}</div>
+                        </div>
+                        <div class="card-details">
+                            <div class="card-venue">
+                                <span class="venue-badge venue-${fixture.venue === 'Home Ground' ? 'home' : 'away'}">${fixture.venue}</span>
+                            </div>
+                            <div style="font-weight: bold; color: ${statusColor};">${statusLabel}</div>
+                        </div>
+                        <div class="card-competition">${fixture.competition}</div>
+                    `;
+                    return card;
+                }
+
                 card.innerHTML = `
                     <div class="card-header">
                         <div class="card-type">Fixture</div>
