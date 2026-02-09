@@ -268,7 +268,8 @@ async getVPs() {
             const response = await fetch('/.netlify/functions/fixtures', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify(data)
             });
@@ -304,7 +305,8 @@ async getVPs() {
             const response = await fetch(`/.netlify/functions/fixtures?id=${fixtureId}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify(data)
             });
@@ -352,7 +354,8 @@ async getVPs() {
             const response = await fetch('/.netlify/functions/fixtures-bulk', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify({ fixtures })
             });
@@ -411,11 +414,12 @@ async getVPs() {
             const response = await fetch('/.netlify/functions/fixtures-bulk', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     action: 'create',
-                    fixtures: fixtures 
+                    fixtures: fixtures
                 })
             });
 
@@ -473,11 +477,12 @@ async getVPs() {
             const response = await fetch('/.netlify/functions/fixtures-bulk', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     action: 'delete',
-                    fixtureIds: fixtureIds 
+                    fixtureIds: fixtureIds
                 })
             });
 
@@ -512,7 +517,10 @@ async getVPs() {
         try {
             // Call Netlify Blobs function with DELETE method
             const response = await fetch(`/.netlify/functions/fixtures?id=${fixtureData.id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    ...this.getAuthHeaders()
+                }
             });
 
             const result = await response.json();
@@ -550,7 +558,8 @@ async getVPs() {
         const response = await fetch('/.netlify/functions/news', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...this.getAuthHeaders()
             },
             body: JSON.stringify(data)
         });
@@ -583,7 +592,8 @@ async updateNews(articleId, newsData) {
         const response = await fetch(`/.netlify/functions/news?id=${articleId}`, {
             method: 'PUT',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...this.getAuthHeaders()
             },
             body: JSON.stringify(data)
         });
@@ -608,7 +618,10 @@ async deleteNews(articleId) {
     try {
         // Call Netlify Blobs function with DELETE method
         const response = await fetch(`/.netlify/functions/news?id=${articleId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+                ...this.getAuthHeaders()
+            }
         });
 
         const result = await response.json();
@@ -643,7 +656,8 @@ async deleteNews(articleId) {
         const response = await fetch('/.netlify/functions/players', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...this.getAuthHeaders()
             },
             body: JSON.stringify(data)
         });
@@ -676,7 +690,8 @@ async updatePlayer(playerId, playerData) {
         const response = await fetch(`/.netlify/functions/players?id=${playerId}`, {
             method: 'PUT',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...this.getAuthHeaders()
             },
             body: JSON.stringify(data)
         });
@@ -701,7 +716,10 @@ async deletePlayer(playerId) {
     try {
         // Call Netlify Blobs function with DELETE method
         const response = await fetch(`/.netlify/functions/players?id=${playerId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+                ...this.getAuthHeaders()
+            }
         });
 
         const result = await response.json();
@@ -828,7 +846,8 @@ async deletePlayers(playerIds) {
             const response = await fetch('/.netlify/functions/teams', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify(data)
             });
@@ -860,7 +879,8 @@ async deletePlayers(playerIds) {
             const response = await fetch('/.netlify/functions/teams', {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify(data)
             });
@@ -884,7 +904,10 @@ async deletePlayers(playerIds) {
         try {
             // Pass ID in query string, matching fixtures pattern
             const response = await fetch(`/.netlify/functions/teams?id=${teamId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    ...this.getAuthHeaders()
+                }
             });
 
             const result = await response.json();
@@ -920,7 +943,8 @@ async deletePlayers(playerIds) {
             const response = await fetch('/.netlify/functions/sponsors', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify(data)
             });
@@ -951,7 +975,8 @@ async deletePlayers(playerIds) {
             const response = await fetch('/.netlify/functions/sponsors', {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify(data)
             });
@@ -976,7 +1001,8 @@ async deletePlayers(playerIds) {
             const response = await fetch('/.netlify/functions/sponsors', {
                 method: 'DELETE',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify({ id: sponsorId })
             });
@@ -1120,7 +1146,8 @@ async deletePlayers(playerIds) {
             const response = await fetch('/.netlify/functions/gallery', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify(data)
             });
@@ -1152,7 +1179,8 @@ async deletePlayers(playerIds) {
             const response = await fetch('/.netlify/functions/gallery', {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify(data)
             });
@@ -1177,7 +1205,8 @@ async deletePlayers(playerIds) {
             const response = await fetch('/.netlify/functions/gallery', {
                 method: 'DELETE',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify({ id: albumId })
             });
@@ -1614,7 +1643,8 @@ async deletePlayers(playerIds) {
             const response = await fetch('/.netlify/functions/events-enquiry-settings', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify(settings)
             });
@@ -1683,7 +1713,8 @@ async deletePlayers(playerIds) {
             const response = await fetch('/.netlify/functions/events-enquiries', {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify({ id, ...updates })
             });
@@ -1706,7 +1737,10 @@ async deletePlayers(playerIds) {
     async deleteEventsEnquiry(id) {
         try {
             const response = await fetch(`/.netlify/functions/events-enquiries?id=${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    ...this.getAuthHeaders()
+                }
             });
 
             if (!response.ok) {

@@ -463,6 +463,27 @@ class AdminActivityLogger {
     }
 
     /**
+     * Get auth headers for authenticated API calls
+     */
+    getAuthHeaders() {
+        const token = localStorage.getItem('olrfc_auth_token');
+        if (token) {
+            return { 'Authorization': `Bearer ${token}` };
+        }
+        const session = JSON.parse(localStorage.getItem('olrfc_admin_session') || '{}');
+        if (session.userId && session.email) {
+            const legacyToken = btoa(JSON.stringify({
+                userId: session.userId,
+                email: session.email,
+                role: session.role,
+                timestamp: Date.now()
+            }));
+            return { 'Authorization': `Bearer ${legacyToken}` };
+        }
+        return {};
+    }
+
+    /**
      * Load current user from session
      */
     loadCurrentUser() {
@@ -512,7 +533,8 @@ class AdminActivityLogger {
             const response = await fetch('/.netlify/functions/admin-activity-logs', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...this.getAuthHeaders()
                 },
                 body: JSON.stringify(logData)
             });
