@@ -3490,22 +3490,17 @@ function filterCalendar(type) {
                 timelineData.sort((a, b) => new Date(a.date) - new Date(b.date));
                 
                 const currentDate = new Date();
-                let currentIndex = -1;
-                
-                // Find the most recent match that has BOTH: datetime passed AND has scores
-                for (let i = timelineData.length - 1; i >= 0; i--) {
-                    const matchDateTime = new Date(timelineData[i].date);
-                    if (matchDateTime < currentDate && timelineData[i].isResult) {
+                let currentIndex = 0;
+
+                // Find the fixture with the nearest date to today
+                let smallestDiff = Infinity;
+                timelineData.forEach((match, i) => {
+                    const diff = Math.abs(new Date(match.date) - currentDate);
+                    if (diff < smallestDiff) {
+                        smallestDiff = diff;
                         currentIndex = i;
-                        break;
                     }
-                }
-                
-                // If no results found, highlight the next upcoming match
-                if (currentIndex === -1) {
-                    currentIndex = timelineData.findIndex(match => new Date(match.date) >= currentDate);
-                    if (currentIndex === -1) currentIndex = 0;
-                }
+                });
                 
                 this.renderTimeline(timelineData, currentIndex);
                 this.scrollToCurrentMatch(currentIndex);
