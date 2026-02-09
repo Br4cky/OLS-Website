@@ -17,6 +17,7 @@
     <script src="../js/contacts-manager.js"></script>
     <script src="../js/background-removal.js"></script>
      <script src="../js/color-manager.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -1266,6 +1267,109 @@ input[type="color"]:hover {
 
         #bulkEditFixturesTable tbody tr.new-row td {
             border-left: 3px solid #28a745;
+        }
+
+        /* Spreadsheet import styles */
+        .btn-upload {
+            background: #17a2b8 !important;
+            color: white !important;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .btn-upload:hover {
+            background: #138496 !important;
+        }
+
+        #bulkEditFixturesTable tbody tr.imported-row {
+            background: rgba(23, 162, 184, 0.12) !important;
+        }
+
+        #bulkEditFixturesTable tbody tr.imported-row td {
+            border-left: 3px solid #17a2b8;
+        }
+
+        .spreadsheet-import-summary {
+            background: linear-gradient(135deg, #e8f4f8, #d1ecf1);
+            border: 1px solid #bee5eb;
+            border-left: 4px solid #17a2b8;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .spreadsheet-import-summary .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .spreadsheet-import-summary .summary-header h4 {
+            margin: 0;
+            color: #0c5460;
+            font-size: 1rem;
+        }
+
+        .spreadsheet-import-summary .summary-dismiss {
+            background: none;
+            border: none;
+            color: #0c5460;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0;
+            line-height: 1;
+            opacity: 0.6;
+        }
+
+        .spreadsheet-import-summary .summary-dismiss:hover {
+            opacity: 1;
+        }
+
+        .spreadsheet-import-summary .summary-stats {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.5rem;
+        }
+
+        .spreadsheet-import-summary .stat-item {
+            font-size: 0.9rem;
+            color: #0c5460;
+        }
+
+        .spreadsheet-import-summary .stat-item strong {
+            font-size: 1.1rem;
+        }
+
+        .spreadsheet-import-summary .stat-added { color: #28a745; }
+        .spreadsheet-import-summary .stat-skipped { color: #6c757d; }
+        .spreadsheet-import-summary .stat-warnings { color: #ff9800; }
+
+        .spreadsheet-import-summary details {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #0c5460;
+        }
+
+        .spreadsheet-import-summary details summary {
+            cursor: pointer;
+            font-weight: bold;
+            color: #17a2b8;
+        }
+
+        .spreadsheet-import-summary details ul {
+            margin: 0.5rem 0 0 1.5rem;
+            padding: 0;
+        }
+
+        .spreadsheet-import-summary details li {
+            margin-bottom: 0.25rem;
         }
 
         .bulk-action-bar {
@@ -6256,9 +6360,13 @@ async function loadAdminFilterOptions() {
                 <span id="bulk-edit-fixture-count" style="color: var(--text-light); margin-left: auto;"></span>
             </div>
             
+            <!-- Spreadsheet Import Summary -->
+            <div id="spreadsheetImportSummary" style="display: none;"></div>
+
             <!-- OLS 127: Action Bar -->
             <div class="bulk-action-bar">
                 <button class="btn btn-success" onclick="bulkAddNewRow()">➕ Add Row</button>
+                <button class="btn btn-upload" onclick="bulkUploadSpreadsheet()">📤 Upload Spreadsheet</button>
                 <button class="btn btn-danger" id="bulkDeleteSelectedBtn" onclick="bulkDeleteSelected()" style="display: none;">🗑️ Delete Selected (<span id="bulkSelectedCount">0</span>)</button>
                 <label style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto; cursor: pointer;">
                     <input type="checkbox" id="bulkSelectAll" onchange="bulkToggleSelectAll(this.checked)">
@@ -10349,6 +10457,13 @@ async function openBulkEditFixtures(teamFilter = null) {
     bulkEditSelectedIds.clear();
     bulkEditNewRowCounter = 0;
 
+    // Clear any previous spreadsheet import summary
+    const importSummary = document.getElementById('spreadsheetImportSummary');
+    if (importSummary) {
+        importSummary.style.display = 'none';
+        importSummary.innerHTML = '';
+    }
+
     // Reset select all checkbox
     const selectAllCheckbox = document.getElementById('bulkSelectAll');
     if (selectAllCheckbox) selectAllCheckbox.checked = false;
@@ -10565,6 +10680,600 @@ function bulkRemoveNewRow(tempId) {
         updateBulkEditChangesCount();
         updateBulkDeleteButton();
     }
+}
+
+// =====================================================
+// SPREADSHEET FIXTURE UPLOAD
+// =====================================================
+
+/**
+ * Entry point: open file picker for CSV/Excel upload
+ */
+function bulkUploadSpreadsheet() {
+    if (typeof XLSX === 'undefined') {
+        alert('Spreadsheet library failed to load. Please refresh the page and try again.');
+        return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv,.xlsx,.xls';
+    input.style.display = 'none';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            processFixtureSpreadsheet(file);
+        }
+        input.remove();
+    };
+    document.body.appendChild(input);
+    input.click();
+}
+
+/**
+ * Process the uploaded spreadsheet file
+ */
+async function processFixtureSpreadsheet(file) {
+    try {
+        const arrayBuffer = await readFileAsArrayBuffer(file);
+        const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+
+        // Get first sheet
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rawData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+        if (!rawData || rawData.length === 0) {
+            alert('The spreadsheet appears to be empty or could not be parsed.');
+            return;
+        }
+
+        // Get column headers from first row keys
+        const headers = Object.keys(rawData[0]);
+        const columnMap = mapSpreadsheetColumns(headers);
+
+        // Get teams and existing fixtures for matching
+        const teams = adminSystem.getData('teams') || [];
+        const existingFixtures = [...(adminSystem.getData('fixtures') || [])];
+
+        // Also include unsaved new rows from the bulk edit table (e.g. from a previous upload)
+        // so a second upload doesn't create duplicates of the first
+        document.querySelectorAll('#bulkEditFixturesTable tbody tr[data-is-new="true"]').forEach(row => {
+            const opponentInput = row.querySelector('input[data-field="opponent"]');
+            const dateInput = row.querySelector('input[data-field="date"]');
+            const timeInput = row.querySelector('input[data-field="time"]');
+            const teamSelect = row.querySelector('select[data-field="team"]');
+            if (opponentInput && dateInput && opponentInput.value.trim()) {
+                existingFixtures.push({
+                    opponent: opponentInput.value.trim(),
+                    dateTime: dateInput.value ? `${dateInput.value}T${timeInput?.value || '14:00'}:00` : '',
+                    team: teamSelect?.value || ''
+                });
+            }
+        });
+
+        // Parse rows
+        const parsedResults = parseSpreadsheetRows(rawData, columnMap, teams, existingFixtures);
+
+        // Show summary
+        showSpreadsheetImportSummary(parsedResults, file.name);
+
+        // Inject new fixtures into the bulk edit table
+        if (parsedResults.fixtures.length > 0) {
+            injectSpreadsheetFixtures(parsedResults);
+        }
+
+    } catch (error) {
+        console.error('Spreadsheet processing error:', error);
+        alert('Failed to process spreadsheet: ' + error.message);
+    }
+}
+
+/**
+ * Promise wrapper for FileReader
+ */
+function readFileAsArrayBuffer(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Failed to read file'));
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+/**
+ * Fuzzy-map spreadsheet column headers to fixture fields
+ */
+function mapSpreadsheetColumns(headers) {
+    const fieldAliases = {
+        team: ['team', 'squad', 'side', 'team name', 'team_name'],
+        opponent: ['opponent', 'opposition', 'vs', 'against', 'opp', 'opponents', 'away team', 'home team'],
+        date: ['date', 'match date', 'fixture date', 'game date', 'match_date', 'fixture_date'],
+        time: ['time', 'kick off', 'ko', 'kickoff', 'start time', 'kick_off', 'start_time', 'kick-off'],
+        venue: ['venue', 'home/away', 'h/a', 'ground', 'location', 'home_away', 'home or away'],
+        competition: ['competition', 'comp', 'league', 'cup', 'tournament', 'type'],
+        ourScore: ['our score', 'score', 'for', 'pts for', 'home score', 'our_score', 'points for'],
+        theirScore: ['their score', 'opp score', 'against score', 'pts against', 'away score', 'their_score', 'opposition score', 'points against'],
+        matchStatus: ['status', 'match status', 'result', 'match_status', 'played']
+    };
+
+    const columnMap = {};
+    const usedHeaders = new Set();
+    const usedFields = new Set();
+
+    // Pass 1: exact match (case-insensitive)
+    headers.forEach(header => {
+        const normalised = header.toLowerCase().trim();
+        for (const [field, aliases] of Object.entries(fieldAliases)) {
+            if (usedFields.has(field)) continue;
+            if (aliases.includes(normalised)) {
+                columnMap[field] = header;
+                usedHeaders.add(header);
+                usedFields.add(field);
+                break;
+            }
+        }
+    });
+
+    // Pass 2: partial/contains match
+    headers.forEach(header => {
+        if (usedHeaders.has(header)) return;
+        const normalised = header.toLowerCase().trim();
+        for (const [field, aliases] of Object.entries(fieldAliases)) {
+            if (usedFields.has(field)) continue;
+            const matched = aliases.some(alias =>
+                normalised.includes(alias) || alias.includes(normalised)
+            );
+            if (matched) {
+                columnMap[field] = header;
+                usedHeaders.add(header);
+                usedFields.add(field);
+                break;
+            }
+        }
+    });
+
+    console.log('📊 Column mapping:', columnMap);
+    return columnMap;
+}
+
+/**
+ * Parse spreadsheet rows into fixture objects
+ */
+function parseSpreadsheetRows(rawRows, columnMap, teams, existingFixtures) {
+    const fixtures = [];
+    const duplicates = [];
+    const warnings = [];
+
+    rawRows.forEach((row, index) => {
+        const rowNum = index + 2; // +2 for header row + 1-based index
+
+        // Skip completely empty rows
+        const values = Object.values(row).filter(v => v !== '' && v !== null && v !== undefined);
+        if (values.length === 0) return;
+
+        const fixture = {};
+        const rowWarnings = [];
+
+        // Extract opponent (required)
+        const rawOpponent = columnMap.opponent ? String(row[columnMap.opponent] || '').trim() : '';
+        if (!rawOpponent) {
+            // Skip rows with no opponent - likely empty/header rows
+            if (values.length <= 1) return;
+            rowWarnings.push('No opponent found');
+        }
+        fixture.opponent = rawOpponent;
+
+        // Extract and resolve team
+        const rawTeam = columnMap.team ? String(row[columnMap.team] || '').trim() : '';
+        if (rawTeam) {
+            const resolvedTeam = resolveTeamSlug(rawTeam, teams);
+            if (resolvedTeam) {
+                fixture.team = resolvedTeam;
+            } else {
+                fixture.team = '';
+                rowWarnings.push(`Could not match team "${rawTeam}"`);
+            }
+        } else {
+            fixture.team = '';
+        }
+
+        // Extract and parse date/time
+        const rawDate = columnMap.date ? row[columnMap.date] : '';
+        const rawTime = columnMap.time ? row[columnMap.time] : '';
+        const parsedDateTime = parseFixtureDateTime(rawDate, rawTime);
+        if (parsedDateTime) {
+            fixture.dateTime = parsedDateTime;
+        } else {
+            fixture.dateTime = '';
+            if (rawDate) {
+                rowWarnings.push(`Could not parse date "${rawDate}"`);
+            } else {
+                rowWarnings.push('No date found');
+            }
+        }
+
+        // Extract venue
+        const rawVenue = columnMap.venue ? String(row[columnMap.venue] || '').trim() : '';
+        fixture.venue = parseFixtureVenue(rawVenue);
+
+        // Extract competition
+        fixture.competition = columnMap.competition ? String(row[columnMap.competition] || '').trim() : '';
+
+        // Extract scores (optional)
+        if (columnMap.ourScore) {
+            const val = row[columnMap.ourScore];
+            fixture.ourScore = (val !== '' && val !== null && !isNaN(val)) ? parseInt(val) : null;
+        } else {
+            fixture.ourScore = null;
+        }
+
+        if (columnMap.theirScore) {
+            const val = row[columnMap.theirScore];
+            fixture.theirScore = (val !== '' && val !== null && !isNaN(val)) ? parseInt(val) : null;
+        } else {
+            fixture.theirScore = null;
+        }
+
+        // Extract match status
+        if (columnMap.matchStatus) {
+            fixture.matchStatus = parseMatchStatus(String(row[columnMap.matchStatus] || ''));
+        } else {
+            fixture.matchStatus = 'played';
+        }
+
+        // Check for duplicates against existing fixtures
+        if (fixture.opponent && fixture.dateTime) {
+            const isDuplicate = checkFixtureDuplicate(fixture, existingFixtures);
+            if (isDuplicate) {
+                duplicates.push({ row: rowNum, fixture, reason: isDuplicate });
+                return;
+            }
+        }
+
+        // Collect warnings for this row
+        if (rowWarnings.length > 0) {
+            warnings.push({ row: rowNum, messages: rowWarnings });
+        }
+
+        fixture._rowNum = rowNum;
+        fixtures.push(fixture);
+    });
+
+    return { fixtures, duplicates, warnings };
+}
+
+/**
+ * Resolve a team name string to a team slug
+ */
+function resolveTeamSlug(teamName, teams) {
+    if (!teamName || !teams || teams.length === 0) return null;
+
+    const normalised = teamName.toLowerCase().trim();
+
+    // Exact slug match
+    const slugMatch = teams.find(t => t.slug === normalised);
+    if (slugMatch) return slugMatch.slug;
+
+    // Exact name match (case-insensitive)
+    const nameMatch = teams.find(t => t.name.toLowerCase() === normalised);
+    if (nameMatch) return nameMatch.slug;
+
+    // Partial match
+    const partialMatch = teams.find(t =>
+        t.name.toLowerCase().includes(normalised) || normalised.includes(t.name.toLowerCase())
+    );
+    if (partialMatch) return partialMatch.slug;
+
+    // Common rugby abbreviations
+    const rugbyAbbreviations = {
+        '1st': '1st-xv', 'firsts': '1st-xv', '1st xv': '1st-xv', '1st-xv': '1st-xv', 'first xv': '1st-xv', 'first': '1st-xv',
+        '2nd': '2nd-xv', 'seconds': '2nd-xv', '2nd xv': '2nd-xv', '2nd-xv': '2nd-xv', 'second xv': '2nd-xv', 'second': '2nd-xv',
+        '3rd': '3rd-xv', 'thirds': '3rd-xv', '3rd xv': '3rd-xv', '3rd-xv': '3rd-xv', 'third xv': '3rd-xv', 'third': '3rd-xv',
+        'colts': 'colts', 'ladies': 'ladies', 'women': 'ladies', 'womens': 'ladies', "women's": 'ladies',
+        'vets': 'veterans', 'veterans': 'veterans'
+    };
+
+    const abbrevMatch = rugbyAbbreviations[normalised];
+    if (abbrevMatch) {
+        const teamBySlug = teams.find(t => t.slug === abbrevMatch);
+        if (teamBySlug) return teamBySlug.slug;
+
+        // Try partial slug match
+        const teamByPartialSlug = teams.find(t => t.slug.includes(abbrevMatch) || abbrevMatch.includes(t.slug));
+        if (teamByPartialSlug) return teamByPartialSlug.slug;
+    }
+
+    return null;
+}
+
+/**
+ * Parse various date/time formats into an ISO string
+ */
+function parseFixtureDateTime(rawDate, rawTime) {
+    if (!rawDate && !rawTime) return null;
+
+    let dateObj = null;
+
+    // Handle JS Date objects (from SheetJS cellDates: true)
+    if (rawDate instanceof Date) {
+        dateObj = rawDate;
+    }
+    // Handle Excel serial numbers (number type)
+    else if (typeof rawDate === 'number') {
+        // Excel serial date: days since 1900-01-01 (with a bug for 1900-02-29)
+        const excelEpoch = new Date(1899, 11, 30);
+        dateObj = new Date(excelEpoch.getTime() + rawDate * 86400000);
+    }
+    // Handle string dates
+    else if (typeof rawDate === 'string' && rawDate.trim()) {
+        const dateStr = rawDate.trim();
+
+        // Try DD/MM/YYYY or DD-MM-YYYY
+        const dmyMatch = dateStr.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+        if (dmyMatch) {
+            let [, day, month, year] = dmyMatch;
+            if (year.length === 2) year = '20' + year;
+            dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        }
+
+        // Try YYYY-MM-DD
+        if (!dateObj) {
+            const isoMatch = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (isoMatch) {
+                const [, year, month, day] = isoMatch;
+                dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            }
+        }
+
+        // Try natural language dates: "1st Jan 2025", "15 February 2025", "Jan 1 2025"
+        if (!dateObj) {
+            const months = {
+                'jan': 0, 'january': 0, 'feb': 1, 'february': 1, 'mar': 2, 'march': 2,
+                'apr': 3, 'april': 3, 'may': 4, 'jun': 5, 'june': 5,
+                'jul': 6, 'july': 6, 'aug': 7, 'august': 7, 'sep': 8, 'september': 8,
+                'oct': 9, 'october': 9, 'nov': 10, 'november': 10, 'dec': 11, 'december': 11
+            };
+
+            // "1st Jan 2025" or "15 February 2025"
+            const naturalMatch1 = dateStr.match(/^(\d{1,2})(?:st|nd|rd|th)?\s+([a-zA-Z]+)\s+(\d{4})$/);
+            if (naturalMatch1) {
+                const [, day, monthStr, year] = naturalMatch1;
+                const monthNum = months[monthStr.toLowerCase()];
+                if (monthNum !== undefined) {
+                    dateObj = new Date(parseInt(year), monthNum, parseInt(day));
+                }
+            }
+
+            // "Jan 1 2025" or "February 15, 2025"
+            if (!dateObj) {
+                const naturalMatch2 = dateStr.match(/^([a-zA-Z]+)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})$/);
+                if (naturalMatch2) {
+                    const [, monthStr, day, year] = naturalMatch2;
+                    const monthNum = months[monthStr.toLowerCase()];
+                    if (monthNum !== undefined) {
+                        dateObj = new Date(parseInt(year), monthNum, parseInt(day));
+                    }
+                }
+            }
+        }
+
+        // Last resort: try native Date.parse
+        if (!dateObj) {
+            const parsed = Date.parse(dateStr);
+            if (!isNaN(parsed)) {
+                dateObj = new Date(parsed);
+            }
+        }
+    }
+
+    if (!dateObj || isNaN(dateObj.getTime())) return null;
+
+    // Parse time
+    let hours = 14, minutes = 0; // Default to 14:00 (2pm)
+    if (rawTime) {
+        let timeStr = '';
+        if (rawTime instanceof Date) {
+            hours = rawTime.getHours();
+            minutes = rawTime.getMinutes();
+        } else if (typeof rawTime === 'string') {
+            timeStr = rawTime.trim();
+        } else if (typeof rawTime === 'number') {
+            // Excel time fraction (0.625 = 15:00)
+            const totalMinutes = Math.round(rawTime * 24 * 60);
+            hours = Math.floor(totalMinutes / 60);
+            minutes = totalMinutes % 60;
+        }
+
+        if (timeStr) {
+            // Try HH:MM or HH:MM:SS
+            const timeMatch = timeStr.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+            if (timeMatch) {
+                hours = parseInt(timeMatch[1]);
+                minutes = parseInt(timeMatch[2]);
+            }
+            // Try "2pm", "2:30pm", "14:00"
+            else {
+                const ampmMatch = timeStr.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i);
+                if (ampmMatch) {
+                    hours = parseInt(ampmMatch[1]);
+                    minutes = ampmMatch[2] ? parseInt(ampmMatch[2]) : 0;
+                    if (ampmMatch[3].toLowerCase() === 'pm' && hours !== 12) hours += 12;
+                    if (ampmMatch[3].toLowerCase() === 'am' && hours === 12) hours = 0;
+                }
+            }
+        }
+    }
+
+    dateObj.setHours(hours, minutes, 0, 0);
+    return dateObj.toISOString();
+}
+
+/**
+ * Parse venue string to "home" or "away"
+ */
+function parseFixtureVenue(rawVenue) {
+    if (!rawVenue) return 'home';
+    const normalised = rawVenue.toLowerCase().trim();
+
+    if (['a', 'away'].includes(normalised)) return 'away';
+    if (['h', 'home'].includes(normalised)) return 'home';
+    if (normalised.includes('away')) return 'away';
+    if (normalised.includes('home')) return 'home';
+
+    return 'home'; // Default
+}
+
+/**
+ * Parse match status string
+ */
+function parseMatchStatus(rawStatus) {
+    if (!rawStatus) return 'played';
+    const normalised = rawStatus.toLowerCase().trim();
+
+    if (['cancelled', 'canceled', 'c', 'x', 'off'].includes(normalised)) return 'cancelled';
+    if (['postponed', 'pp', 'p', 'delayed', 'rearranged'].includes(normalised)) return 'postponed';
+    if (['played', 'complete', 'completed', 'done', 'yes', 'y'].includes(normalised)) return 'played';
+
+    return 'played';
+}
+
+/**
+ * Check if a fixture is a duplicate of an existing one
+ * Returns a reason string if duplicate, null otherwise
+ */
+function checkFixtureDuplicate(fixture, existingFixtures) {
+    if (!fixture.opponent || !fixture.dateTime) return null;
+
+    const fixtureDate = new Date(fixture.dateTime);
+    const fixtureDateStr = fixtureDate.toISOString().split('T')[0];
+    const fixtureOpponent = fixture.opponent.toLowerCase().trim();
+
+    for (const existing of existingFixtures) {
+        if (!existing.dateTime || !existing.opponent) continue;
+
+        const existingDate = new Date(existing.dateTime);
+        const existingDateStr = existingDate.toISOString().split('T')[0];
+        const existingOpponent = existing.opponent.toLowerCase().trim();
+
+        // Same opponent + same date
+        if (existingOpponent === fixtureOpponent && existingDateStr === fixtureDateStr) {
+            // If team is specified, also check team matches (or be lenient if team is empty)
+            if (!fixture.team || !existing.team || fixture.team === existing.team) {
+                return `Matches existing fixture: ${existing.opponent} on ${existingDateStr}${existing.team ? ` (${existing.team})` : ''}`;
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Escape HTML entities to prevent XSS in summary display
+ */
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+/**
+ * Show the import summary banner
+ */
+function showSpreadsheetImportSummary(parsedResults, fileName) {
+    const container = document.getElementById('spreadsheetImportSummary');
+    if (!container) return;
+
+    const { fixtures, duplicates, warnings } = parsedResults;
+
+    let detailsHTML = '';
+
+    if (duplicates.length > 0) {
+        detailsHTML += `<details>
+            <summary>Duplicates Skipped (${duplicates.length})</summary>
+            <ul>
+                ${duplicates.map(d => `<li>Row ${d.row}: ${escapeHTML(d.fixture.opponent || 'Unknown')} — ${escapeHTML(d.reason)}</li>`).join('')}
+            </ul>
+        </details>`;
+    }
+
+    if (warnings.length > 0) {
+        detailsHTML += `<details>
+            <summary>Warnings (${warnings.length} rows)</summary>
+            <ul>
+                ${warnings.map(w => `<li>Row ${w.row}: ${escapeHTML(w.messages.join(', '))}</li>`).join('')}
+            </ul>
+        </details>`;
+    }
+
+    container.innerHTML = `
+        <div class="spreadsheet-import-summary">
+            <div class="summary-header">
+                <h4>📤 Spreadsheet Import — ${escapeHTML(fileName)}</h4>
+                <button class="summary-dismiss" onclick="this.closest('.spreadsheet-import-summary').parentElement.style.display='none'" title="Dismiss">&times;</button>
+            </div>
+            <div class="summary-stats">
+                <span class="stat-item stat-added"><strong>${fixtures.length}</strong> fixture${fixtures.length !== 1 ? 's' : ''} added for review</span>
+                <span class="stat-item stat-skipped"><strong>${duplicates.length}</strong> duplicate${duplicates.length !== 1 ? 's' : ''} skipped</span>
+                ${warnings.length > 0 ? `<span class="stat-item stat-warnings"><strong>${warnings.length}</strong> warning${warnings.length !== 1 ? 's' : ''}</span>` : ''}
+            </div>
+            ${detailsHTML}
+        </div>
+    `;
+
+    container.style.display = 'block';
+}
+
+/**
+ * Inject parsed fixtures into the bulk edit table as new rows
+ */
+function injectSpreadsheetFixtures(parsedResults) {
+    const tbody = document.getElementById('bulkEditFixturesBody');
+    if (!tbody) return;
+
+    const { fixtures } = parsedResults;
+    let injectedCount = 0;
+
+    fixtures.forEach((fixture, index) => {
+        // Generate temp ID
+        bulkEditNewRowCounter++;
+        const tempId = `new_${Date.now()}_${bulkEditNewRowCounter}`;
+
+        const fixtureWithId = {
+            ...fixture,
+            id: tempId
+        };
+
+        // Track as new row
+        bulkEditNewRows.push(tempId);
+
+        // Create the row using existing function
+        const row = createBulkEditRow(fixtureWithId, -1, window.bulkEditTeamOptionsHTML, true);
+
+        // Add imported-row class for blue styling (in addition to new-row)
+        row.classList.add('imported-row');
+
+        // Prepend to table
+        if (tbody.firstChild) {
+            tbody.insertBefore(row, tbody.firstChild);
+        } else {
+            tbody.appendChild(row);
+        }
+
+        injectedCount++;
+    });
+
+    // Update counts
+    updateBulkEditFixtureCount();
+    updateBulkEditChangesCount();
+
+    // Scroll to top of the table to show imported rows
+    const tableContainer = document.querySelector('#bulkEditFixturesTable')?.closest('div[style*="overflow"]');
+    if (tableContainer) {
+        tableContainer.scrollTop = 0;
+    }
+
+    console.log(`📤 Injected ${injectedCount} fixtures from spreadsheet`);
 }
 
 /**
