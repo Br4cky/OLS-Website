@@ -6299,6 +6299,13 @@ async function loadAdminFilterOptions() {
                     <label>Author:</label>
                     <input type="text" id="newsAuthor" value="Club Admin" placeholder="Author name">
                 </div>
+                <div class="form-group">
+                    <label>Publish Date:</label>
+                    <input type="date" id="newsPublishDate">
+                    <small style="color: var(--text-light); display: block; margin-top: 0.25rem;">
+                        Defaults to today. Backdate to publish retrospective articles (e.g. match reports).
+                    </small>
+                </div>
 
                 <!-- 🎯 NEW: Image Upload Section -->
 <div class="form-group">
@@ -8471,6 +8478,10 @@ if (sectionId === 'news') {
             
             // OLS 122: Special handling for news modal - show/hide fixture dropdown based on category
             if (modalId === 'newsModal') {
+                // Default publish date to today for new articles
+                if (adminSystem.currentEditIndex === null) {
+                    document.getElementById('newsPublishDate').value = new Date().toISOString().split('T')[0];
+                }
                 setTimeout(() => {
                     // Check initial category and toggle fixture dropdown visibility
                     toggleNewsFixtureDropdown();
@@ -8958,9 +8969,7 @@ document.getElementById('newsForm').addEventListener('submit', async function(e)
         content: document.getElementById('newsContent').value.trim(),
         category: document.getElementById('newsCategory').value,
         author: document.getElementById('newsAuthor').value.trim() || 'Club Admin',
-        date: adminSystem.currentEditIndex !== null ? 
-    adminSystem.getData('news')[adminSystem.currentEditIndex].date : 
-    new Date().toISOString().split('T')[0],
+        date: document.getElementById('newsPublishDate').value || new Date().toISOString().split('T')[0],
         image: imageUrl, // 🎯 NEW: Include the image URL
         featured: false,
         // OLS 122: Link to fixture (for match reports)
@@ -10094,6 +10103,7 @@ function initializeSampleData() {
     document.getElementById('newsContent').value = article.content;
     document.getElementById('newsCategory').value = article.category;
     document.getElementById('newsAuthor').value = article.author;
+    document.getElementById('newsPublishDate').value = article.date || '';
     
     // OLS 130: Populate and set club section
     populateNewsClubSectionDropdown();
