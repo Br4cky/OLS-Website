@@ -21,7 +21,8 @@
     "@sparticuz/chromium": "^143.0.0",
     "cheerio": "^1.0.0-rc.12",
     "googleapis": "^144.0.0",
-    "puppeteer-core": "^24.32.1"
+    "puppeteer-core": "^24.32.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "live-server": "^1.2.2"

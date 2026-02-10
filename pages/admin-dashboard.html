@@ -8450,6 +8450,8 @@ if (sectionId === 'news') {
     adminSystem.loadSponsors();
 } else if (sectionId === 'contacts') {
     loadContacts();
+} else if (sectionId === 'club-sections') {
+    loadClubSectionsList();
 }
 
             document.title = `${sectionId.charAt(0).toUpperCase() + sectionId.slice(1)} - Admin Dashboard`;
