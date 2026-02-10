@@ -11401,8 +11401,7 @@ async function deduplicateGoogleCalendar() {
         const fixtureIds = fixtures.map(f => f.id).filter(Boolean);
 
         // Call the scan endpoint
-        const token = localStorage.getItem('olrfc_auth_token');
-        const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const authHeaders = window.netlifyDataManager ? window.netlifyDataManager.getAuthHeaders() : {};
 
         const response = await fetch('/.netlify/functions/deduplicate-calendar', {
             method: 'POST',
@@ -11545,8 +11544,7 @@ async function confirmDeleteCalendarDuplicates() {
     showLoading(`Deleting ${eventIds.length} duplicate events...`);
 
     try {
-        const token = localStorage.getItem('olrfc_auth_token');
-        const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const authHeaders = window.netlifyDataManager ? window.netlifyDataManager.getAuthHeaders() : {};
 
         const response = await fetch('/.netlify/functions/deduplicate-calendar', {
             method: 'POST',
