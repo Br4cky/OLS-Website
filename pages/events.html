@@ -974,17 +974,11 @@
         let currentFilter = 'all';
         let calendarWidget;
 
-        // Map event types to CSS variable names
-        const eventTypeColors = {
-            'Senior Fixtures': '--senior-red',
-            'Junior Fixtures': '--junior-blue',
-            'Colts Fixtures': '--colts-green',
-            'Social Events': '--social-orange'
-        };
-
-        // Helper function to get CSS variable value
-        function getCSSColor(varName) {
-            return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+        // Helper function to get colour for an event
+        // Uses event.color directly (set by calendar-data-fetcher from club sections)
+        function getEventColor(event) {
+            if (event.color) return event.color;
+            return '#1b5e20'; // Fallback: dark green
         }
 
         // Initialize page
@@ -1166,7 +1160,7 @@
                 timeDisplay = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
             }
             
-            const color = getCSSColor(eventTypeColors[event.type] || '--primary-green');
+            const color = getEventColor(event);
             
             const isFixture = event.fixture;
             const hasScore = isFixture && event.fixture.ourScore && event.fixture.theirScore;
@@ -1217,7 +1211,7 @@
 
         function showEventModal(event) {
             const modal = document.getElementById('event-modal');
-            const color = getCSSColor(eventTypeColors[event.type] || '--primary-green');
+            const color = getEventColor(event);
             
             // Header
             document.getElementById('modal-event-type').textContent = event.type;
@@ -1598,9 +1592,9 @@
                 const buttonMap = {
                     'all': { id: 'events-filter-all', default: 'All Events' },
                     'Senior': { id: 'events-filter-senior', default: 'Senior' },
-                    'Junior': { id: 'events-filter-junior', default: 'Junior' },
-                    'Colts': { id: 'events-filter-colts', default: 'Colts' },
-                    'Social': { id: 'events-filter-social', default: 'Social' }
+                    'Ladies': { id: 'events-filter-ladies', default: 'Ladies' },
+                    'Minis & Juniors': { id: 'events-filter-minis', default: 'Minis & Juniors' },
+                    'Social Events': { id: 'events-filter-social', default: 'Social' }
                 };
                 
                 filterButtons.forEach(btn => {
@@ -1611,13 +1605,6 @@
                         if (match) {
                             const filterValue = match[1];
                             let key = filterValue;
-                            
-                            // Handle special cases
-                            if (filterValue === 'Senior Fixtures') key = 'Senior';
-                            if (filterValue === 'Junior Fixtures') key = 'Junior';
-                            if (filterValue === 'Colts Fixtures') key = 'Colts';
-                            if (filterValue === 'Social Events') key = 'Social';
-                            if (filterValue === 'all') key = 'all';
                             
                             if (buttonMap[key]) {
                                 const btnText = get(buttonMap[key].id, buttonMap[key].default);

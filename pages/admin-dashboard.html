@@ -3708,25 +3708,14 @@ Rugby, Warwickshire, CV22 7QT</textarea>
                 
                 <div style="margin-top: 1.5rem; display: grid; gap: 2rem;">
                     
-                    <!-- Section 1: Fixture Filter Groups -->
+                    <!-- Section 1: Fixture Colour Coding Info -->
                     <div style="padding: 1.5rem; background: linear-gradient(135deg, rgba(var(--primary-green-rgb), 0.05), rgba(var(--primary-maroon-rgb), 0.05)); border-radius: 10px;">
                         <h4 style="color: var(--primary-green); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                            🏷️ Fixture Filter Groups
+                            🎨 Fixture Colour Coding
                         </h4>
-                        <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 1rem;">
-                            Define filter categories for fixtures. Teams will be assigned to these groups.
+                        <p style="color: var(--text-light); font-size: 0.9rem;">
+                            Fixture colours on the website calendar are driven by <strong>Club Sections</strong>. Each club section has a calendar colour — fixtures from teams in that section are displayed in that colour. Manage sections and their colours in the <a href="#" onclick="showSection('club-sections'); return false;" style="color: var(--primary-green); font-weight: bold;">Club Sections</a> page.
                         </p>
-                        
-                        <!-- Filter Groups Container -->
-                        <div id="fixture-filter-groups-container" style="display: grid; gap: 1rem; margin-bottom: 1rem;">
-                            <!-- Filter groups will be populated by JavaScript -->
-                        </div>
-                        
-                        <!-- Add New Group Button -->
-                        <button type="button" onclick="addFixtureFilterGroup()" 
-                                style="padding: 0.75rem 1.5rem; background: var(--primary-green); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 0.5rem;">
-                            ➕ Add Filter Group
-                        </button>
                     </div>
                     
                     <!-- Section 2: Team → Filter Assignment -->
@@ -3774,9 +3763,9 @@ Rugby, Warwickshire, CV22 7QT</textarea>
                     <!-- Info about Team Assignments -->
                     <div style="padding: 1rem; background: rgba(var(--primary-green-rgb), 0.1); border-radius: 10px; border-left: 4px solid var(--primary-green);">
                         <p style="margin: 0; color: var(--text-dark); font-size: 0.95rem;">
-                            💡 <strong>Team → Filter assignments</strong> are set on each team in the 
-                            <a href="#" onclick="showSection('teams'); return false;" style="color: var(--primary-green); font-weight: bold;">Teams section</a>. 
-                            Edit a team to change its Fixture Filter Group.
+                            💡 <strong>Team → Section assignments</strong> are set on each team in the
+                            <a href="#" onclick="showSection('teams'); return false;" style="color: var(--primary-green); font-weight: bold;">Teams section</a>.
+                            Edit a team to change its Club Section.
                         </p>
                     </div>
 
@@ -6867,20 +6856,6 @@ async function loadAdminFilterOptions() {
                     </small>
                 </div>
                 
-                <div class="form-group">
-                    <label>Fixture Filter Group:</label>
-                    <select id="teamFilterGroup">
-                        <option value="">— Unassigned —</option>
-                        <!-- Options populated dynamically from calendar config -->
-                    </select>
-                    <small style="color: var(--text-light); display: block; margin-top: 0.25rem;">
-                        Determines which calendar filter button shows this team's fixtures. 
-                        <a href="#" onclick="document.getElementById('calendar-config-accordion').open = true; showSection('site-content'); return false;" style="color: var(--primary-green);">
-                            Configure filter groups →
-                        </a>
-                    </small>
-                </div>
-                
                 <!-- OLS 125: Display Order Field -->
                 <div class="form-group">
                     <label>Display Order:</label>
@@ -7294,7 +7269,16 @@ async function loadAdminFilterOptions() {
                     <label>Icon (Emoji):</label>
                     <input type="text" id="clubSectionIcon" placeholder="e.g., 🏉, 👩, 👶 (optional)" maxlength="4" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1.5rem;">
                 </div>
-                
+
+                <div class="form-group">
+                    <label>Calendar Colour:</label>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <input type="color" id="clubSectionColor" value="#e53935" oninput="document.getElementById('clubSectionColorHex').textContent = this.value" style="width: 50px; height: 40px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; padding: 2px;">
+                        <span id="clubSectionColorHex" style="font-size: 0.85rem; color: var(--text-light); font-family: monospace;">#e53935</span>
+                    </div>
+                    <small style="color: var(--text-light);">Used to colour fixtures on the website calendar and event filters</small>
+                </div>
+
                 <div class="form-group">
                     <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                         <input type="checkbox" id="clubSectionShowFilter" checked>
@@ -7835,7 +7819,7 @@ forceStatsRefresh() {
                         <div class="content-info" style="flex: 1;">
                             <h3>🏉 ${team.name} <span style="font-size: 0.8rem; color: var(--text-light); font-weight: normal;">#${index + 1}</span></h3>
                             <p><strong>Slug:</strong> ${team.slug}</p>
-                            <p><strong>Filter Group:</strong> ${team.filterGroup || team.ageGroup || 'Unassigned'}</p>
+                            <p><strong>Club Section:</strong> ${team.clubSection || 'Unassigned'}</p>
                             ${team.description ? `<p>${team.description}</p>` : ''}
                         </div>
                         <div class="content-actions">
@@ -7916,10 +7900,6 @@ forceStatsRefresh() {
                 
                 document.getElementById('teamName').value = team.name;
                 document.getElementById('teamSlug').value = team.slug;
-                
-                // Populate and set filter group dropdown
-                populateTeamFilterGroupDropdown();
-                document.getElementById('teamFilterGroup').value = team.filterGroup || team.ageGroup || '';
                 
                 document.getElementById('teamDescription').value = team.description || '';
                 
@@ -9214,7 +9194,6 @@ document.getElementById('teamForm').addEventListener('submit', async function(e)
             Date.now().toString(),
         name: document.getElementById('teamName').value.trim(),
         slug: document.getElementById('teamSlug').value.trim(),
-        filterGroup: document.getElementById('teamFilterGroup').value,
         description: document.getElementById('teamDescription').value.trim(),
         photo: null, // Handle photo upload separately if needed
         // OLS 125: Display Order
@@ -18295,19 +18274,11 @@ async function saveEventsPageContent() {
 // OLS 124: CALENDAR CONFIGURATION FUNCTIONS
 // ============================================================================
 
-// State for calendar configuration
+// State for calendar configuration (fixture colours now driven by club-sections)
 let calendarConfig = {
-    fixtureGroups: [],
     additionalCalendars: [],
     fixturesCalendarId: ''
 };
-
-// Default fixture groups (used when none exist)
-const defaultFixtureGroups = [
-    { id: 'senior', label: 'Senior Fixtures', color: '#e53935' },
-    { id: 'junior', label: 'Junior Fixtures', color: '#1e88e5' },
-    { id: 'colts', label: 'Colts Fixtures', color: '#43a047' }
-];
 
 // Default additional calendars
 const defaultAdditionalCalendars = [
@@ -18325,17 +18296,6 @@ async function loadCalendarConfiguration() {
         const result = await response.json();
         const settings = result.data || {};
         
-        // Parse fixture groups
-        if (settings['calendar-fixture-groups']) {
-            try {
-                calendarConfig.fixtureGroups = JSON.parse(settings['calendar-fixture-groups']);
-            } catch (e) {
-                calendarConfig.fixtureGroups = [...defaultFixtureGroups];
-            }
-        } else {
-            calendarConfig.fixtureGroups = [...defaultFixtureGroups];
-        }
-        
         // Parse additional calendars
         if (settings['calendar-additional-sources']) {
             try {
@@ -18350,8 +18310,7 @@ async function loadCalendarConfiguration() {
         // Fixtures calendar ID
         calendarConfig.fixturesCalendarId = settings['calendar-fixtures-id'] || '';
         
-        // Render all sections
-        renderFixtureFilterGroups();
+        // Render additional calendars
         renderAdditionalCalendars();
         
         // Set fixtures calendar ID
@@ -18365,79 +18324,8 @@ async function loadCalendarConfiguration() {
     } catch (error) {
         console.error('❌ Error loading calendar configuration:', error);
         // Use defaults on error
-        calendarConfig.fixtureGroups = [...defaultFixtureGroups];
         calendarConfig.additionalCalendars = [...defaultAdditionalCalendars];
-        renderFixtureFilterGroups();
         renderAdditionalCalendars();
-    }
-}
-
-// Render Fixture Filter Groups
-function renderFixtureFilterGroups() {
-    const container = document.getElementById('fixture-filter-groups-container');
-    if (!container) return;
-    
-    if (calendarConfig.fixtureGroups.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-light); font-style: italic;">No filter groups defined. Add one to get started.</p>';
-        return;
-    }
-    
-    container.innerHTML = calendarConfig.fixtureGroups.map((group, index) => `
-        <div class="filter-group-item" data-index="${index}" style="display: grid; grid-template-columns: auto 1fr auto auto; gap: 1rem; align-items: center; padding: 1rem; background: white; border-radius: 8px; border: 2px solid #e0e0e0;">
-            <!-- Color Picker -->
-            <input type="color" value="${group.color}" onchange="updateFixtureGroup(${index}, 'color', this.value)" 
-                   style="width: 50px; height: 40px; border: none; cursor: pointer; border-radius: 4px;">
-            
-            <!-- Label Input -->
-            <input type="text" value="${group.label}" onchange="updateFixtureGroup(${index}, 'label', this.value)"
-                   placeholder="Filter name (e.g., Senior Fixtures)"
-                   style="padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
-            
-            <!-- ID Display -->
-            <span style="color: var(--text-light); font-size: 0.85rem; font-family: monospace; background: #f5f5f5; padding: 0.5rem 0.75rem; border-radius: 4px;">
-                ${group.id}
-            </span>
-            
-            <!-- Delete Button -->
-            <button type="button" onclick="removeFixtureGroup(${index})" 
-                    style="padding: 0.5rem 1rem; background: #f44336; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;"
-                    ${calendarConfig.fixtureGroups.length <= 1 ? 'disabled title="Must have at least one group"' : ''}>
-                🗑️
-            </button>
-        </div>
-    `).join('');
-}
-
-// Add a new fixture filter group
-function addFixtureFilterGroup() {
-    const newId = 'group_' + Date.now();
-    calendarConfig.fixtureGroups.push({
-        id: newId,
-        label: 'New Filter Group',
-        color: '#9e9e9e'
-    });
-    renderFixtureFilterGroups();
-}
-
-// Update a fixture filter group property
-function updateFixtureGroup(index, property, value) {
-    if (calendarConfig.fixtureGroups[index]) {
-        calendarConfig.fixtureGroups[index][property] = value;
-    }
-}
-
-// Remove a fixture filter group
-function removeFixtureGroup(index) {
-    if (calendarConfig.fixtureGroups.length <= 1) {
-        alert('You must have at least one filter group.');
-        return;
-    }
-    
-    const removedGroup = calendarConfig.fixtureGroups[index];
-    
-    if (confirm(`Remove "${removedGroup.label}"? Teams using this group will need to be reassigned in the Teams section.`)) {
-        calendarConfig.fixtureGroups.splice(index, 1);
-        renderFixtureFilterGroups();
     }
 }
 
@@ -18532,9 +18420,8 @@ async function saveCalendarConfiguration() {
         // Get fixtures calendar ID
         const fixturesId = document.getElementById('calendar-fixtures-id')?.value || '';
         
-        // Build updates object
+        // Build updates object (fixture colours now driven by club-sections)
         const updates = {
-            'calendar-fixture-groups': JSON.stringify(calendarConfig.fixtureGroups),
             'calendar-additional-sources': JSON.stringify(calendarConfig.additionalCalendars),
             'calendar-fixtures-id': fixturesId
         };
@@ -18594,72 +18481,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Also populate team filter dropdown when Teams section is shown
-    populateTeamFilterGroupDropdown();
 });
-
-// Populate the Team Filter Group dropdown in Team form
-async function populateTeamFilterGroupDropdown() {
-    const dropdown = document.getElementById('teamFilterGroup');
-    if (!dropdown) return;
-    
-    // Preserve current selection
-    const currentValue = dropdown.value;
-    
-    try {
-        // Try to get filter groups from site-settings
-        let groups = [];
-        
-        // Check localStorage cache first
-        const cachedSettings = localStorage.getItem('olrfc_site-settings');
-        if (cachedSettings) {
-            try {
-                const settings = JSON.parse(cachedSettings);
-                if (settings['calendar-fixture-groups']) {
-                    groups = JSON.parse(settings['calendar-fixture-groups']);
-                }
-            } catch (e) {
-                console.warn('Failed to parse cached filter groups');
-            }
-        }
-        
-        // If no cached groups, fetch from Netlify
-        if (groups.length === 0) {
-            try {
-                const response = await fetch('/.netlify/functions/site-settings');
-                const result = await response.json();
-                const settings = result.data || {};
-                
-                if (settings['calendar-fixture-groups']) {
-                    groups = JSON.parse(settings['calendar-fixture-groups']);
-                }
-            } catch (e) {
-                console.warn('Failed to fetch filter groups from Netlify');
-            }
-        }
-        
-        // Use defaults if still no groups
-        if (groups.length === 0) {
-            groups = [
-                { id: 'senior', label: 'Senior Fixtures', color: '#e53935' },
-                { id: 'junior', label: 'Junior Fixtures', color: '#1e88e5' },
-                { id: 'colts', label: 'Colts Fixtures', color: '#43a047' }
-            ];
-        }
-        
-        // Build dropdown options
-        dropdown.innerHTML = '<option value="">— Unassigned —</option>' +
-            groups.map(g => `<option value="${g.id}">${g.label}</option>`).join('');
-        
-        // Restore selection
-        dropdown.value = currentValue;
-        
-        console.log('✅ Team filter group dropdown populated with', groups.length, 'groups');
-        
-    } catch (error) {
-        console.error('❌ Error populating filter group dropdown:', error);
-    }
-}
 
 // ============================================================================
 // END OLS 124: CALENDAR CONFIGURATION FUNCTIONS
@@ -21922,9 +21744,9 @@ async function getClubSections() {
     
     // Default sections
     const defaultSections = [
-        { id: 'senior', name: 'Senior', icon: '🏉', order: 1, showFilter: true },
-        { id: 'ladies', name: 'Ladies', icon: '👩', order: 2, showFilter: true },
-        { id: 'minis', name: 'Minis & Juniors', icon: '👶', order: 3, showFilter: true }
+        { id: 'senior', name: 'Senior', icon: '🏉', order: 1, showFilter: true, color: '#e53935' },
+        { id: 'ladies', name: 'Ladies', icon: '👩', order: 2, showFilter: true, color: '#43a047' },
+        { id: 'minis', name: 'Minis & Juniors', icon: '👶', order: 3, showFilter: true, color: '#1e88e5' }
     ];
     
     try {
@@ -22033,13 +21855,15 @@ async function loadClubSectionsList() {
     
     const sectionsHtml = sections.map(section => {
         const teamCount = teams.filter(t => t.clubSection === section.id).length;
+        const sectionColor = section.color || '#9e9e9e';
         return `
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: white; border-radius: 8px; border: 1px solid #e0e0e0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: white; border-radius: 8px; border: 1px solid #e0e0e0; border-left: 4px solid ${sectionColor};">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <span style="font-size: 1.5rem;">${section.icon || '📁'}</span>
                     <div>
                         <div style="font-weight: bold; color: var(--primary-green);">${section.name}</div>
                         <div style="font-size: 0.8rem; color: var(--text-light);">
+                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${sectionColor}; vertical-align: middle; margin-right: 4px;"></span>
                             ID: ${section.id} • ${teamCount} team${teamCount !== 1 ? 's' : ''}
                             ${section.showFilter ? ' • Shows in filters' : ''}
                         </div>
@@ -22067,6 +21891,8 @@ function openClubSectionModal() {
     document.getElementById('clubSectionId').disabled = false;
     document.getElementById('clubSectionName').value = '';
     document.getElementById('clubSectionIcon').value = '';
+    document.getElementById('clubSectionColor').value = '#9e9e9e';
+    document.getElementById('clubSectionColorHex').textContent = '#9e9e9e';
     document.getElementById('clubSectionShowFilter').checked = true;
     document.getElementById('clubSectionTrainingSortOrder').value = '10';
     document.getElementById('clubSectionModal').style.display = 'flex';
@@ -22094,6 +21920,8 @@ async function editClubSection(sectionId) {
     document.getElementById('clubSectionId').disabled = true;
     document.getElementById('clubSectionName').value = section.name;
     document.getElementById('clubSectionIcon').value = section.icon || '';
+    document.getElementById('clubSectionColor').value = section.color || '#9e9e9e';
+    document.getElementById('clubSectionColorHex').textContent = section.color || '#9e9e9e';
     document.getElementById('clubSectionShowFilter').checked = section.showFilter !== false;
     document.getElementById('clubSectionTrainingSortOrder').value = section.trainingSortOrder || 10;
     document.getElementById('clubSectionModal').style.display = 'flex';
@@ -22109,6 +21937,7 @@ async function saveClubSection(event) {
     const id = document.getElementById('clubSectionId').value.toLowerCase().replace(/[^a-z0-9-]/g, '');
     const name = document.getElementById('clubSectionName').value.trim();
     const icon = document.getElementById('clubSectionIcon').value.trim();
+    const color = document.getElementById('clubSectionColor').value || '#9e9e9e';
     const showFilter = document.getElementById('clubSectionShowFilter').checked;
     const trainingSortOrder = parseInt(document.getElementById('clubSectionTrainingSortOrder').value) || 10;
     
@@ -22131,6 +21960,7 @@ async function saveClubSection(event) {
             if (index !== -1) {
                 sections[index].name = name;
                 sections[index].icon = icon;
+                sections[index].color = color;
                 sections[index].showFilter = showFilter;
                 sections[index].trainingSortOrder = trainingSortOrder;
             }
@@ -22146,6 +21976,7 @@ async function saveClubSection(event) {
                 id: id,
                 name: name,
                 icon: icon,
+                color: color,
                 order: sections.length + 1,
                 showFilter: showFilter,
                 trainingSortOrder: trainingSortOrder

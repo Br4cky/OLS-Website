@@ -15,31 +15,31 @@ class CalendarDataFetcher {
         
         // Will be populated from site-settings and Teams API
         this.calendars = {};
-        this.fixtureGroups = [];
+        this.clubSections = [];
         this.teamTypeMap = {};
         this.teams = []; // 🎯 OLS 129: Store teams array for name lookup
         this.settingsLoaded = false;
-        
-        // Default fixture groups (fallback)
-        this.defaultFixtureGroups = [
-            { id: 'senior', label: 'Senior Fixtures', color: '#e53935' },
-            { id: 'junior', label: 'Junior Fixtures', color: '#1e88e5' },
-            { id: 'colts', label: 'Colts Fixtures', color: '#43a047' }
+
+        // Default club sections with calendar colours (fallback)
+        this.defaultClubSections = [
+            { id: 'senior', name: 'Senior', color: '#e53935' },
+            { id: 'ladies', name: 'Ladies', color: '#43a047' },
+            { id: 'minis', name: 'Minis & Juniors', color: '#1e88e5' }
         ];
-        
-        // Default team assignments (fallback when Teams API unavailable)
+
+        // Default team → club section assignments (fallback when Teams API unavailable)
         this.defaultTeamAssignments = {
             'mens-1st': 'senior',
             'mens-2nd': 'senior',
-            'colts': 'colts',
-            'u16s': 'junior',
-            'u15s': 'junior',
-            'u14s': 'junior',
-            'u13s': 'junior',
-            'u12s': 'junior',
-            'minis': 'junior',
-            'ladies': 'senior',
-            'phoenix-ladies': 'senior'
+            'colts': 'senior',
+            'u16s': 'minis',
+            'u15s': 'minis',
+            'u14s': 'minis',
+            'u13s': 'minis',
+            'u12s': 'minis',
+            'minis': 'minis',
+            'ladies': 'ladies',
+            'phoenix-ladies': 'ladies'
         };
         
         this.cache = {
@@ -83,18 +83,36 @@ class CalendarDataFetcher {
                 }
             }
             
-            // Load fixture groups (definitions)
-            if (settings?.['calendar-fixture-groups']) {
+            // Load club sections (used for calendar colour coding)
+            if (settings?.['club-sections']) {
                 try {
-                    this.fixtureGroups = JSON.parse(settings['calendar-fixture-groups']);
+                    this.clubSections = JSON.parse(settings['club-sections']);
+                    // Ensure all sections have a color (backfill for legacy data)
+                    const defaultColorMap = { 'senior': '#e53935', 'ladies': '#43a047', 'minis': '#1e88e5' };
+                    this.clubSections.forEach(s => {
+                        if (!s.color) s.color = defaultColorMap[s.id] || '#9e9e9e';
+                    });
                 } catch (e) {
-                    this.fixtureGroups = [...this.defaultFixtureGroups];
+                    this.clubSections = [...this.defaultClubSections];
+                }
+            } else if (settings?.['calendar-fixture-groups']) {
+                // Backwards compatibility: map old fixture groups to club section format
+                try {
+                    const fixtureGroups = JSON.parse(settings['calendar-fixture-groups']);
+                    this.clubSections = fixtureGroups.map(fg => ({
+                        id: fg.id,
+                        name: fg.label ? fg.label.replace(' Fixtures', '') : fg.id,
+                        color: fg.color,
+                        showFilter: true
+                    }));
+                } catch (e) {
+                    this.clubSections = [...this.defaultClubSections];
                 }
             } else {
-                this.fixtureGroups = [...this.defaultFixtureGroups];
+                this.clubSections = [...this.defaultClubSections];
             }
-            
-            // Fetch teams from API to get their filterGroup assignments
+
+            // Fetch teams from API to get their clubSection assignments
             await this.loadTeamsAndBuildMap();
             
             // Build calendars configuration
@@ -129,14 +147,14 @@ class CalendarDataFetcher {
             
             this.settingsLoaded = true;
             console.log('✅ Calendar configuration loaded:', {
-                fixtureGroups: this.fixtureGroups.length,
-                teamsWithFilters: Object.keys(this.teamTypeMap).length,
+                clubSections: this.clubSections.length,
+                teamsWithSections: Object.keys(this.teamTypeMap).length,
                 calendars: Object.keys(this.calendars)
             });
-            
+
         } catch (error) {
             console.error('❌ Error loading calendar settings, using defaults:', error);
-            this.fixtureGroups = [...this.defaultFixtureGroups];
+            this.clubSections = [...this.defaultClubSections];
             this.useDefaultTeamAssignments();
             this.calendars = {
                 'fixtures': {
@@ -150,62 +168,51 @@ class CalendarDataFetcher {
         }
     }
     
-    // Fetch teams from API and build teamTypeMap from their filterGroup field
+    // Fetch teams from API and build teamTypeMap from their clubSection field
     async loadTeamsAndBuildMap() {
         try {
             const response = await fetch('/.netlify/functions/teams');
             if (!response.ok) throw new Error('Failed to fetch teams');
-            
+
             const result = await response.json();
             const teams = result.data || [];
-            
+
             // 🎯 OLS 129: Store teams array for name lookup
             this.teams = teams;
-            
-            // Create a lookup for group id → {type, color}
-            const groupLookup = {};
-            this.fixtureGroups.forEach(group => {
-                groupLookup[group.id] = {
-                    type: group.label,
-                    color: group.color
+
+            // Create a lookup for club section id → {type, color}
+            const sectionLookup = {};
+            this.clubSections.forEach(section => {
+                sectionLookup[section.id] = {
+                    type: section.name,
+                    color: section.color || '#9e9e9e'
                 };
             });
-            
-            // Build teamTypeMap from each team's filterGroup
+
+            // Build teamTypeMap from each team's clubSection
             this.teamTypeMap = {};
             teams.forEach(team => {
-                const filterGroup = team.filterGroup;
-                if (filterGroup && groupLookup[filterGroup]) {
-                    // Map by both team ID and slug for flexible matching
-                    this.teamTypeMap[team.id] = groupLookup[filterGroup];
+                const sectionId = team.clubSection;
+                if (sectionId && sectionLookup[sectionId]) {
+                    this.teamTypeMap[team.id] = sectionLookup[sectionId];
                     if (team.slug) {
-                        this.teamTypeMap[team.slug] = groupLookup[filterGroup];
+                        this.teamTypeMap[team.slug] = sectionLookup[sectionId];
                     }
                 }
             });
-            
-            // Add fallback mappings for backwards compatibility with old ageGroup field
+
+            // Fallback: teams without clubSection but with filterGroup (backwards compat)
             teams.forEach(team => {
-                if (!this.teamTypeMap[team.id] && team.ageGroup) {
-                    // Map old ageGroup values to new filter groups
-                    const ageGroupToFilter = {
-                        'senior': 'senior',
-                        'youth': 'junior',
-                        'junior': 'junior',
-                        'mini': 'junior'
-                    };
-                    const mappedGroup = ageGroupToFilter[team.ageGroup];
-                    if (mappedGroup && groupLookup[mappedGroup]) {
-                        this.teamTypeMap[team.id] = groupLookup[mappedGroup];
-                        if (team.slug) {
-                            this.teamTypeMap[team.slug] = groupLookup[mappedGroup];
-                        }
+                if (!this.teamTypeMap[team.id] && team.filterGroup && sectionLookup[team.filterGroup]) {
+                    this.teamTypeMap[team.id] = sectionLookup[team.filterGroup];
+                    if (team.slug) {
+                        this.teamTypeMap[team.slug] = sectionLookup[team.filterGroup];
                     }
                 }
             });
-            
-            console.log('📋 Team type map built from Teams API:', Object.keys(this.teamTypeMap).length, 'mappings');
-            
+
+            console.log('📋 Team type map built from club sections:', Object.keys(this.teamTypeMap).length, 'mappings');
+
         } catch (error) {
             console.warn('⚠️ Failed to load teams, using default assignments:', error);
             this.useDefaultTeamAssignments();
@@ -214,23 +221,23 @@ class CalendarDataFetcher {
     
     // Use hardcoded default team assignments as fallback
     useDefaultTeamAssignments() {
-        // Create a lookup for group id → {type, color}
-        const groupLookup = {};
-        this.fixtureGroups.forEach(group => {
-            groupLookup[group.id] = {
-                type: group.label,
-                color: group.color
+        // Create a lookup for club section id → {type, color}
+        const sectionLookup = {};
+        this.clubSections.forEach(section => {
+            sectionLookup[section.id] = {
+                type: section.name,
+                color: section.color || '#9e9e9e'
             };
         });
-        
+
         // Default mappings
         this.teamTypeMap = {};
-        Object.entries(this.defaultTeamAssignments).forEach(([teamId, groupId]) => {
-            if (groupLookup[groupId]) {
-                this.teamTypeMap[teamId] = groupLookup[groupId];
+        Object.entries(this.defaultTeamAssignments).forEach(([teamId, sectionId]) => {
+            if (sectionLookup[sectionId]) {
+                this.teamTypeMap[teamId] = sectionLookup[sectionId];
             }
         });
-        
+
         console.log('📋 Using default team assignments:', Object.keys(this.teamTypeMap).length, 'mappings');
     }
     
@@ -240,14 +247,16 @@ class CalendarDataFetcher {
             { id: 'all', label: 'All Events', color: null }
         ];
         
-        // Add fixture group filters
-        this.fixtureGroups.forEach(group => {
-            filters.push({
-                id: group.id,
-                label: group.label,
-                color: group.color,
-                type: group.label
-            });
+        // Add club section filters (for fixture colour coding)
+        this.clubSections.forEach(section => {
+            if (section.showFilter !== false) {
+                filters.push({
+                    id: section.id,
+                    label: section.name,
+                    color: section.color || '#9e9e9e',
+                    type: section.name
+                });
+            }
         });
         
         // Add additional calendar filters
@@ -552,16 +561,16 @@ class CalendarDataFetcher {
                 return this.teamTypeMap['colts'];
             }
             if (title.includes('u14') || title.includes('u13') || title.includes('u15') || title.includes('u16') || title.includes('u12') || title.includes('mini')) {
-                return this.teamTypeMap['u14s']; // Returns Junior Fixtures
+                return this.teamTypeMap['u14s']; // Returns Minis & Juniors section
             }
             if (title.includes('ladies') || title.includes('phoenix')) {
                 return this.teamTypeMap['ladies'];
             }
         }
         
-        // Default to Senior Fixtures for OLS fixtures without team info
+        // Default to Senior section for OLS fixtures without team info
         if (event.summary && (event.summary.includes('OLS') || event.summary.includes('vs') || event.summary.includes('at'))) {
-            console.log(`📋 Defaulting to Senior Fixtures for: ${event.summary}`);
+            console.log(`📋 Defaulting to Senior section for: ${event.summary}`);
             return this.teamTypeMap['mens-1st'];
         }
         
@@ -593,20 +602,10 @@ class CalendarDataFetcher {
     }
 
     formatFixtureEvent(fixture) {
-        // Determine color based on team - UPDATED COLORS
-        let color = '#e53935'; // Default: Senior (bright red)
-        let type = 'Senior Fixtures';
-        
-        if (fixture.team === 'mens-2nd') {
-            color = '#e53935';
-            type = 'Senior Fixtures';
-        } else if (fixture.team === 'colts') {
-            color = '#43a047';
-            type = 'Colts Fixtures';
-        } else if (fixture.team === 'u16s' || fixture.team === 'u14s') {
-            color = '#1e88e5';
-            type = "Mini's/Junior Fixtures";
-        }
+        // Determine color and type from club section via teamTypeMap
+        const teamInfo = this.teamTypeMap[fixture.team];
+        let color = teamInfo ? teamInfo.color : '#e53935';
+        let type = teamInfo ? teamInfo.type : 'Senior';
 
         // Create title
         const homeAway = fixture.venue === 'home' ? 'vs' : 'at';
