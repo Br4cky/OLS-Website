@@ -1372,6 +1372,73 @@ input[type="color"]:hover {
             margin-bottom: 0.25rem;
         }
 
+        /* Calendar Dedup styles */
+        .btn-dedup {
+            background: #6f42c1 !important;
+            color: white !important;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .btn-dedup:hover {
+            background: #5a32a3 !important;
+        }
+
+        .dedup-summary {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            padding: 1rem;
+            background: linear-gradient(135deg, #f3eaff, #e8daff);
+            border: 1px solid #d4b8ff;
+            border-left: 4px solid #6f42c1;
+            border-radius: 8px;
+        }
+
+        .dedup-summary .dedup-stat {
+            text-align: center;
+        }
+
+        .dedup-summary .dedup-stat strong {
+            display: block;
+            font-size: 1.5rem;
+            color: #6f42c1;
+        }
+
+        .dedup-summary .dedup-stat span {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        #dedupResultsTable tbody tr {
+            border-bottom: 1px solid #eee;
+        }
+
+        #dedupResultsTable tbody tr:hover {
+            background: #f8f4ff;
+        }
+
+        #dedupResultsTable td {
+            padding: 0.5rem 0.6rem;
+            border: 1px solid #eee;
+        }
+
+        .dedup-orphan {
+            color: #dc3545;
+            font-size: 0.8rem;
+            font-style: italic;
+        }
+
+        .dedup-old-id {
+            color: #6c757d;
+            font-size: 0.8rem;
+            font-family: monospace;
+        }
+
         .bulk-action-bar {
             display: flex;
             gap: 1rem;
@@ -4461,6 +4528,7 @@ Rugby, Warwickshire, CV22 7QT</textarea>
                     </div>
                     <a href="#league-tables" class="manage-link" onclick="showSection('league-tables')">🏆 League Tables</a>
                     <button class="btn btn-warning" onclick="openBulkEditFixtures()">📝 Bulk Edit</button>
+                    <button class="btn btn-dedup" onclick="deduplicateGoogleCalendar()">📅 Dedup Calendar</button>
                     <button class="btn" onclick="adminSystem.currentEditIndex = null; openModal('fixtureModal')">Add Fixture</button>
                 </div>
             </div>
@@ -6405,6 +6473,45 @@ async function loadAdminFilterOptions() {
                     <button class="btn btn-secondary" onclick="closeModal('bulkEditFixturesModal')">Cancel</button>
                     <button class="btn" onclick="saveBulkEditFixtures()">💾 Save All Changes</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Calendar Deduplication Modal -->
+    <div id="calendarDedupModal" class="modal">
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh;">
+            <div class="modal-header">
+                <h3>📅 Google Calendar Deduplication</h3>
+                <button class="close" onclick="closeModal('calendarDedupModal')">&times;</button>
+            </div>
+
+            <!-- Summary Stats -->
+            <div id="dedupSummary" style="margin-bottom: 1rem;"></div>
+
+            <!-- Results Table -->
+            <div style="overflow-y: auto; max-height: 55vh;">
+                <table id="dedupResultsTable" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead style="position: sticky; top: 0; background: #6f42c1; color: white; z-index: 10;">
+                        <tr>
+                            <th style="padding: 0.6rem; border: 1px solid #ddd; width: 40px;">
+                                <input type="checkbox" id="dedupSelectAll" onchange="toggleDedupSelectAll(this.checked)" checked>
+                            </th>
+                            <th style="padding: 0.6rem; text-align: left; border: 1px solid #ddd;">Event Title</th>
+                            <th style="padding: 0.6rem; text-align: left; border: 1px solid #ddd;">Date</th>
+                            <th style="padding: 0.6rem; text-align: left; border: 1px solid #ddd;">Fixture ID Link</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dedupResultsBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Actions -->
+            <div style="display: flex; gap: 1rem; margin-top: 1rem; align-items: center;">
+                <button class="btn btn-danger" onclick="confirmDeleteCalendarDuplicates()" id="dedupDeleteBtn">
+                    🗑️ Delete Selected Duplicates (<span id="dedupSelectedCount">0</span>)
+                </button>
+                <button class="btn btn-secondary" onclick="closeModal('calendarDedupModal')">Cancel</button>
+                <span id="dedupProgressText" style="margin-left: auto; color: var(--text-light); font-size: 0.9rem;"></span>
             </div>
         </div>
     </div>
@@ -11276,6 +11383,199 @@ function injectSpreadsheetFixtures(parsedResults) {
     }
 
     console.log(`📤 Injected ${injectedCount} fixtures from spreadsheet`);
+}
+
+// =====================================================
+// GOOGLE CALENDAR DEDUPLICATION
+// =====================================================
+
+/**
+ * Scan Google Calendar for duplicate events and show results modal
+ */
+async function deduplicateGoogleCalendar() {
+    showLoading('Scanning Google Calendar for duplicates...');
+
+    try {
+        // Get current fixture IDs from the website
+        const fixtures = adminSystem.getData('fixtures') || [];
+        const fixtureIds = fixtures.map(f => f.id).filter(Boolean);
+
+        // Call the scan endpoint
+        const token = localStorage.getItem('olrfc_auth_token');
+        const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+        const response = await fetch('/.netlify/functions/deduplicate-calendar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...authHeaders
+            },
+            body: JSON.stringify({
+                action: 'scan',
+                fixtureIds: fixtureIds
+            })
+        });
+
+        const result = await response.json();
+        hideLoading();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || result.message || 'Scan failed');
+        }
+
+        if (result.duplicateCount === 0) {
+            showLoadingSuccess('No duplicates found! Calendar is clean.');
+            return;
+        }
+
+        // Store duplicates for later deletion
+        window._calendarDuplicates = result.duplicates;
+
+        // Render results
+        renderDedupResults(result);
+
+        // Open modal
+        openModal('calendarDedupModal');
+
+    } catch (error) {
+        hideLoading();
+        console.error('Calendar dedup error:', error);
+        alert('Failed to scan calendar: ' + error.message);
+    }
+}
+
+/**
+ * Render deduplication scan results into the modal
+ */
+function renderDedupResults(data) {
+    // Summary
+    const summaryEl = document.getElementById('dedupSummary');
+    summaryEl.innerHTML = `
+        <div class="dedup-summary">
+            <div class="dedup-stat">
+                <strong>${data.totalEvents}</strong>
+                <span>Total Events</span>
+            </div>
+            <div class="dedup-stat">
+                <strong>${data.uniqueGroups}</strong>
+                <span>Unique Fixtures</span>
+            </div>
+            <div class="dedup-stat">
+                <strong style="color: #dc3545;">${data.duplicateCount}</strong>
+                <span>Duplicates Found</span>
+            </div>
+            <div class="dedup-stat">
+                <strong style="color: #28a745;">${data.keepCount}</strong>
+                <span>Will Keep</span>
+            </div>
+        </div>
+    `;
+
+    // Table body
+    const tbody = document.getElementById('dedupResultsBody');
+    tbody.innerHTML = '';
+
+    data.duplicates.forEach((dup, i) => {
+        const row = document.createElement('tr');
+
+        const dateFormatted = dup.date || 'Unknown';
+        const fixtureIdDisplay = dup.fixtureId
+            ? `<span class="dedup-old-id" title="${dup.fixtureId}">${dup.fixtureId.substring(0, 12)}...</span>`
+            : '<span class="dedup-orphan">No fixture link</span>';
+
+        row.innerHTML = `
+            <td style="text-align: center;">
+                <input type="checkbox" class="dedup-checkbox" data-event-id="${escapeHTML(dup.googleEventId)}" checked onchange="updateDedupSelectedCount()">
+            </td>
+            <td>${escapeHTML(dup.summary)}</td>
+            <td>${escapeHTML(dateFormatted)}</td>
+            <td>${fixtureIdDisplay}</td>
+        `;
+
+        tbody.appendChild(row);
+    });
+
+    // Update selected count
+    updateDedupSelectedCount();
+
+    // Reset select all
+    const selectAll = document.getElementById('dedupSelectAll');
+    if (selectAll) selectAll.checked = true;
+}
+
+/**
+ * Toggle all dedup checkboxes
+ */
+function toggleDedupSelectAll(checked) {
+    document.querySelectorAll('.dedup-checkbox').forEach(cb => {
+        cb.checked = checked;
+    });
+    updateDedupSelectedCount();
+}
+
+/**
+ * Update the selected count display
+ */
+function updateDedupSelectedCount() {
+    const checked = document.querySelectorAll('.dedup-checkbox:checked').length;
+    const countEl = document.getElementById('dedupSelectedCount');
+    if (countEl) countEl.textContent = checked;
+
+    const btn = document.getElementById('dedupDeleteBtn');
+    if (btn) btn.disabled = checked === 0;
+}
+
+/**
+ * Delete selected duplicate calendar events
+ */
+async function confirmDeleteCalendarDuplicates() {
+    const checkedBoxes = document.querySelectorAll('.dedup-checkbox:checked');
+    const eventIds = [...checkedBoxes].map(cb => cb.getAttribute('data-event-id'));
+
+    if (eventIds.length === 0) {
+        alert('No duplicates selected.');
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${eventIds.length} duplicate calendar events? This cannot be undone.`)) {
+        return;
+    }
+
+    closeModal('calendarDedupModal');
+    showLoading(`Deleting ${eventIds.length} duplicate events...`);
+
+    try {
+        const token = localStorage.getItem('olrfc_auth_token');
+        const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+        const response = await fetch('/.netlify/functions/deduplicate-calendar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...authHeaders
+            },
+            body: JSON.stringify({
+                action: 'delete',
+                eventIds: eventIds
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || result.message || 'Deletion failed');
+        }
+
+        const msg = result.failed && result.failed.length > 0
+            ? `Deleted ${result.deleted} events. ${result.failed.length} failed.`
+            : `Successfully deleted ${result.deleted} duplicate events!`;
+
+        showLoadingSuccess(msg, 3000);
+
+    } catch (error) {
+        console.error('Calendar dedup delete error:', error);
+        showLoadingError('Failed to delete duplicates: ' + error.message);
+    }
 }
 
 /**
