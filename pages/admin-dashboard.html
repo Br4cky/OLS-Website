@@ -21784,9 +21784,10 @@ async function getClubSections() {
  */
 async function saveClubSections(sections) {
     try {
+        const authHeaders = window.netlifyDataManager ? window.netlifyDataManager.getAuthHeaders() : {};
         const response = await fetch('/.netlify/functions/site-settings', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
             body: JSON.stringify({ 'club-sections': JSON.stringify(sections) })
         });
         

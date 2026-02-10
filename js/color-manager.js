@@ -71,24 +71,26 @@ class ColorManager {
         try {
             const cached = localStorage.getItem(this.cacheKey);
             const timestamp = localStorage.getItem(this.timestampKey);
-            
+
             if (!cached || !timestamp) {
                 console.log('🔭 No cache found');
                 return null;
             }
-            
+
             const age = Date.now() - parseInt(timestamp, 10);
-            
-            if (age > this.cacheExpiry) {
-                console.log('⏰ Cache expired (age: ' + Math.round(age / 1000) + 's)');
-                this.clearCache();
-                return null;
-            }
-            
             const colors = JSON.parse(cached);
+
+            if (age > this.cacheExpiry) {
+                // Cache expired but still return stale colours to avoid flash of grey defaults.
+                // Background validation will refresh them shortly.
+                console.log('⏰ Cache stale (age: ' + Math.round(age / 1000) + 's) - using stale colours while revalidating');
+                this._cacheStale = true;
+                return colors;
+            }
+
             console.log('✅ Cache valid (age: ' + Math.round(age / 1000) + 's)');
             return colors;
-            
+
         } catch (error) {
             console.error('❌ Cache read error:', error);
             this.clearCache();
@@ -133,16 +135,20 @@ class ColorManager {
     async validateCacheInBackground() {
         try {
             const freshColors = await this.fetchCustomColorsQuiet();
-            
+
             // Compare with cached version
             const cachedStr = JSON.stringify(this.customColors);
             const freshStr = JSON.stringify(freshColors);
-            
+
             if (cachedStr !== freshStr && Object.keys(freshColors).length > 0) {
                 console.log('🔄 Cache outdated, updating...');
                 this.customColors = freshColors;
                 this.applyColors();
                 this.saveToCache(freshColors);
+            } else if (Object.keys(freshColors).length > 0) {
+                // Refresh cache timestamp even if colours unchanged (keeps cache alive)
+                this.saveToCache(this.customColors);
+                console.log('✅ Cache validated (still fresh)');
             } else {
                 console.log('✅ Cache validated (still fresh)');
             }
